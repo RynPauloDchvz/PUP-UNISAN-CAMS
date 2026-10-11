@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upcoming Event Alert</title>
+</head>
+<body style="margin: 0; padding: 30px 15px; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+    <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px 28px; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h2 style="margin: 0 0 6px 0; font-size: 20px; font-weight: 800; color: #800000; letter-spacing: -0.02em;">PUP UNISAN CAMS</h2>
+            <p style="margin: 0; font-size: 13px; color: #64748b;">Upcoming Campus Activity Alert</p>
+        </div>
+
+        <p style="margin: 0 0 12px 0; font-size: 15px; color: #1e293b; line-height: 1.6;">
+            Hello <strong>{{ full_name }}</strong>,
+        </p>
+        <p style="margin: 0 0 20px 0; font-size: 14px; color: #475569; line-height: 1.6;">
+            A new campus activity has been scheduled by <strong>{{ org_name }}</strong>. Here are the event details:
+        </p>
+
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px 20px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0; font-size: 16px; font-weight: 800; color: #800000;">
+                {{ event_title }}
+            </p>
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
+                <strong style="color: #0f172a;">Date:</strong> {{ event_date }}
+            </p>
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
+                <strong style="color: #0f172a;">Time:</strong> {{ start_time }}
+            </p>
+            <p style="margin: 0; font-size: 14px; color: #334155;">
+                <strong style="color: #0f172a;">Venue:</strong> {{ venue }}
+            </p>
+        </div>
+
+        <p style="margin: 0 0 24px 0; font-size: 13px; color: #64748b; line-height: 1.6;">
+            Make sure to be at the venue on time and prepare your student portal for digital attendance checking.
+        </p>
+
+        <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f1f5f9; text-align: center; font-size: 12px; color: #94a3b8; line-height: 1.6;">
+            <p style="margin: 0 0 4px 0;">This is an automated message from the PUP Campus Activity Management System.</p>
+            <p style="margin: 0;">&copy; 2026 PUP UNISAN CAMS. All rights reserved.</p>
+        </div>
+
+    </div>
+</body>
+</html>

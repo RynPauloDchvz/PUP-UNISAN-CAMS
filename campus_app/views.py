@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User 
 from django.db.models import Q, Count, Sum, Avg
 from django.http import JsonResponse, HttpResponse
-from django.core.mail import send_mail 
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings 
 from django.core.serializers import serialize 
 from django.template.loader import render_to_string 
@@ -275,11 +275,11 @@ def forgot_password_send_otp(request):
 
             subject = "Password Reset Request - PUP UNISAN CAMS"
             text_content = f"Your password reset code is: {temp_code}"
-            html_content = render_to_string('emails/otp_email.html', {
+            html_content = render_to_string('system_emails/otp_email.html', {
                 'otp': temp_code,
             })
 
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email_to_verify])
+            email_msg = EmailMultiAlternatives(subject, text_content, '"PUP UNISAN CAMS Admin" <pupunicams@gmail.com>', [email_to_verify])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": f"Verification code sent to {email_to_verify}"})
@@ -373,10 +373,10 @@ def send_student_register_otp(request):
 
         subject = 'PUP UNISAN CAMS: Registration Verification Code'
         text_content = f"Your verification code is: {otp_code}"
-        html_content = render_to_string('emails/otp_email.html', {'otp': otp_code})
+        html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
 
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, '"PUP UNISAN CAMS Admin" <pupunicams@gmail.com>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent! Please check your email inbox (and spam folder)."})
@@ -1385,10 +1385,10 @@ def force_change_send_otp(request):
         subject = 'PUP UNISAN CAMS: Password Change Verification Code'
         text_content = f"Your verification code is: {otp_code}"
         from django.template.loader import render_to_string
-        html_content = render_to_string('emails/otp_email.html', {'otp': otp_code})
+        html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
         
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, '"PUP UNISAN CAMS Admin" <pupunicams@gmail.com>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent to your email."})
@@ -2022,8 +2022,10 @@ def reject_individual_student(request):
 # ==========================================
 # 🟢 UTILITY: SEND STUDENT EMAIL NOTIFICATION
 # ==========================================
-def send_student_email(student, email_type, context_data):
-    if not student.email_notifications:
+def send_student_email(student, email_type, context_data=None):
+    if context_data is None:
+        context_data = {}
+    if not getattr(student, 'email_notifications', True):
         return False
     
     subject = "PUP UNISAN CAMS Notification"
@@ -2031,25 +2033,27 @@ def send_student_email(student, email_type, context_data):
     
     if email_type == 'welcome':
         subject = f"Account Approved - {student.organization} Student Portal"
-        template_name = "email/welcome_email.html"
+        template_name = "system_emails/welcome_email.html"
     elif email_type == 'event_alert':
         subject = f"New Event: {context_data.get('event_title')}"
-        template_name = "email/event_alert.html"
+        template_name = "event_emails/event_alert.html"
     elif email_type == 'attendance':
         subject = f"Attendance Issue: {context_data.get('event_title')}"
-        template_name = "email/attendance_status.html"
+        template_name = "event_emails/attendance_status.html"
     elif email_type == 'evaluation':
         subject = f"Evaluation Issue: {context_data.get('event_title')}"
-        template_name = "email/evaluation_issue.html"
+        template_name = "event_emails/evaluation_issue.html"
     elif email_type == 'reject':
         subject = "Registration Declined - Action Required"
-        template_name = "email/rejection_email.html"
+        template_name = "event_emails/rejection_email.html"
     
     if not template_name:
         return False
 
     context_data['full_name'] = student.full_name
     context_data['email_address'] = student.email_address
+    context_data['student_number'] = getattr(student, 'student_number', '') or (student.user.username if student.user else '')
+    context_data['organization'] = student.organization
 
     html_message = render_to_string(template_name, context_data)
     plain_message = strip_tags(html_message)
@@ -2058,7 +2062,7 @@ def send_student_email(student, email_type, context_data):
         send_mail(
             subject,
             plain_message,
-            settings.EMAIL_HOST_USER,
+            f'"{ "PUP UNISAN CAMS STUDENT ORG" if email_type == "welcome" else "PUP UNISAN CAMS" }" <{settings.EMAIL_HOST_USER}>',
             [student.email_address],
             html_message=html_message,
             fail_silently=True
@@ -3651,23 +3655,14 @@ def admin_generate_adviser_password(request):
             chars = string.ascii_letters + string.digits + "!@#$%^&*"
             password = ''.join(random.choice(chars) for _ in range(12))
             
-            # Use same cache pattern
             cache.set(f'generated_adviser_pwd_{email}', password, timeout=600)
-            from django.core.mail import EmailMultiAlternatives
-            from django.template.loader import render_to_string
             
-            subject = 'PUP UNISAN CAMS: Adviser Account Password'
-            text_content = f"Your generated password for PUP UNISAN CAMS is: {password}\n\nPlease use this to log in and change your password immediately."
-            
+            user = User.objects.filter(email=email).first()
+            name = (user.get_full_name() or user.username) if user else "Adviser"
+            identifier = user.username if user else email
             login_url = request.build_absolute_uri('/')
-            html_content = render_to_string('emails/generated_org_password.html', {
-                'password': password,
-                'login_url': login_url
-            })
             
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email])
-            email_msg.attach_alternative(html_content, "text/html")
-            email_msg.send()
+            send_account_credentials(email, name, identifier, password, role='adviser', login_url=login_url)
             return JsonResponse({"status": "success", "message": "Password generated and sent to email successfully."})
 
         except Exception as e:
@@ -3687,27 +3682,19 @@ def admin_generate_org_password(request):
             
             import string
             import random
-            from django.core.mail import EmailMultiAlternatives
-            from django.template.loader import render_to_string
             
             chars = string.ascii_letters + string.digits + "!@#$%^&*"
             password = ''.join(random.choice(chars) for _ in range(12))
             
-            # Store in cache to be used when form is submitted
-            cache.set(f'generated_org_pwd_{email}', password, timeout=600) # Valid for 10 minutes
+            cache.set(f'generated_org_pwd_{email}', password, timeout=600)
             
-            subject = 'PUP UNISAN CAMS: Organizer Account Password'
-            text_content = f"Your generated password for PUP UNISAN CAMS is: {password}\n\nPlease use this to log in and change your password immediately."
-            
+            user = User.objects.filter(email=email).first()
+            student = Student.objects.filter(user=user).first() if user else None
+            name = (student.full_name if student else (user.get_full_name() or user.username)) if user else "Student Organizer"
+            identifier = (student.student_number if student else user.username) if user else email
             login_url = request.build_absolute_uri('/')
-            html_content = render_to_string('emails/generated_org_password.html', {
-                'password': password,
-                'login_url': login_url
-            })
             
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email])
-            email_msg.attach_alternative(html_content, "text/html")
-            email_msg.send()
+            send_account_credentials(email, name, identifier, password, role='organizer', login_url=login_url)
             
             return JsonResponse({"status": "success", "message": "Password generated and sent to email successfully."})
         except Exception as e:
@@ -4182,6 +4169,65 @@ def adviser_download_documents(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
+def send_adviser_review_email(event, is_approved, process_sentence='', remarks='', adviser_name=None):
+    try:
+        recipient_email = None
+        recipient_name = event.requester_name or ''
+
+        # 1. Try proposal user
+        user = User.objects.filter(username=event.proposal_by_user_id).first()
+        if user:
+            recipient_email = user.email
+            if not recipient_name:
+                recipient_name = user.get_full_name() or user.username
+            student = Student.objects.filter(user=user).first()
+            if student:
+                recipient_email = student.email_address or recipient_email
+                if not recipient_name:
+                    recipient_name = student.full_name
+
+        # 2. Fallback to OrgProfile
+        if not recipient_email and event.org_id:
+            org = OrgProfile.objects.filter(organization=event.org_id).first()
+            if org and org.user and org.user.email:
+                recipient_email = org.user.email
+                if not recipient_name:
+                    recipient_name = org.user.get_full_name() or org.user.username
+
+        if not recipient_email:
+            return False
+
+        if not recipient_name:
+            recipient_name = event.org_id
+
+        org_name = ORG_FULL_NAMES.get(event.org_id, event.org_id)
+
+        subject = f"PUP UNISAN CAMS: Event Proposal {'Approved' if is_approved else 'Rejected'} - {event.event_title}"
+        context = {
+            'requester_name': recipient_name,
+            'organization': org_name,
+            'event_title': event.event_title,
+            'is_approved': is_approved,
+            'adviser_name': adviser_name or event.adviser_name or 'Organization Adviser',
+            'remarks': remarks or event.remarks or '',
+            'process_sentence': process_sentence
+        }
+
+        html_content = render_to_string('system_emails/adviser_event_review.html', context)
+        text_content = strip_tags(html_content)
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=f'"PUP UNISAN CAMS" <{settings.EMAIL_HOST_USER}>',
+            to=[recipient_email]
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=True)
+        return True
+    except Exception:
+        return False
+
 @user_passes_test(is_adviser_strictly, login_url='/admin/login/')
 def adviser_api_action(request):
     if request.method == 'POST':
@@ -4210,6 +4256,10 @@ def adviser_api_action(request):
                 log_audit_event(request, 'ADVISER_APPROVE', target_model='Event', target_id=str(event.id), status='Success', 
                                 changes={'from': old_status, 'to': event.event_status, 'title': event.event_title})
                 
+                # 🟢 SEND EMAIL NOTIFICATION TO ORGANIZER
+                adv_name = request.user.get_full_name() or request.user.username
+                send_adviser_review_email(event, is_approved=True, process_sentence=message, adviser_name=adv_name)
+
                 return JsonResponse({"status": "success", "message": message})
             
             elif action == 'reject':
@@ -4222,6 +4272,10 @@ def adviser_api_action(request):
                 log_audit_event(request, 'ADVISER_REJECT', target_model='Event', target_id=str(event.id), status='Success', 
                                 changes={'from': old_status, 'reason': event.remarks, 'title': event.event_title})
                 
+                # 🟢 SEND EMAIL NOTIFICATION TO ORGANIZER
+                adv_name = request.user.get_full_name() or request.user.username
+                send_adviser_review_email(event, is_approved=False, remarks=event.remarks, adviser_name=adv_name)
+
                 return JsonResponse({"status": "success", "message": "Event Rejected."})
                 
         except Exception as e: return JsonResponse({"status": "error", "message": str(e)})
@@ -4504,29 +4558,41 @@ from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 from .models import Student
 from django.contrib.auth.decorators import user_passes_test
-def send_student_credentials(email, name, student_id, password):
-    subject = "PUP UNISAN CAMS - Your Student Account Credentials"
-    html_content = f'''
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h2 style="color: #800000; text-align: center;">Welcome to PUP UNISAN CAMS!</h2>
-        <p>Hello <strong>{name}</strong>,</p>
-        <p>Your student account has been successfully created by the Administrator.</p>
-        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 5px 0;"><strong>Student ID:</strong> {student_id}</p>
-            <p style="margin: 5px 0;"><strong>Email:</strong> {email}</p>
-            <p style="margin: 5px 0;"><strong>Temporary Password:</strong> <span style="font-family: monospace; font-size: 1.1em; background: #e0e0e0; padding: 2px 6px; border-radius: 4px;">{password}</span></p>
-        </div>
-        <p>Please login using the link below and change your password immediately.</p>
-        <div style="text-align: center; margin-top: 25px;">
-            <a href="http://127.0.0.1:8000/" style="background-color: #800000; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login Now</a>
-        </div>
-        <p style="margin-top: 30px; font-size: 0.85em; color: #777; text-align: center;">This is an automated message. Please do not reply.</p>
-    </div>
-    '''
+def send_account_credentials(email, name, identifier, password, role='student', login_url=None):
+    if role == 'adviser':
+        id_label = "Employee ID"
+        role_description = "Your adviser account has been successfully configured by the Administrator."
+        subject = "PUP UNISAN CAMS - Your Adviser Account Credentials"
+    elif role == 'organizer':
+        id_label = "Student ID"
+        role_description = "Your student organization account has been successfully configured by the Administrator."
+        subject = "PUP UNISAN CAMS - Your Organizer Account Credentials"
+    else:
+        id_label = "Student ID"
+        role_description = "Your student account has been successfully configured by the Administrator."
+        subject = "PUP UNISAN CAMS - Your Student Account Credentials"
+
+    if not login_url:
+        login_url = "http://127.0.0.1:8000/"
+
+    context = {
+        'name': name or 'User',
+        'email': email,
+        'identifier': identifier or email,
+        'id_label': id_label,
+        'password': password,
+        'role_description': role_description,
+        'login_url': login_url
+    }
+    html_content = render_to_string('system_emails/account_credentials.html', context)
     text_content = strip_tags(html_content)
-    msg = EmailMultiAlternatives(subject, text_content, '"PUP UNISAN CAMS Admin" <pupunicams@gmail.com>', [email])
+    sender = f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>'
+    msg = EmailMultiAlternatives(subject, text_content, sender, [email])
     msg.attach_alternative(html_content, "text/html")
     msg.send()
+
+def send_student_credentials(email, name, student_id, password):
+    send_account_credentials(email, name, student_id, password, role='student')
 
 @user_passes_test(is_admin_strictly, login_url='/')
 def create_student_manual(request):
@@ -4574,6 +4640,11 @@ def create_student_manual(request):
                 force_password_change=True,
                 organization=organization
             )
+            
+            try:
+                send_account_credentials(email, full_name, student_id, password, role='student', login_url=request.build_absolute_uri('/'))
+            except Exception:
+                pass
             
             return JsonResponse({'status': 'success', 'message': 'Student created successfully!'})
         except Exception as e:
@@ -4710,10 +4781,10 @@ def student_force_change_send_otp(request):
         subject = 'PUP UNISAN CAMS: Password Change Verification Code'
         text_content = f"Your verification code is: {otp_code}"
         from django.template.loader import render_to_string
-        html_content = render_to_string('emails/otp_email.html', {'otp': otp_code})
+        html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
         
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent to your email."})
@@ -4831,12 +4902,19 @@ def request_temporary_password_api(request):
             user = student.user
             name = student.full_name
             identifier = student.student_number
+            role = 'student'
         else:
             user = User.objects.filter(email__iexact=email).first()
             if not user:
                 return JsonResponse({"status": "error", "message": "No account found with this email."})
-            name = user.first_name or user.username
+            name = user.get_full_name() or user.first_name or user.username
             identifier = user.username
+            if user.is_staff and not user.is_superuser:
+                role = 'adviser'
+            elif OrgProfile.objects.filter(user=user).exists():
+                role = 'organizer'
+            else:
+                role = 'student'
             
         if not user:
             return JsonResponse({"status": "error", "message": "User not linked properly. Please contact admin."})
@@ -4857,9 +4935,13 @@ def request_temporary_password_api(request):
             if org:
                 org.force_password_change = True
                 org.save()
+            adv = AdviserProfile.objects.filter(user=user).first()
+            if adv:
+                adv.force_password_change = True
+                adv.save()
 
         try:
-            send_student_credentials(email, name, identifier, temp_password)
+            send_account_credentials(email, name, identifier, temp_password, role=role, login_url=request.build_absolute_uri('/'))
         except Exception as e:
             return JsonResponse({"status": "error", "message": f"Failed to send email: {str(e)}"})
             
@@ -4888,8 +4970,8 @@ def generate_student_password(request):
         text_content = f"Your password reset code is: {otp}"
         
         try:
-            html_content = render_to_string('emails/otp_email.html', {'otp': otp})
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email_address])
+            html_content = render_to_string('system_emails/otp_email.html', {'otp': otp})
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email_address])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({'status': 'success', 'message': 'Verification code sent to your email.'})
@@ -4919,8 +5001,8 @@ def generate_org_password_profile(request):
         text_content = f"Your password reset code is: {otp}"
         
         try:
-            html_content = render_to_string('emails/otp_email.html', {'otp': otp})
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email_address])
+            html_content = render_to_string('system_emails/otp_email.html', {'otp': otp})
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email_address])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({'status': 'success', 'message': 'Verification code sent to your email.'})
@@ -4971,10 +5053,10 @@ def adviser_force_change_send_otp(request):
         subject = 'PUP UNISAN CAMS: Password Change Verification Code'
         text_content = f"Your verification code is: {otp_code}"
         from django.template.loader import render_to_string
-        html_content = render_to_string('emails/otp_email.html', {'otp': otp_code})
+        html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
         
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, 'PUP UNISAN CAMS <pupuqcams2526@gmail.com>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent to your email."})
