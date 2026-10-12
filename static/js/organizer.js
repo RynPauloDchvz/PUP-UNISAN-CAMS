@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (type === 'alert') return 'text-red-600 dark:text-red-500';
                 if (type === 'event') {
                     if (status === 'Approved') return 'text-green-600 dark:text-green-500';
-                    if (status === 'Admin Approved') return 'text-blue-600 dark:text-blue-500';
+                    if (status === 'Admin Approved' || status === 'Adviser Approved') return 'text-blue-600 dark:text-blue-500';
                     if (status === 'Rejected') return 'text-red-600 dark:text-red-500';
                     return 'text-yellow-600 dark:text-yellow-500';
                 }
@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             getModalIconClass(type, status) {
                 if (type === 'event') {
                     if (status === 'Approved') return 'ph-fill ph-check-circle text-green-500';
-                    if (status === 'Admin Approved') return 'ph-fill ph-file-signature text-blue-500';
+                    if (status === 'Admin Approved' || status === 'Adviser Approved') return 'ph-fill ph-file-signature text-blue-500';
                     if (status === 'Rejected') return 'ph-fill ph-x-circle text-red-500';
                     return 'ph-fill ph-clock text-yellow-500';
                 }
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             getModalIconBgClass(type, status) {
                 if (type === 'event') {
                     if (status === 'Approved') return 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30';
-                    if (status === 'Admin Approved') return 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30';
+                    if (status === 'Admin Approved' || status === 'Adviser Approved') return 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30';
                     if (status === 'Rejected') return 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30';
                     return 'border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/30';
                 }
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
             getModalTitleClass(type, status) {
                 if (type === 'event') {
                     if (status === 'Approved') return 'text-green-600 dark:text-green-500';
-                    if (status === 'Admin Approved') return 'text-blue-600 dark:text-blue-500';
+                    if (status === 'Admin Approved' || status === 'Adviser Approved') return 'text-blue-600 dark:text-blue-500';
                     if (status === 'Rejected') return 'text-red-600 dark:text-red-500';
                     return 'text-yellow-600 dark:text-yellow-500';
                 }
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             getModalTitle(notif) {
                 if (notif.type === 'event') {
                     if (notif.status === 'Approved') return "Event Officially Published!";
-                    if (notif.status === 'Admin Approved') return "Initial Approval Granted!";
+                    if (notif.status === 'Admin Approved' || notif.status === 'Adviser Approved') return "Initial Approval Granted!";
                     if (notif.status === 'Rejected') return "Event Rejected";
                     return "Event Pending";
                 }
@@ -289,8 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             return `Congratulations! The Administration has verified your signed documents. Your event <strong>"${notif.title}"</strong> is now fully approved and published in the system. The countdown timer is now active for the students!`;
                         }
                     }
-                    if (notif.status === 'Admin Approved') {
-                        return `Great news! Your event proposal for <strong>"${notif.title}"</strong> has received initial approval.<br><br><span class="text-pup-maroon dark:text-pup-gold font-bold">ACTION REQUIRED:</span> Please print the documents, secure all necessary manual signatures, and upload both the <strong class="text-gray-900 dark:text-white">Signed Request Letter</strong> and <strong class="text-gray-900 dark:text-white">Permit to Conduct Activity</strong> in your Document Vault to finalize the publication.`;
+                    if (notif.status === 'Admin Approved' || notif.status === 'Adviser Approved') {
+                        return `Great news! Your event proposal for <strong>"${notif.title}"</strong> has received initial approval from your Adviser.<br><br><span class="text-pup-maroon dark:text-pup-gold font-bold">ACTION REQUIRED:</span> Please print the documents, secure all necessary manual signatures, and upload both the <strong class="text-gray-900 dark:text-white">Signed Request Letter</strong> and <strong class="text-gray-900 dark:text-white">Permit to Conduct Activity</strong> in your Document Vault to finalize the publication.`;
                     }
                     if (notif.status === 'Rejected') {
                         return `Unfortunately, your event proposal for <strong>"${notif.title}"</strong> was rejected. Please review the reason below.`;

@@ -304,17 +304,17 @@
                              data-remarks="{{ evt.remarks|default:'' }}"
                              class="notif-item bg-white dark:bg-[#151515] p-4 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-all flex items-center justify-between
                              {% if evt.event_status == 'Approved' %} border-green-200 dark:border-green-900/40 
-                             {% elif evt.event_status == 'Admin Approved' %} border-blue-200 dark:border-blue-900/40
+                             {% elif evt.event_status == 'Admin Approved' or evt.event_status == 'Adviser Approved' %} border-blue-200 dark:border-blue-900/40
                              {% elif evt.event_status == 'Rejected' %} border-red-200 dark:border-red-900/40 
                              {% else %} border-yellow-200 dark:border-yellow-900/40 {% endif %}">
                             <div class="flex items-center gap-4">
                                 <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0
                                      {% if evt.event_status == 'Approved' %} bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400
-                                     {% elif evt.event_status == 'Admin Approved' %} bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400
+                                     {% elif evt.event_status == 'Admin Approved' or evt.event_status == 'Adviser Approved' %} bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400
                                      {% elif evt.event_status == 'Rejected' %} bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400
                                      {% else %} bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400 {% endif %}">
                                     {% if evt.event_status == 'Approved' %} <i class="ph-bold ph-check-circle text-xl"></i>
-                                    {% elif evt.event_status == 'Admin Approved' %} <i class="ph-bold ph-file-signature text-xl"></i>
+                                    {% elif evt.event_status == 'Admin Approved' or evt.event_status == 'Adviser Approved' %} <i class="ph-bold ph-file-signature text-xl"></i>
                                     {% elif evt.event_status == 'Rejected' %} <i class="ph-bold ph-x-circle text-xl"></i>
                                     {% else %} <i class="ph-bold ph-clock text-xl"></i> {% endif %}
                                 </div>
@@ -322,7 +322,7 @@
                                     <h4 class="font-bold text-gray-900 dark:text-white text-sm sm:text-base">{{ evt.event_title }}</h4>
                                     <p class="text-xs font-bold 
                                         {% if evt.event_status == 'Approved' %}text-green-600 dark:text-green-500
-                                        {% elif evt.event_status == 'Admin Approved' %}text-blue-600 dark:text-blue-500
+                                        {% elif evt.event_status == 'Admin Approved' or evt.event_status == 'Adviser Approved' %}text-blue-600 dark:text-blue-500
                                         {% elif evt.event_status == 'Rejected' %}text-red-600 dark:text-red-500
                                         {% else %}text-yellow-600 dark:text-yellow-500{% endif %} uppercase tracking-wide mt-0.5">
                                         Status: {{ evt.event_status }}
@@ -536,12 +536,12 @@
             }
             reasonBox.classList.add('hidden');
         } 
-        else if(status === 'Admin Approved') {
+        else if(status === 'Admin Approved' || status === 'Adviser Approved') {
             icon.className = "w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 border-4 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 text-blue-500 text-4xl";
             icon.innerHTML = '<i class="ph-fill ph-file-signature"></i>';
             titleEl.innerText = "Initial Approval Granted!";
             titleEl.className = "text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-500 mb-2 uppercase tracking-wide";
-            bodyEl.innerHTML = `Great news! Your event proposal for <strong>"${title}"</strong> has received initial approval.<br><br><span class="text-pup-maroon dark:text-pup-gold font-bold">ACTION REQUIRED:</span> Please print the documents, secure all necessary manual signatures, and upload both the <strong class="text-gray-900 dark:text-white">Signed Request Letter</strong> and <strong class="text-gray-900 dark:text-white">Permit to Conduct Activity</strong> in your Document Vault to finalize the publication.`;
+            bodyEl.innerHTML = `Great news! Your event proposal for <strong>"${title}"</strong> has received initial approval from your Adviser.<br><br><span class="text-pup-maroon dark:text-pup-gold font-bold">ACTION REQUIRED:</span> Please print the documents, secure all necessary manual signatures, and upload both the <strong class="text-gray-900 dark:text-white">Signed Request Letter</strong> and <strong class="text-gray-900 dark:text-white">Permit to Conduct Activity</strong> in your Document Vault to finalize the publication.`;
             reasonBox.classList.add('hidden');
         }
         else if (status === 'Rejected') {

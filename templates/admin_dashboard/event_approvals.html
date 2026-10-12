@@ -768,12 +768,11 @@
                             <td style="font-weight: 800; color: var(--text-main);">[[ event.title ]]</td>
                             <td style="color: var(--text-muted); font-weight: 700; text-align: center; white-space: nowrap; font-size: 0.8rem;">[[ event.date ]]</td>
                             <td style="text-align: center;">
-                                <span v-if="event.status === 'PENDING ADMIN'" class="badge badge-pending"><i class="ph-bold ph-file-text"></i> Initial Clearance</span>
-                                <span v-else-if="event.status === 'FINAL ADMIN REVIEW'" class="badge badge-review"><i class="ph-bold ph-seal-check"></i> Final Publication</span>
+                                <span class="badge badge-review"><i class="ph-bold ph-seal-check"></i> Final Publication</span>
                             </td>
                             <td style="text-align: center;">
                                 <button @click="openModal(event, false, $event)" class="action-btn theme-action-btn" style="padding: 10px 20px;">
-                                    [[ event.status === 'FINAL ADMIN REVIEW' ? 'Final Approval' : 'Initial Review' ]]
+                                    Final Approval
                                 </button>
                             </td>
                         </tr>
@@ -800,8 +799,7 @@
                         <div class="mobile-card-info">
                             <div class="mobile-card-title">[[ event.title ]]</div>
                             <div>
-                                <span v-if="event.status === 'PENDING ADMIN'" class="badge badge-pending" style="font-size: 0.6rem; padding: 4px 6px; white-space: nowrap;"><i class="ph-bold ph-file-text"></i> Init Clear</span>
-                                <span v-else-if="event.status === 'FINAL ADMIN REVIEW'" class="badge badge-review" style="font-size: 0.6rem; padding: 4px 6px; white-space: nowrap;"><i class="ph-bold ph-seal-check"></i> Final Pub</span>
+                                <span class="badge badge-review" style="font-size: 0.6rem; padding: 4px 6px; white-space: nowrap;"><i class="ph-bold ph-seal-check"></i> Final Pub</span>
                             </div>
                         </div>
                     </div>
@@ -862,8 +860,7 @@
                         <h3 class="av-modal-title">
                             <i class="ph-bold ph-magnifying-glass-plus" style="color: var(--pup-maroon);"></i> 
                             <span v-if="isHistoryMode">Historical Event Record</span>
-                            <span v-else-if="selectedEvent.status === 'FINAL ADMIN REVIEW'">Final Document Verification</span>
-                            <span v-else>Initial Clearance Review</span>
+                            <span v-else>Final Document Verification</span>
                         </h3>
                         <button @click="closeModal" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 border border-gray-300 dark:border-gray-600/50"><i class="ph-bold ph-x text-lg"></i></button>
                     </div>
@@ -1090,41 +1087,13 @@
                             </transition>
                         </div>
 
-                        <!-- Remarks for Rejected Events -->
-                        <div v-if="selectedEvent.status === 'REJECTED'" class="readonly-box" style="border: 2px solid rgba(220, 53, 69, 0.3); background: rgba(220, 53, 69, 0.03); padding: 25px; border-radius: 15px;">
-                            <span class="form-label" style="color: var(--danger); font-size: 0.8rem;"><i class="ph-bold ph-warning-circle"></i> Admin Rejection Remarks</span>
-                            <p style="color: var(--danger); font-size: 1rem; margin: 10px 0 0 0; font-weight: 800; line-height: 1.5;">[[ selectedEvent.remarks || 'No detailed reason provided.' ]]</p>
-                        </div>
-
-                        <!-- Rejection Form -->
-                        <div v-if="isRejecting && !isHistoryMode" class="fade-in" style="background: rgba(220, 53, 69, 0.05); padding: 25px; border-radius: 15px; border: 2px solid rgba(220, 53, 69, 0.2);">
-                            <label class="form-label" style="color: var(--danger);"><i class="ph-bold ph-warning-circle"></i> Official Reason for Rejection (Required)</label>
-                            <textarea v-model="rejectReason" rows="4" class="form-input" placeholder="State the administrative or technical reason why this proposal cannot proceed..." style="resize: none; border-color: rgba(220, 53, 69, 0.3);"></textarea>
-                        </div>
-
                     </div>
 
                     <!-- MODAL FOOTERS -->
                     <div class="absolute bottom-0 left-0 w-full p-4 sm:p-5 bg-[var(--card-bg)]/90 backdrop-blur-md border-t border-[var(--border)] flex justify-end gap-2 sm:gap-3 font-sans z-30" v-if="!isHistoryMode">
-                        <template v-if="!isRejecting">
-                            <button class="flex-1 sm:flex-none px-4 sm:px-6 py-3 sm:py-2.5 bg-white/90 dark:bg-[#1a1a1a]/90 border border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/50 font-bold text-sm rounded-lg transition-colors disabled:opacity-50 shadow-sm" @click="initiateReject" :disabled="actionLoading">
-                                Reject Proposal
-                            </button>
-                            
-                            <button v-if="selectedEvent.status === 'PENDING ADMIN'" class="flex-1 sm:flex-none px-4 sm:px-6 py-3 sm:py-2.5 bg-[#16a34a]/90 text-white hover:bg-green-700 font-bold text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md" @click="approveEvent" :disabled="actionLoading">
-                                Grant Initial Clearance
-                            </button>
-                            <button v-else-if="selectedEvent.status === 'FINAL ADMIN REVIEW'" class="flex-1 sm:flex-none px-4 sm:px-6 py-3 sm:py-2.5 bg-[#16a34a]/90 text-white hover:bg-green-700 font-bold text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md" @click="approveEvent" :disabled="actionLoading">
-                                <i class="ph-bold ph-rocket-launch"></i> Fully Approve & Publish
-                            </button>
-                        </template>
-                        
-                        <template v-else-if="isRejecting">
-                            <button class="flex-1 sm:flex-none px-4 sm:px-6 py-3 sm:py-2.5 bg-gray-200/90 hover:bg-gray-300 dark:bg-gray-800/90 dark:hover:bg-gray-700 text-gray-800 dark:text-white font-bold text-sm rounded-lg transition-colors disabled:opacity-50 shadow-sm" @click="cancelReject" :disabled="actionLoading">Go Back</button>
-                            <button class="flex-1 sm:flex-none px-4 sm:px-6 py-3 sm:py-2.5 bg-red-600/90 hover:bg-red-700 text-white font-bold text-sm rounded-lg transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2" @click="confirmReject" :disabled="actionLoading">
-                                <i class="ph-bold ph-paper-plane-right"></i> Confirm Rejection
-                            </button>
-                        </template>
+                        <button class="flex-1 sm:flex-none px-4 sm:px-6 py-3 sm:py-2.5 bg-[#16a34a]/90 text-white hover:bg-green-700 font-bold text-sm rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md" @click="approveEvent" :disabled="actionLoading">
+                            <i class="ph-bold ph-rocket-launch"></i> Fully Approve & Publish
+                        </button>
                     </div>
 
 
@@ -1288,12 +1257,9 @@
             const statusOptions = [
                 { value: 'All', label: 'All Transactions' },
                 { value: 'PENDING ADVISER', label: 'Waiting for Adviser' },
-                { value: 'PENDING ADMIN', label: 'Initial Admin Review' },
-                { value: 'ADMIN APPROVED', label: 'Gathering Signatures' },
-                { value: 'PERMIT VERIFICATION', label: 'Permit Verification' },
+                { value: 'ADVISER APPROVED', label: 'Gathering Signatures' },
                 { value: 'FINAL ADMIN REVIEW', label: 'Final Admin Review' },
-                { value: 'APPROVED', label: 'Published (Approved)' },
-                { value: 'REJECTED', label: 'Rejected' }
+                { value: 'APPROVED', label: 'Published (Approved)' }
             ];
 
             const histOrgLabel = computed(() => orgOptions.find(o => o.value === histOrg.value)?.label || 'All Organizations');
@@ -1741,18 +1707,14 @@
                         } else {
                             let updatedEvent = { ...selectedEvent.value };
                             if(status === 'approve') {
-                                if (selectedEvent.value.status === 'FINAL ADMIN REVIEW') {
-                                    updatedEvent.status = 'APPROVED';
-                                } else {
-                                    updatedEvent.status = 'ADMIN APPROVED';
-                                }
+                                updatedEvent.status = 'APPROVED';
                             } else if(status === 'reject') {
                                 updatedEvent.status = 'REJECTED';
                                 updatedEvent.remarks = payloadData.remarks;
                             }
                             
                             // Remove from pending if it moved out of Admin states
-                            if (updatedEvent.status === 'REJECTED' || updatedEvent.status === 'ADMIN APPROVED' || updatedEvent.status === 'APPROVED') {
+                            if (updatedEvent.status === 'REJECTED' || updatedEvent.status === 'APPROVED') {
                                 pendingEvents.value = pendingEvents.value.filter(e => e.id !== selectedEvent.value.id);
                             }
                             

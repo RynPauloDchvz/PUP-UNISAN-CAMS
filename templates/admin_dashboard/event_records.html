@@ -796,7 +796,7 @@
                         <div class="custom-dd history-dd" :class="{ 'is-open': isStatusDropdownOpen }">
                             <div class="custom-dd-header" @click="toggleStatusDropdown">
                                 <span class="hide-on-mobile">[[ histStatusLabel ]]</span>
-                                <span class="show-on-mobile" style="display: none;">[[ histStatusLabel === 'All Transactions' ? 'All Transac' : histStatusLabel ]]</span>
+                                <span class="show-on-mobile" style="display: none;">[[ histStatusLabel === 'All Records' ? 'All Records' : histStatusLabel ]]</span>
                                 <i class="ph-bold ph-caret-down" style="transition: 0.3s;"></i>
                             </div>
                             <div class="custom-dd-content">
@@ -834,7 +834,7 @@
                                 <div v-else>
                                     <i class="ph-fill ph-folder-open" style="font-size: 4rem; opacity: 0.2; display: block; margin-bottom: 15px;"></i>
                                     <span style="font-weight: 500; font-size: 0.95rem; color: var(--text-main); display: block; margin-bottom: 5px;">No campus event records found.</span>
-                                    <span style="font-size: 0.85rem; font-weight: 500;">There are no completed or rejected events logged in the system.</span>
+                                    <span style="font-size: 0.85rem; font-weight: 500;">There are no completed events logged in the system.</span>
                                 </div>
                             </td>
                         </tr>
@@ -854,7 +854,7 @@
                             </td>
                             <td style="text-align: center;">
                                 <span v-if="event.status === 'APPROVED'" class="badge badge-approved"><i class="ph-bold ph-check-circle"></i> Published</span>
-                                <span v-else-if="event.status === 'REJECTED'" class="badge badge-rejected"><i class="ph-bold ph-x-circle"></i> Rejected</span>
+                                <span v-else-if="event.status === 'FINAL ADMIN REVIEW'" class="badge" style="background: rgba(0, 123, 255, 0.1); color: #007bff; border-color: rgba(0, 123, 255, 0.3);"><i class="ph-bold ph-seal-check"></i> Final Admin Review</span>
                                 <span v-else class="badge badge-pending" style="color: #6c757d; border-color: #6c757d;"><i class="ph-bold ph-clock"></i> [[ event.status ]]</span>
                             </td>
                             <td style="text-align: center;">
@@ -887,7 +887,7 @@
                             <div class="mobile-card-title">[[ event.title ]]</div>
                             <div>
                                 <span v-if="event.status === 'APPROVED'" class="badge badge-approved" style="font-size: 0.6rem; padding: 4px 6px; white-space: nowrap;"><i class="ph-bold ph-check-circle"></i> Published</span>
-                                <span v-else-if="event.status === 'REJECTED'" class="badge badge-rejected" style="font-size: 0.6rem; padding: 4px 6px; white-space: nowrap;"><i class="ph-bold ph-x-circle"></i> Rejected</span>
+                                <span v-else-if="event.status === 'FINAL ADMIN REVIEW'" class="badge" style="background: rgba(0, 123, 255, 0.1); color: #007bff; border-color: rgba(0, 123, 255, 0.3); font-size: 0.6rem; padding: 4px 6px; white-space: nowrap;"><i class="ph-bold ph-seal-check"></i> Final Review</span>
                                 <span v-else class="badge badge-pending" style="color: #6c757d; border-color: #6c757d; font-size: 0.6rem; padding: 4px 6px; white-space: nowrap;"><i class="ph-bold ph-clock"></i> [[ event.status ]]</span>
                             </div>
                         </div>
@@ -948,8 +948,7 @@
                         <h3 class="av-modal-title">
                             <i class="ph-bold ph-magnifying-glass-plus" style="color: var(--pup-maroon);"></i> 
                             <span v-if="isHistoryMode">Historical Event Record</span>
-                            <span v-else-if="selectedEvent.status === 'FINAL ADMIN REVIEW'">Final Document Verification</span>
-                            <span v-else>Initial Clearance Review</span>
+                            <span v-else>Final Document Verification</span>
                         </h3>
                         <button @click="closeModal" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 border border-gray-300 dark:border-gray-600/50"><i class="ph-bold ph-x text-lg"></i></button>
                     </div>
@@ -987,7 +986,7 @@
                         </div>
 
                         <!-- 📂 UPLOADED DOCUMENT TABS 📂 -->
-                        <div v-if="selectedEvent.status === 'FINAL ADMIN REVIEW' || (isHistoryMode && selectedEvent.status !== 'REJECTED' && selectedEvent.letter_url)" class="flex flex-col gap-4 animate-fade-in w-full mb-6">
+                        <div v-if="activeDocs && activeDocs.length > 0" class="flex flex-col gap-4 animate-fade-in w-full mb-6">
                             
                             <!-- Desktop Segmented Tab Switches (Hidden on Mobile) -->
                             <div class="hidden sm:flex relative p-1 bg-gray-200/80 dark:bg-gray-800/80 rounded-xl shrink-0">
@@ -1038,179 +1037,18 @@
                             </div>
                         </div>
 
-                        <!-- Segmented Tab Switches for Generated Letters -->
-                        <div v-if="parsedDescription.type !== 'reschedule' && !selectedEvent.letter_url && selectedEvent.status !== 'REJECTED'" class="flex relative p-1 bg-gray-200/80 dark:bg-gray-800/80 rounded-xl shrink-0 mt-2 mb-2">
-                            <!-- Sliding pill background wrapper -->
-                            <div class="absolute inset-y-1 left-1 right-1 flex pointer-events-none">
-                                <div class="h-full bg-white dark:bg-pup-darkcard rounded-lg shadow-sm transition-all duration-300 ease-out"
-                                     :style="{ width: '50%', transform: activeTab === 'main' ? 'translateX(0)' : 'translateX(100%)' }"></div>
-                            </div>
-                            
-                            <button @click="activeTab = 'main'"
-                                    :class="['relative z-10 flex-1 px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-bold capitalize transition-colors duration-300',
-                                            activeTab === 'main' ? 'text-pup-maroon dark:text-pup-gold' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white']">
-                                Request Letter
-                            </button>
-                            <button @click="activeTab = 'excuse'"
-                                    :class="['relative z-10 flex-1 px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-bold capitalize transition-colors duration-300',
-                                            activeTab === 'excuse' ? 'text-pup-maroon dark:text-pup-gold' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white']">
-                                Excuse & Equipment
-                            </button>
-                        </div>
-
-                        <!-- 📜 OFFICIAL LETTER PREVIEW 📜 -->
-                        <div v-if="!selectedEvent.letter_url && selectedEvent.status !== 'REJECTED'" class="letter-preview fade-in">
-                            <transition name="fade-slide" mode="out-in">
-                                <!-- Main / Reschedule Letter Content -->
-                                <div v-if="activeTab === 'main'" key="main">
-                                    <p style="margin-bottom: 25px; font-weight: bold;">[[ selectedEvent.date ]]</p>
-                                    
-                                    <p style="margin-bottom: 25px; line-height: 1.2;">
-                                        <strong>Dr. EDWIN G. MALABUYOC</strong><br>
-                                        Director<br>
-                                        PUP Unisan Campus
-                                    </p>
-
-                                    <p style="margin-bottom: 25px; line-height: 1.2;">
-                                        Thru/Attn: &nbsp; &nbsp;<strong>ANNABEL S. JANORAS</strong><br>
-                                        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Head of Students Services<br>
-                                        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;PUP Unisan Campus
-                                    </p>
-
-                                    <div v-if="parsedDescription">
-                                        <!-- STANDARD / NEW EVENT -->
-                                        <div v-if="parsedDescription.type === 'standard' || parsedDescription.type === 'new_event'">
-                                            <p style="margin-bottom: 25px;">
-                                                Re: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>Approval of Organizational Student Activity</strong>
-                                            </p>
-                                            <p style="margin-bottom: 15px;">Dear <strong>Dr. Malabuyoc</strong>:</p>
-                                            <p style="margin-bottom: 15px;">Greetings!</p>
-                                            <p style="margin-bottom: 15px; text-align: justify; text-indent: 40px;">
-                                                To comply with the commitment to UPHOLD E2E Program: Upscaling Holistic Development from Enrollment to Employment, the <strong>[[ selectedEvent.full_org ]]</strong> will be conducting an activity entitled <strong>"[[ selectedEvent.title ]]"</strong>. [[ parsedDescription.originalDesc ]]
-                                            </p>
-                                            <p style="margin-bottom: 30px; text-align: justify; text-indent: 40px;">
-                                                The activity is scheduled for <strong>[[ selectedEvent.date ]]</strong>, <strong>[[ selectedEvent.time ]]</strong> to <strong>[[ selectedEvent.end_time || '(End Time)' ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>.
-                                            </p>
-                                        </div>
-
-                                        <!-- RESCHEDULE LETTER -->
-                                        <div v-if="parsedDescription.type === 'reschedule'">
-                                            <p style="margin-bottom: 25px;">
-                                                Re: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>Scheduling of Organizational Student Activity</strong>
-                                            </p>
-                                            <p style="margin-bottom: 15px;">Dear <strong>Dr. Malabuyoc</strong>:</p>
-                                            <p style="margin-bottom: 15px;">Greetings!</p>
-                                            <p style="margin-bottom: 15px; text-align: justify; text-indent: 40px;">
-                                                We hope this letter finds you well. <strong>[[ selectedEvent.full_org ]]</strong> respectfully requests a rescheduling of our upcoming event entitled <strong>"[[ selectedEvent.title ]]"</strong>. The event was originally set for <strong>[[ parsedDescription.origDate || '(Original Date)' ]]</strong>.
-                                            </p>
-                                            <p style="margin-bottom: 15px; text-align: justify; text-indent: 40px;">
-                                                We propose moving the event to <strong>[[ selectedEvent.date ]]</strong>, from <strong>[[ selectedEvent.time ]] to [[ selectedEvent.end_time || '(End Time)' ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>.
-                                            </p>
-                                            <p style="margin-bottom: 30px; text-align: justify; text-indent: 40px;">
-                                                This request is made due to [[ parsedDescription.reason ]]. [[ parsedDescription.originalDesc ]]
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <p style="margin-bottom: 35px;">Thank you for your kind consideration and usual support.</p>
-                                    <p style="margin-bottom: 30px;">Respectfully yours,</p>
-
-                                    <div style="margin-bottom: 30px;">
-                                        <p style="margin: 0; font-weight: bold; text-transform: uppercase;">[[ selectedEvent.requester_name || '(Requester Name)' ]]</p>
-                                        <p style="margin: 0;">[[ selectedEvent.org ]] President</p>
-                                    </div>
-
-                                    <div>
-                                        <p style="margin-bottom: 10px;">Noted by:</p>
-                                        <p style="margin: 0; font-weight: bold; text-transform: uppercase;">[[ selectedEvent.adviser_name || '(Adviser Name)' ]]</p>
-                                        <p style="margin: 0;">[[ selectedEvent.org ]] Adviser</p>
-                                    </div>
-                                </div>
-
-                                <!-- Excuse & Equipment Tab -->
-                                <div v-else-if="activeTab === 'excuse'" key="excuse">
-                                    <p style="margin-bottom: 25px; font-weight: bold;">[[ selectedEvent.date ]]</p>
-                                    
-                                    <p style="margin-bottom: 25px; line-height: 1.2;">
-                                        <strong>Dr. EDWIN G. MALABUYOC</strong><br>
-                                        Director<br>
-                                        PUP Unisan Campus
-                                    </p>
-
-                                    <p style="margin-bottom: 25px; line-height: 1.2;">
-                                        Thru/Attn: &nbsp; &nbsp;<strong>ANNABEL S. JANORAS</strong><br>
-                                        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Head of Students Services<br>
-                                        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;PUP Unisan Campus
-                                    </p>
-
-                                    <p style="margin-bottom: 25px;">
-                                        Re: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>Excuse and Request Usage of Equipment/Facility</strong>
-                                    </p>
-                                    <p style="margin-bottom: 15px;">Dear <strong>Dr. Malabuyoc</strong>:</p>
-                                    <p style="margin-bottom: 15px;">Greetings!</p>
-                                    
-                                    <p style="margin-bottom: 15px; text-align: justify; text-indent: 40px;">
-                                        The <strong>[[ selectedEvent.full_org ]]</strong> is organizing an event entitled <strong>"[[ selectedEvent.title ]]"</strong> on <strong>[[ selectedEvent.date ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>. 
-                                    </p>
-                                    <p style="margin-bottom: 15px; text-align: justify; text-indent: 40px;" v-if="parsedDescription.type === 'new_event'">
-                                        We respectfully request the excusal of <strong>[[ parsedDescription.target || 'all affected students' ]]</strong> whose classes will be affected, and we also request usage of the aforementioned facility, together with <strong>[[ parsedDescription.equipment || 'the necessary equipment' ]]</strong>.
-                                    </p>
-                                    <p style="margin-bottom: 30px; text-align: justify; text-indent: 40px;" v-else>
-                                        We respectfully request the usage of the facility and aforementioned equipment for the success of this event.
-                                    </p>
-                                    
-                                    <p style="margin-bottom: 35px;">We look forward to your response. Thank you for your kind consideration and usual support!</p>
-                                    <p style="margin-bottom: 30px;">Respectfully yours,</p>
-
-                                    <div style="margin-bottom: 30px;">
-                                        <p style="margin: 0; font-weight: bold; text-transform: uppercase;">[[ selectedEvent.requester_name || '(Requester Name)' ]]</p>
-                                        <p style="margin: 0;">[[ selectedEvent.org ]] President</p>
-                                    </div>
-
-                                    <div>
-                                        <p style="margin-bottom: 10px;">Noted by:</p>
-                                        <p style="margin: 0; font-weight: bold; text-transform: uppercase;">[[ selectedEvent.adviser_name || '(Adviser Name)' ]]</p>
-                                        <p style="margin: 0;">[[ selectedEvent.org ]] Adviser</p>
-                                    </div>
-                                </div>
-                            </transition>
-                        </div>
-
-                        <!-- Remarks for Rejected Events -->
-                        <div v-if="selectedEvent.status === 'REJECTED'" class="readonly-box" style="border: 2px solid rgba(220, 53, 69, 0.3); background: rgba(220, 53, 69, 0.03); padding: 25px; border-radius: 15px;">
-                            <span class="form-label" style="color: var(--danger); font-size: 0.8rem;"><i class="ph-bold ph-warning-circle"></i> Admin Rejection Remarks</span>
-                            <p style="color: var(--danger); font-size: 1rem; margin: 10px 0 0 0; font-weight: 800; line-height: 1.5;">[[ selectedEvent.remarks || 'No detailed reason provided.' ]]</p>
-                        </div>
-
-                        <!-- Rejection Form -->
-                        <div v-if="isRejecting && !isHistoryMode" class="fade-in" style="background: rgba(220, 53, 69, 0.05); padding: 25px; border-radius: 15px; border: 2px solid rgba(220, 53, 69, 0.2);">
-                            <label class="form-label" style="color: var(--danger);"><i class="ph-bold ph-warning-circle"></i> Official Reason for Rejection (Required)</label>
-                            <textarea v-model="rejectReason" rows="4" class="form-input" placeholder="State the administrative or technical reason why this proposal cannot proceed..." style="resize: none; border-color: rgba(220, 53, 69, 0.3);"></textarea>
+                        <div v-else class="text-center py-20 bg-[var(--input-bg)] border border-[var(--border)] rounded-2xl">
+                            <i class="ph-fill ph-files text-5xl text-gray-400 mb-3 block"></i>
+                            <span class="text-sm font-bold text-gray-500 uppercase tracking-wider">No uploaded documents found for this record</span>
                         </div>
 
                     </div>
 
                     <!-- MODAL FOOTERS -->
-                    <div class="av-modal-footer" v-if="!isHistoryMode">
-                        <template v-if="!isRejecting">
-                            <button class="btn-large btn-reject" @click="initiateReject" :disabled="actionLoading">
-                                Reject Proposal
-                            </button>
-                            
-                            <button v-if="selectedEvent.status === 'PENDING ADMIN'" class="btn-large btn-approve" @click="approveEvent" :disabled="actionLoading">
-                                Grant Initial Clearance
-                            </button>
-                            <button v-else-if="selectedEvent.status === 'FINAL ADMIN REVIEW'" class="btn-large btn-approve" @click="approveEvent" :disabled="actionLoading">
-                                <i class="ph-bold ph-rocket-launch"></i> Fully Approve & Publish
-                            </button>
-                        </template>
-                        
-                        <template v-else-if="isRejecting">
-                            <button class="btn-large" style="background: var(--input-bg); border: 1px solid var(--border); color: var(--text-main);" @click="cancelReject" :disabled="actionLoading">Go Back</button>
-                            <button class="btn-large" style="background: var(--danger); color: white; border: none;" @click="confirmReject" :disabled="actionLoading">
-                                <i class="ph-bold ph-paper-plane-right"></i> Confirm Rejection
-                            </button>
-                        </template>
+                    <div class="av-modal-footer" v-if="!isHistoryMode && selectedEvent.status === 'FINAL ADMIN REVIEW'">
+                        <button class="btn-large btn-approve" @click="approveEvent" :disabled="actionLoading">
+                            <i class="ph-bold ph-rocket-launch"></i> Fully Approve & Publish
+                        </button>
                     </div>
 
 
@@ -1315,18 +1153,13 @@
             ];
 
             const statusOptions = [
-                { value: 'All', label: 'All Transactions' },
-                { value: 'PENDING ADVISER', label: 'Waiting for Adviser' },
-                { value: 'PENDING ADMIN', label: 'Initial Admin Review' },
-                { value: 'ADMIN APPROVED', label: 'Gathering Signatures' },
-                { value: 'PERMIT VERIFICATION', label: 'Permit Verification' },
+                { value: 'All', label: 'All Records' },
                 { value: 'FINAL ADMIN REVIEW', label: 'Final Admin Review' },
-                { value: 'APPROVED', label: 'Published (Approved)' },
-                { value: 'REJECTED', label: 'Rejected' }
+                { value: 'APPROVED', label: 'Published (Approved)' }
             ];
 
             const histOrgLabel = computed(() => orgOptions.find(o => o.value === histOrg.value)?.label || 'All Organizations');
-            const histStatusLabel = computed(() => statusOptions.find(o => o.value === histStatus.value)?.label || 'All Transactions');
+            const histStatusLabel = computed(() => statusOptions.find(o => o.value === histStatus.value)?.label || 'All Records');
 
             const toggleOrgDropdown = () => {
                 isOrgDropdownOpen.value = !isOrgDropdownOpen.value;

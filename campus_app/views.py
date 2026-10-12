@@ -1735,7 +1735,7 @@ def organizer_create_events(request):
             loc = "Office of the Admin (Initial Clearance)"
             coords = ADMIN_COORDS
             progress = 2 
-        elif e.event_status == 'Admin Approved':
+        elif e.event_status in ['Admin Approved', 'Adviser Approved']:
             loc = "Student Organization Office (Gathering Signatures)"
             coords = HUB_COORDS
             progress = 3 
@@ -2680,7 +2680,7 @@ def organizer_document_tracking(request):
             loc = "Office of the Admin (Initial Clearance)"
             coords = ADMIN_COORDS
             progress = 2 
-        elif e.event_status == 'Admin Approved':
+        elif e.event_status in ['Admin Approved', 'Adviser Approved']:
             loc = "Student Organization Office (Gathering Signatures)"
             coords = HUB_COORDS
             progress = 3 
@@ -2744,7 +2744,7 @@ def organizer_event_vault(request):
     except OrgProfile.DoesNotExist:
         org_acronym = "UNKNOWN"
     
-    pending_events = Event.objects.filter(org_id=org_acronym, event_status='Admin Approved').order_by('-id')
+    pending_events = Event.objects.filter(org_id=org_acronym, event_status__in=['Admin Approved', 'Adviser Approved']).order_by('-id')
     pending_data = []
     for e in pending_events:
         # Detect mode if not set
@@ -2812,7 +2812,8 @@ def upload_signed_permit(request):
             org_acronym = org_profile.organization.strip()
             
             event = Event.objects.get(id=event_id, org_id=org_acronym)
-            event.event_status = 'Permit Verification' 
+            event.event_status = 'Final Admin Review' 
+            event.current_location = "Office of the Admin (Final Clearance)"
             
             if requirement_mode:
                 event.requirement_mode = int(requirement_mode)
@@ -2988,8 +2989,8 @@ def organizer_feedback_detail(request):
 # ==========================================
 @user_passes_test(is_admin_strictly, login_url='/admin/login/')
 def event_approvals_view(request): 
-    # PENDING EVENTS (Action Required)
-    pending = Event.objects.filter(event_status__in=['Pending Admin', 'Final Admin Review']).exclude(is_flag_raising=True).order_by('-created_at')
+    # PENDING EVENTS (Action Required - Final Admin Review only)
+    pending = Event.objects.filter(event_status='Final Admin Review').exclude(is_flag_raising=True).order_by('-created_at')
     pending_data = []
     for e in pending:
         full_org_name = ORG_FULL_NAMES.get(e.org_id, e.org_id)
@@ -3082,7 +3083,9 @@ def event_history_view(request):
 
 @user_passes_test(is_admin_strictly, login_url='/admin/login/')
 def event_records_view(request):
-    history = Event.objects.exclude(is_flag_raising=True).order_by('-created_at')
+    history = Event.objects.filter(
+        Q(event_status__iexact='Final Admin Review') | Q(event_status__iexact='Approved')
+    ).exclude(is_flag_raising=True).order_by('-created_at')
     history_data = []
     for e in history:
         att_count = Attendance.objects.filter(event=e).count()
@@ -3421,75 +3424,65 @@ def admin_api_action(request):
             event = Event.objects.get(id=data.get('event_id'))
             
             if data.get('action') == 'approve':
-                if event.event_status == 'Pending Admin':
-                    event.event_status = 'Admin Approved' 
-                    event.current_location = "With Student Org (For Signatures)"
-                    message = "Initial Approval granted! Student Org must now upload signed permits."
-                elif event.event_status == 'Final Admin Review':
-                    event.event_status = 'Approved' 
-                    event.current_location = "System Published"
-                    
-                    if data.get('event_date'): event.event_date = data.get('event_date')
-                    if data.get('event_time'): event.start_time = data.get('event_time')
-                    
-                    event.save() # Save before potentially swapping
+                event.event_status = 'Approved' 
+                event.current_location = "System Published"
+                message = "Signatures verified! Event has been fully approved and published with countdown!"
+                
+                if data.get('event_date'): event.event_date = data.get('event_date')
+                if data.get('event_time'): event.start_time = data.get('event_time')
+                
+                event.save() # Save before potentially swapping
 
-                    # 🟢 MAGIC SWAP LOGIC FOR RESCHEDULING 🟢
-                    # Check if this is a reschedule by parsing the description for 'OrigID:'
-                    desc = event.description or ""
-                    is_reschedule = "[RESCHEDULE]" in desc and "OrigID:" in desc
-                    final_event_to_announce = event
+                # 🟢 MAGIC SWAP LOGIC FOR RESCHEDULING 🟢
+                # Check if this is a reschedule by parsing the description for 'OrigID:'
+                desc = event.description or ""
+                is_reschedule = "[RESCHEDULE]" in desc and "OrigID:" in desc
+                final_event_to_announce = event
 
-                    if is_reschedule:
-                        try:
-                            # Extract Original ID (e.g., ... | OrigID: 123 | ...)
-                            orig_id_str = desc.split("OrigID:")[1].split("|")[0].strip()
-                            orig_event = Event.objects.get(id=int(orig_id_str))
-                            
-                            # 1. Update the Original Event with new info
-                            orig_event.event_date = event.event_date
-                            orig_event.start_time = event.start_time
-                            orig_event.end_time = event.end_time
-                            orig_event.venue = event.venue
-                            
-                            # Update metadata if needed (copy cover photo if new one was uploaded)
-                            if event.reschedule_cover_photo:
-                                orig_event.event_cover_photo = event.reschedule_cover_photo
-                            
-                            orig_event.save()
-                            
-                            # 2. Redirect announcements to the original event
-                            final_event_to_announce = orig_event
-                            
-                            # 3. DELETE the reschedule proposal record to avoid duplicates
-                            # (Wait until after email sending to be safe with references)
-                            reschedule_proposal_id = event.id
-                            
-                            message = f"Reschedule approved! '{orig_event.event_title}' has been updated to {orig_event.event_date.strftime('%B %d')}."
-                        except Exception as swap_err:
-                            print(f"Swap Error: {swap_err}")
-                            # Fallback: Just approve the new one if swap fails
+                if is_reschedule:
+                    try:
+                        # Extract Original ID (e.g., ... | OrigID: 123 | ...)
+                        orig_id_str = desc.split("OrigID:")[1].split("|")[0].strip()
+                        orig_event = Event.objects.get(id=int(orig_id_str))
+                        
+                        # 1. Update the Original Event with new info
+                        orig_event.event_date = event.event_date
+                        orig_event.start_time = event.start_time
+                        orig_event.end_time = event.end_time
+                        orig_event.venue = event.venue
+                        
+                        # Update metadata if needed (copy cover photo if new one was uploaded)
+                        if event.reschedule_cover_photo:
+                            orig_event.event_cover_photo = event.reschedule_cover_photo
+                        
+                        orig_event.save()
+                        
+                        # 2. Redirect announcements to the original event
+                        final_event_to_announce = orig_event
+                        
+                        # 3. DELETE the reschedule proposal record to avoid duplicates
+                        # (Wait until after email sending to be safe with references)
+                        reschedule_proposal_id = event.id
+                        
+                        message = f"Reschedule approved! '{orig_event.event_title}' has been updated to {orig_event.event_date.strftime('%B %d')}."
+                    except Exception as swap_err:
+                        print(f"Swap Error: {swap_err}")
+                        # Fallback: Just approve the new one if swap fails
 
-                    # 🟢 SEND EVENT ALERT TO ALL STUDENTS OF THE ORG
-                    students = Student.objects.filter(organization__iexact=final_event_to_announce.org_id, is_verified=True, email_notifications=True)
-                    for s in students:
-                        send_student_email(s, 'event_alert', {
-                            'event_title': final_event_to_announce.event_title,
-                            'org_name': ORG_FULL_NAMES.get(final_event_to_announce.org_id, final_event_to_announce.org_id),
-                            'event_date': final_event_to_announce.event_date.strftime('%B %d, %Y'),
-                            'start_time': final_event_to_announce.start_time.strftime('%I:%M %p'),
-                            'venue': final_event_to_announce.venue
-                        })
+                # 🟢 SEND EVENT ALERT TO ALL STUDENTS OF THE ORG
+                students = Student.objects.filter(organization__iexact=final_event_to_announce.org_id, is_verified=True, email_notifications=True)
+                for s in students:
+                    send_student_email(s, 'event_alert', {
+                        'event_title': final_event_to_announce.event_title,
+                        'org_name': ORG_FULL_NAMES.get(final_event_to_announce.org_id, final_event_to_announce.org_id),
+                        'event_date': final_event_to_announce.event_date.strftime('%B %d, %Y'),
+                        'start_time': final_event_to_announce.start_time.strftime('%I:%M %p'),
+                        'venue': final_event_to_announce.venue
+                    })
 
-                    # Cleanup if swap happened
-                    if is_reschedule and 'reschedule_proposal_id' in locals():
-                         Event.objects.filter(id=reschedule_proposal_id).delete()
-
-                    if not is_reschedule:
-                        message = "Signatures verified! Event has been fully approved and published with countdown!"
-                else:
-                    event.event_status = 'Approved'
-                    message = "Event approved."
+                # Cleanup if swap happened
+                if is_reschedule and 'reschedule_proposal_id' in locals():
+                     Event.objects.filter(id=reschedule_proposal_id).delete()
 
                 event.save()
                 return JsonResponse({"status": "success", "message": message})
@@ -3518,7 +3511,7 @@ def get_all_admin_notifications():
     
     # 1. Events pending Admin actions
     try:
-        pending_events = Event.objects.filter(event_status__in=['Pending Admin', 'Final Admin Review']).order_by('-id')
+        pending_events = Event.objects.filter(event_status='Final Admin Review').order_by('-id')
         for e in pending_events:
             dt = getattr(e, 'created_at', None) or now
             
@@ -3526,12 +3519,8 @@ def get_all_admin_notifications():
             full_org_name = ORG_FULL_NAMES.get(e.org_id, e.org_id)
             org_display = full_org_name
             
-            if e.event_status == 'Pending Admin':
-                title = "New Event Proposal"
-                msg = f"Good day Admin, {e.requester_name or 'an Organizer'} from {org_display} has submitted the event '{e.event_title}' for Initial Admin Clearance. Please review the proposal."
-            else:
-                title = "Final Review Request"
-                msg = f"Good day Admin, {e.requester_name or 'an Organizer'} from {org_display} has uploaded the signed permits for '{e.event_title}'. It is now awaiting Final Admin Review."
+            title = "Final Review Request"
+            msg = f"Good day Admin, {e.requester_name or 'an Organizer'} from {org_display} has uploaded the signed permits for '{e.event_title}'. It is now awaiting Final Admin Review."
                 
             org_profile = OrgProfile.objects.filter(organization=e.org_id).first()
             avatar_url = org_profile.profile_picture.url if (org_profile and org_profile.profile_picture) else f"https://ui-avatars.com/api/?name={e.org_id}&background=800000&color=fff"
@@ -4269,16 +4258,17 @@ def adviser_api_action(request):
             if action == 'approve':
                 old_status = event.event_status
                 if event.event_status == 'Pending Adviser':
-                    event.event_status = 'Pending Admin'
-                    event.current_location = "Admin Office"
-                    message = "Forwarded to Administration for initial review."
+                    event.event_status = 'Adviser Approved'
+                    event.current_location = "Student Organization Office (Gathering Signatures)"
+                    message = "Proposal approved by Adviser! You may now print your Event Letter, proceed with physical routing, and upload your signed documents."
                 elif event.event_status == 'Permit Verification':
                     event.event_status = 'Final Admin Review'
                     event.current_location = "Admin Office (Final Clearance)"
                     message = "Uploaded signatures verified. Forwarded to Admin for final approval."
                 else:
-                    event.event_status = 'Pending Admin'
-                    message = "Forwarded."
+                    event.event_status = 'Adviser Approved'
+                    event.current_location = "Student Organization Office (Gathering Signatures)"
+                    message = "Proposal approved by Adviser."
 
                 event.save()
                 
@@ -4403,7 +4393,7 @@ def admin_dashboard(request):
     """
     # 1. Stats Grid Data
     total_events = Event.objects.exclude(is_flag_raising=True).count()
-    pending_approval = Event.objects.filter(event_status__in=['Pending Admin', 'Final Admin Review']).exclude(is_flag_raising=True).count()
+    pending_approval = Event.objects.filter(event_status='Final Admin Review').exclude(is_flag_raising=True).count()
     active_orgs = OrgProfile.objects.count()
     engaged_students = Student.objects.filter(is_verified=True).count()
     total_attendances = Attendance.objects.count()

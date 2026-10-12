@@ -40,6 +40,7 @@ class Event(models.Model):
         ('Pending Adviser', 'Pending Adviser Approval'),
         ('Pending Admin', 'Pending Admin Initial Clearance'),
         ('Admin Approved', 'Admin Approved (Awaiting Documents)'),
+        ('Adviser Approved', 'Adviser Approved (Awaiting Documents)'),
         ('Permit Verification', 'Permit Verification (Adviser)'),
         ('Final Admin Review', 'Final Admin Review'),
         ('Approved', 'Approved / Published'),
