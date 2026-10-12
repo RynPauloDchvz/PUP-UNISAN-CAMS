@@ -4,15 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Hindi Matagpuan ang Pahina | PUP UNISAN CAMS</title>
+    <title>404 - Page Not Found | PUP UNISAN CAMS</title>
     
-    <link rel="icon" type="image/png" href="{% static 'images/loading_icon.png' %}">
+    <link id="cams-favicon" rel="icon" type="image/png" href="{% static 'images/loading_icon.png' %}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
-        // Automatic Device Dark/Light Theme Sync
+        // Automatic Device Dark/Light Theme Detection
         function applySystemTheme() {
             if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 document.documentElement.classList.add('dark');
@@ -23,6 +23,20 @@
         applySystemTheme();
         if (window.matchMedia) {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystemTheme);
+        }
+
+        // Direct browser file:/// preview fallback (avoids net::ERR_FILE_NOT_FOUND when opened without Django)
+        if (window.location.protocol === 'file:') {
+            document.addEventListener('DOMContentLoaded', function() {
+                var logo = document.getElementById('cams-logo');
+                if (logo && (!logo.complete || logo.naturalWidth === 0 || logo.src.indexOf('%7B') !== -1)) {
+                    logo.src = '../static/images/loading_icon.png';
+                }
+                var fav = document.getElementById('cams-favicon');
+                if (fav) {
+                    fav.href = '../static/images/loading_icon.png';
+                }
+            });
         }
 
         tailwind.config = {
@@ -47,12 +61,11 @@
     </script>
     
     <style>
-        /* Smooth transitions between light and dark */
         body {
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* Ambient background patterns */
+        /* Ambient background dot grid */
         .bg-light-pattern {
             background-color: #f8fafc;
             background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
@@ -67,7 +80,7 @@
 
         @keyframes floatSlow {
             0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
+            50% { transform: translateY(-6px); }
         }
 
         .animate-float {
@@ -75,7 +88,7 @@
         }
 
         .text-glow-maroon {
-            text-shadow: 0 0 30px rgba(128, 0, 0, 0.25);
+            text-shadow: 0 0 30px rgba(128, 0, 0, 0.22);
         }
 
         .dark .text-glow-maroon {
@@ -85,28 +98,41 @@
 </head>
 <body class="min-h-screen bg-light-pattern text-slate-800 dark:text-slate-100 font-sans antialiased flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-pup-gold selection:text-black relative overflow-x-hidden">
 
-    <!-- Ambient Glow Top Accents (Borderless) -->
+    <!-- Ambient Subtle Background Accents (Borderless) -->
     <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-96 sm:w-[32rem] h-96 bg-pup-maroon/15 dark:bg-pup-maroon/25 rounded-full blur-[110px] pointer-events-none"></div>
     <div class="absolute top-1/3 -right-24 w-80 h-80 bg-pup-gold/10 dark:bg-pup-gold/15 rounded-full blur-[100px] pointer-events-none"></div>
 
-    <!-- Top Campus Navigation/Brand Badge -->
-    <header class="w-full max-w-4xl flex items-center justify-center relative z-10 pt-2">
-        <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md shadow-sm border border-slate-200 dark:border-zinc-800 text-[0.7rem] sm:text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-            <span class="w-2 h-2 rounded-full bg-pup-maroon animate-pulse"></span>
-            Polytechnic University of the Philippines • Unisan Campus
-        </div>
-    </header>
+    <!-- Empty Spacer for balanced centering -->
+    <div class="w-full h-4"></div>
 
-    <!-- Main Content (Seamless / No Border Container) -->
-    <main class="w-full max-w-2xl text-center relative z-10 my-auto py-8">
+    <!-- Main Content (Seamless & Borderless) -->
+    <main class="w-full max-w-2xl text-center relative z-10 my-auto py-4">
         
-        <!-- Icon Badge -->
-        <div class="mb-6 inline-flex items-center justify-center relative animate-float">
-            <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white dark:bg-zinc-900 shadow-xl border border-slate-100 dark:border-zinc-800 flex items-center justify-center">
-                <i class="ph-duotone ph-file-dashed text-4xl sm:text-5xl text-pup-maroon dark:text-pup-gold"></i>
-            </div>
-            <div class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md text-xs font-bold">
-                !
+        <!-- Icon: Warning Triangle with Exclamation Mark & Magnifying Glass -->
+        <div class="mb-5 inline-flex items-center justify-center relative animate-float select-none">
+            <div class="relative flex items-center justify-center w-24 h-24 sm:w-28 sm:h-28">
+                <!-- Triangle Border with Exclamation Point -->
+                <svg class="w-20 h-20 sm:w-24 sm:h-24 text-pup-maroon dark:text-pup-gold transition-colors duration-300 drop-shadow-md" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Triangle Shape Border -->
+                    <path d="M44.8 14.4C47.1 10.4 52.9 10.4 55.2 14.4L90.8 76C93.1 80 90.2 85 85.6 85H14.4C9.8 85 6.9 80 9.2 76L44.8 14.4Z" 
+                          stroke="currentColor" 
+                          stroke-width="6" 
+                          stroke-linejoin="round"
+                          stroke-linecap="round"
+                          class="fill-pup-maroon/5 dark:fill-pup-gold/10" />
+                    
+                    <!-- Exclamation Mark Inside Triangle -->
+                    <line x1="50" y1="34" x2="50" y2="54" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <circle cx="50" cy="67" r="4" fill="currentColor"/>
+                </svg>
+
+                <!-- Magnifying Glass Accent -->
+                <div class="absolute -bottom-1 -right-1 sm:bottom-0 sm:right-0 bg-white dark:bg-zinc-900 rounded-full p-1.5 shadow-lg border border-slate-200 dark:border-zinc-700 flex items-center justify-center">
+                    <svg class="w-6 h-6 sm:w-7 sm:h-7 text-amber-500 dark:text-pup-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="10.5" cy="10.5" r="7"/>
+                        <line x1="21" y1="21" x2="15.5" y2="15.5"/>
+                    </svg>
+                </div>
             </div>
         </div>
 
@@ -115,44 +141,33 @@
             404
         </h1>
 
-        <!-- Subtitle -->
-        <div class="inline-block px-3 py-1 rounded-md bg-pup-maroon/10 dark:bg-pup-gold/10 text-pup-maroon dark:text-pup-gold text-xs sm:text-sm font-bold uppercase tracking-wider mb-4">
-            Pahina ay Hindi Matagpuan • Page Not Found
+        <!-- Subtitle Badge -->
+        <div class="inline-block px-3.5 py-1 rounded-md bg-pup-maroon/10 dark:bg-pup-gold/10 text-pup-maroon dark:text-pup-gold text-xs sm:text-sm font-bold uppercase tracking-wider mb-4">
+            Page Not Found
         </div>
 
-        <div class="w-12 h-1 bg-gradient-to-r from-pup-maroon to-pup-gold mx-auto mb-6 rounded-full"></div>
+        <div class="w-12 h-1 bg-gradient-to-r from-pup-maroon to-pup-gold mx-auto mb-5 rounded-full"></div>
 
-        <!-- System-aligned formal message -->
-        <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed max-w-lg mx-auto mb-8 px-2">
-            Paumanhin, ang pahina o serbisyong hinahanap mo sa <strong>PUP UNISAN Campus Activity Management System (CAMS)</strong> ay hindi matagpuan, binago ang access link, o kasalukuyang hindi magagamit.
+        <!-- English Professional Description -->
+        <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed max-w-lg mx-auto mb-3 px-2">
+            The page or requested resource in the <strong>PUP UNISAN Campus Activity Management System (CAMS)</strong> could not be found, may have been moved, or is currently unavailable.
         </p>
 
-        <!-- Action Buttons -->
-        <div class="flex flex-col sm:flex-row gap-3 justify-center items-center max-w-md mx-auto w-full px-4">
-            <button onclick="window.history.back()" class="w-full sm:w-auto sm:flex-1 px-6 py-3 rounded-xl bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-zinc-700 font-semibold shadow-sm transition-all duration-200 flex items-center justify-center gap-2 text-sm active:scale-98">
-                <i class="ph-bold ph-arrow-left text-base"></i>
-                <span>Bumalik sa Nakaraan</span>
-            </button>
-            <a href="/" class="w-full sm:w-auto sm:flex-1 px-6 py-3 rounded-xl bg-pup-maroon hover:bg-pup-maroonDark text-white font-semibold shadow-lg shadow-pup-maroon/25 transition-all duration-200 flex items-center justify-center gap-2 text-sm active:scale-98">
-                <i class="ph-bold ph-house text-base"></i>
-                <span>Bumalik sa Portal</span>
-            </a>
-        </div>
-
-        <!-- Help Link -->
-        <p class="mt-6 text-xs text-slate-400 dark:text-slate-500">
-            Kung sa palagay mo ay may kamalian, makipag-ugnayan sa Administrator o sa inyong Organization Adviser.
+        <p class="text-xs text-slate-400 dark:text-slate-500 max-w-md mx-auto">
+            Please check the URL or return to the main portal if you believe this is an error.
         </p>
 
     </main>
 
-    <!-- Bottom Watermark with loading_icon.png -->
+    <!-- Bottom Watermark with loading_icon.png (Instantly Visible) -->
     <footer class="w-full max-w-4xl text-center relative z-10 pt-4 pb-2">
-        <div class="inline-flex items-center justify-center gap-2.5 px-4 py-2 rounded-full text-slate-500 dark:text-slate-400">
-            <img src="{% static 'images/loading_icon.png' %}" 
-                 class="h-5 w-5 sm:h-6 sm:w-6 object-contain rounded-full shadow-sm" 
+        <div class="inline-flex items-center justify-center gap-2.5 px-4 py-2 rounded-full text-slate-600 dark:text-slate-400">
+            <img id="cams-logo"
+                 src="{% static 'images/loading_icon.png' %}" 
+                 onerror="this.onerror=null; this.src='../static/images/loading_icon.png';"
+                 class="h-6 w-6 sm:h-7 sm:w-7 object-contain rounded-full shadow-sm" 
                  alt="PUP UNISAN CAMS Logo">
-            <span class="text-[0.68rem] sm:text-xs font-semibold tracking-wider uppercase">
+            <span class="text-xs sm:text-sm font-bold tracking-widest uppercase">
                 PUP UNISAN CAMS OFFICIAL PAGE
             </span>
         </div>
