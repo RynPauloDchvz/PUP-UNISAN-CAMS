@@ -60,6 +60,11 @@ class Event(models.Model):
     venue = models.CharField(max_length=200)
     is_flag_raising = models.BooleanField(default=False)
     
+    # Audience & Evaluation Settings
+    target_audience = models.CharField(max_length=50, default='ALL') # 'ALL' or 'SPECIFIC'
+    allowed_orgs = models.TextField(default='ALL') # 'ALL' or comma-separated acronyms e.g. 'ITO,YEO'
+    has_evaluation = models.BooleanField(default=True) # True = With Evaluation, False = Without Evaluation
+    
     event_date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField(null=True, blank=True) # 🟢 PERPEKTONG NAKALAPAT AT HINDI KULANG!

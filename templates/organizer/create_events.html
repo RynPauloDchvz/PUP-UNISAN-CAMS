@@ -90,6 +90,22 @@
             backdrop-filter: blur(4px) !important;
         }
     }
+
+    /* Mobile Phase Smooth Transitions */
+    @keyframes phaseFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .phase-slide-active {
+        animation: phaseFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
 </style>
 {% endblock %}
 
@@ -100,18 +116,7 @@
         <div class="w-full max-w-md h-5 rounded skeleton-shimmer mx-auto sm:mx-0"></div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        <div
-            class="bg-white dark:bg-pup-darkcard rounded-3xl border border-gray-100 dark:border-gray-800 h-[600px] skeleton-shimmer">
-        </div>
-        <div
-            class="bg-white dark:bg-pup-darkcard rounded-3xl border border-gray-100 dark:border-gray-800 p-6 sm:p-8 h-[600px] flex flex-col gap-6">
-            <div class="w-48 h-8 rounded-lg skeleton-shimmer"></div>
-            <div class="space-y-4">
-                <div v-for="i in 4" :key="i" class="h-24 rounded-2xl skeleton-shimmer"></div>
-            </div>
-        </div>
-    </div>
+    <div class="bg-white dark:bg-pup-darkcard rounded-3xl border border-gray-100 dark:border-gray-800 h-[650px] skeleton-shimmer w-full"></div>
 </div>
 {% endblock skeleton %}
 
@@ -128,32 +133,67 @@
             <p class="text-gray-500 dark:text-gray-400 mt-2 font-sans">Create activity proposals, usage/excuse letters,
                 or reschedule an existing event.</p>
         </div>
-        <!-- Mobile Track Documents Button -->
+        <!-- Track Documents Button (Modal Trigger for Desktop & Mobile) -->
         <button type="button" onclick="openMobileTracking(event)"
-            class="lg:hidden w-full sm:w-auto bg-gray-900 hover:bg-black dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 font-bold py-3 px-5 rounded-xl text-sm shadow-md flex items-center justify-center gap-2 transition-colors">
-            <i class="ph-bold ph-file-search text-lg"></i> Track Documents
+            class="w-full sm:w-auto bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-black py-3 px-5 rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg flex items-center justify-center gap-2.5 transition-all transform active:scale-95 cursor-pointer">
+            <i class="ph-bold ph-file-search text-lg text-pup-gold dark:text-pup-maroon"></i>
+            <span>Track Documents</span>
         </button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+    <!-- DOCUMENT FORM CONTAINER (Split into 2 parts on Desktop, 2 Phases on Mobile) -->
+    <div
+        class="bg-transparent sm:bg-white dark:bg-transparent dark:sm:bg-pup-darkcard rounded-none sm:rounded-3xl shadow-none sm:shadow-xl border-none sm:border border-gray-200 dark:border-gray-800 overflow-hidden relative font-sans">
 
-        <div
-            class="bg-transparent sm:bg-white dark:bg-transparent dark:sm:bg-pup-darkcard sm:rounded-3xl shadow-none sm:shadow-xl border-none sm:border border-gray-200 dark:border-gray-800 overflow-hidden relative font-sans">
+        <form id="createEventForm" onsubmit="event.preventDefault(); generateLetter();" novalidate class="p-0 sm:p-8 lg:p-10">
+            <input type="hidden" id="evtId" value="">
 
-            <form id="createEventForm" onsubmit="event.preventDefault(); generateLetter();" class="p-0 py-2 sm:p-8">
-                <input type="hidden" id="evtId" value="">
+            <!-- Document Form Header (Centered on Mobile) -->
+            <div class="border-b border-gray-200/80 dark:border-gray-800 pb-4 mb-6">
+                <div class="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-3">
+                    <div class="w-full sm:w-auto text-center sm:text-left">
+                        <h3 class="font-sans text-xl sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-wide">
+                            <span id="formTitle">DOCUMENT FORM</span>
+                        </h3>
+                        <p id="mobilePhaseText" class="lg:hidden text-[11px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
+                            Phase 1 of 2: Document & Organization Details
+                        </p>
+                    </div>
+                    <div class="flex items-center justify-center gap-3">
+                        <span id="editBadge"
+                            class="hidden bg-yellow-100 text-yellow-700 border border-yellow-300 text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-black shadow-sm animate-pulse">Edit
+                            Mode</span>
+                    </div>
+                </div>
 
-                <div class="flex flex-col gap-5">
-                    <h3
-                        class="font-sans text-xl font-black text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3 flex justify-between items-center">
-                        <span id="formTitle">DOCUMENT FORM</span>
-                        <div class="flex items-center gap-3">
-                            <span id="editBadge"
-                                class="hidden bg-yellow-100 text-yellow-700 border border-yellow-300 text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-black shadow-sm animate-pulse">Edit
-                                Mode</span>
-                        </div>
-                    </h3>
+                <!-- 🟢 MOBILE PROGRESS BAR (Phase 1 vs Phase 2) -->
+                <div class="lg:hidden mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/60">
+                    <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-wider mb-2 px-0.5">
+                        <button type="button" id="step1Indicator" onclick="setMobilePhase(1)"
+                            class="text-pup-maroon dark:text-pup-gold font-black transition-colors cursor-pointer select-none">
+                            1. Document & Target
+                        </button>
+                        <button type="button" id="step2Indicator" onclick="proceedToMobilePhase2()"
+                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer select-none">
+                            2. Event Schedule & Preview
+                        </button>
+                    </div>
+                    <!-- Animated Bar Track -->
+                    <div class="w-full h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div id="mobileProgressBar" class="h-full bg-gradient-to-r from-pup-maroon via-red-600 to-pup-gold rounded-full transition-all duration-300 ease-out" style="width: 50%;"></div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- 2-Column Split: Left Side & Right Side -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-start">
+
+                <!-- ==================================================== -->
+                <!-- ⬅️ PHASE 1 (Mobile) / LEFT COLUMN (Desktop) -->
+                <!-- ==================================================== -->
+                <div id="formPhase1" class="flex lg:!flex flex-col gap-5 phase-slide-active">
+
+                    <!-- Select Document Type -->
                     <div>
                         <label
                             class="block text-[0.7rem] font-bold text-pup-maroon dark:text-pup-gold uppercase tracking-wider mb-1.5">Select
@@ -200,6 +240,105 @@
                         </div>
                     </div>
 
+                    <!-- ========================================== -->
+                    <!-- 🟢 1. TARGET AUDIENCE / AVAILABILITY 🟢 -->
+                    <!-- ========================================== -->
+                    <div id="availabilitySection" class="transition-all duration-300">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-[0.7rem] font-bold text-pup-maroon dark:text-pup-gold uppercase tracking-wider">
+                                Event Availability / Target Audience
+                            </label>
+                            <span id="audienceBadge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 transition-all">
+                                All Organizations
+                            </span>
+                        </div>
+                        <input type="hidden" id="targetAudience" value="ALL">
+                        <input type="hidden" id="allowedOrgsInput" value="ALL">
+
+                        <!-- Segmented Switcher for Availability -->
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-[#151515] rounded-xl border border-gray-200 dark:border-gray-800">
+                            <button type="button" id="btnAudienceAll" onclick="setAudienceMode('ALL')"
+                                class="flex items-center justify-center gap-2 py-2.5 px-2 rounded-lg text-xs font-bold transition-all duration-200 bg-white dark:bg-[#222] text-pup-maroon dark:text-pup-gold shadow-sm cursor-pointer">
+                                <i class="ph-bold ph-globe text-base"></i>
+                                <span>All Organizations</span>
+                            </button>
+                            <button type="button" id="btnAudienceSpecific" onclick="setAudienceMode('SPECIFIC')"
+                                class="flex items-center justify-center gap-2 py-2.5 px-2 rounded-lg text-xs font-bold transition-all duration-200 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+                                <i class="ph-bold ph-funnel text-base"></i>
+                                <span>Select Specific Orgs</span>
+                            </button>
+                        </div>
+
+                        <!-- Animated Collapsible Specific Orgs List -->
+                        <div id="specificOrgsWrapper" class="grid transition-all duration-300 ease-in-out grid-rows-[0fr] opacity-0">
+                            <div class="overflow-hidden">
+                                <div class="mt-2.5 p-3 sm:p-4 rounded-xl bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-gray-800">
+                                    <div class="flex items-center justify-between pb-2 mb-2 border-b border-gray-200/60 dark:border-gray-800">
+                                        <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400">
+                                            Choose organizations that can access this event:
+                                        </span>
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" onclick="toggleAllOrgCheckboxes(true)" class="text-[10px] font-black uppercase text-pup-maroon dark:text-pup-gold hover:underline cursor-pointer">Select All</button>
+                                            <span class="text-gray-300 dark:text-gray-700">|</span>
+                                            <button type="button" onclick="toggleAllOrgCheckboxes(false)" class="text-[10px] font-black uppercase text-gray-500 hover:underline cursor-pointer">Clear</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Responsive Organization Checkbox Grid -->
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1 form-scroll">
+                                        {% for org in all_orgs_list %}
+                                        <label class="org-check-card flex items-start gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-pup-maroon/50 dark:hover:border-pup-gold/50 cursor-pointer transition-all bg-white dark:bg-[#161616] select-none group">
+                                            <input type="checkbox" name="target_org_choice" value="{{ org.code }}" onchange="updateSelectedOrgs()"
+                                                class="mt-0.5 rounded text-pup-maroon focus:ring-pup-maroon dark:text-pup-gold dark:focus:ring-pup-gold accent-pup-maroon dark:accent-pup-gold cursor-pointer"
+                                                {% if org.code == org_acronym %}checked{% endif %}>
+                                            <div class="flex flex-col min-w-0">
+                                                <span class="text-xs font-black text-gray-900 dark:text-white leading-tight group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors">{{ org.code }}</span>
+                                                <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight" title="{{ org.name }}">{{ org.name }}</span>
+                                            </div>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                    <p id="selectedOrgsSummary" class="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-800 truncate">
+                                        Selected: <span class="font-bold text-gray-800 dark:text-gray-200" id="selectedOrgsListText">{{ org_acronym }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- 🟢 2. ACCESS OF EVALUATION FORM 🟢 -->
+                    <!-- ========================================== -->
+                    <div id="evaluationSection" class="transition-all duration-300">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-[0.7rem] font-bold text-pup-maroon dark:text-pup-gold uppercase tracking-wider">
+                                Access of Evaluation Form
+                            </label>
+                            <span id="evalBadge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-400 transition-all">
+                                Feedback Enabled
+                            </span>
+                        </div>
+                        <input type="hidden" id="hasEvaluation" value="true">
+
+                        <!-- Segmented Switcher for Evaluation -->
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-[#151515] rounded-xl border border-gray-200 dark:border-gray-800">
+                            <button type="button" id="btnEvalWith" onclick="setEvaluationMode(true)"
+                                class="flex items-center justify-center gap-2 py-2.5 px-2 rounded-lg text-xs font-bold transition-all duration-200 bg-white dark:bg-[#222] text-pup-maroon dark:text-pup-gold shadow-sm cursor-pointer">
+                                <i class="ph-bold ph-clipboard-text text-base"></i>
+                                <span>With Evaluation</span>
+                            </button>
+                            <button type="button" id="btnEvalWithout" onclick="setEvaluationMode(false)"
+                                class="flex items-center justify-center gap-2 py-2.5 px-2 rounded-lg text-xs font-bold transition-all duration-200 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+                                <i class="ph-bold ph-x-circle text-base"></i>
+                                <span>Without Evaluation</span>
+                            </button>
+                        </div>
+                        <p id="evalHelperText" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 pl-1 leading-relaxed">
+                            Students will be prompted to submit ratings and feedback in the Evaluation Hub after attending this event.
+                        </p>
+                    </div>
+
+                    <!-- Requester Name & Organization -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label
@@ -218,6 +357,7 @@
                         </div>
                     </div>
 
+                    <!-- Adviser Full Name -->
                     <div id="advNameWrapper"
                         class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100">
                         <div class="overflow-hidden">
@@ -232,6 +372,33 @@
                         </div>
                     </div>
 
+                    <!-- Mobile Phase 1 Navigation (Next Link Style) -->
+                    <div class="lg:hidden pt-4 border-t border-gray-200 dark:border-gray-800 flex justify-center items-center">
+                        <button type="button" onclick="proceedToMobilePhase2()"
+                            class="group inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl text-xs font-black uppercase tracking-wider text-pup-maroon dark:text-pup-gold bg-pup-maroon/5 dark:bg-pup-gold/5 hover:bg-pup-maroon/10 dark:hover:bg-pup-gold/10 border border-pup-maroon/20 dark:border-pup-gold/20 active:scale-95 transition-all cursor-pointer select-none shadow-xs">
+                            <span>Proceed to Event Details</span>
+                            <i class="ph-bold ph-arrow-right text-sm transition-transform duration-200 group-hover:translate-x-1"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- ==================================================== -->
+                <!-- ➡️ PHASE 2 (Mobile) / RIGHT COLUMN (Desktop) -->
+                <!-- ==================================================== -->
+                <div id="formPhase2" class="hidden lg:!flex flex-col gap-5">
+
+                    <!-- Mobile Phase 2 Navigation (Back Link Style) -->
+                    <div class="lg:hidden pb-2 mb-1 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                        <button type="button" onclick="setMobilePhase(1)"
+                            class="group inline-flex items-center gap-1.5 py-1.5 px-2 -ml-2 rounded-lg text-xs font-bold text-gray-500 hover:text-pup-maroon dark:text-gray-400 dark:hover:text-pup-gold hover:bg-gray-100 dark:hover:bg-gray-800/50 active:scale-95 transition-all cursor-pointer select-none">
+                            <i class="ph-bold ph-arrow-left text-sm transition-transform duration-200 group-hover:-translate-x-1"></i>
+                            <span>Back to Document Details</span>
+                        </button>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-pup-maroon dark:text-pup-gold bg-pup-maroon/10 dark:bg-pup-gold/10 px-2.5 py-0.5 rounded-full">Phase 2</span>
+                    </div>
+
+                    <!-- Event Title -->
                     <div>
                         <label class="block text-[0.7rem] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Event
                             Title</label>
@@ -240,6 +407,7 @@
                             placeholder="e.g., IT Week Hackathon 2026" required>
                     </div>
 
+                    <!-- Reschedule Fields -->
                     <div id="rescheduleFields"
                         class="grid transition-all duration-300 ease-in-out grid-rows-[0fr] opacity-0">
                         <div class="overflow-hidden">
@@ -274,6 +442,7 @@
                         </div>
                     </div>
 
+                    <!-- Excuse Fields -->
                     <div id="excuseFields"
                         class="grid transition-all duration-300 ease-in-out grid-rows-[0fr] opacity-0">
                         <div class="overflow-hidden">
@@ -299,6 +468,7 @@
                         </div>
                     </div>
 
+                    <!-- Flag Raising Fields -->
                     <div id="flagRaisingFields"
                         class="grid transition-all duration-300 ease-in-out grid-rows-[0fr] opacity-0">
                         <div class="overflow-hidden">
@@ -325,6 +495,7 @@
                         </div>
                     </div>
 
+                    <!-- Target Date, Start Time, End Time -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <label
@@ -352,6 +523,7 @@
                         </div>
                     </div>
 
+                    <!-- Venue -->
                     <div>
                         <label
                             class="block text-[0.7rem] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Venue</label>
@@ -360,6 +532,7 @@
                             placeholder="e.g., PUP Main Campus Gym" required>
                     </div>
 
+                    <!-- Description / Objective -->
                     <div id="standardDescDiv"
                         class="grid transition-all duration-300 ease-in-out grid-rows-[1fr] opacity-100">
                         <div class="overflow-hidden">
@@ -374,98 +547,109 @@
                         </div>
                     </div>
 
-                    <div class="mt-4 border-t border-gray-100 dark:border-gray-800 pt-5 flex gap-2">
+                    <!-- Action Buttons -->
+                    <div class="mt-2 border-t border-gray-100 dark:border-gray-800 pt-5 flex gap-2">
                         <button type="button" id="btnCancelEdit" onclick="cancelEdit()"
-                            class="hidden w-1/3 bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-bold py-3 px-4 rounded-xl text-sm transition-all hover:bg-gray-300 dark:hover:bg-gray-700">Cancel</button>
+                            class="hidden w-1/3 bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-bold py-3 px-4 rounded-xl text-sm transition-all hover:bg-gray-300 dark:hover:bg-gray-700 cursor-pointer">Cancel</button>
                         <button type="submit"
-                            class="flex-grow bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-bold py-3.5 px-6 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-red-950 dark:hover:bg-yellow-500 transition-all shadow-md">
+                            class="flex-grow bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-bold py-3.5 px-6 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-red-950 dark:hover:bg-yellow-500 transition-all shadow-md cursor-pointer">
                             <i class="ph-bold ph-file-text text-lg"></i> PREVIEW REQUEST LETTER
                         </button>
                     </div>
+
+                    <!-- Subtle Return to Phase 1 Link on Mobile bottom -->
+                    <div class="lg:hidden text-center pt-2">
+                        <button type="button" onclick="setMobilePhase(1)"
+                            class="text-[11px] font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline transition-colors cursor-pointer">
+                            Edit Document & Organization Settings
+                        </button>
+                    </div>
+
                 </div>
-            </form>
-        </div>
 
-        <!-- Document Tracking Right Panel -->
-        <div id="trackingOverlayMobile" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[5000] lg:!hidden"
-            onclick="closeMobileTracking()"></div>
+            </div>
+        </form>
+    </div>
 
-        <div id="trackingContainerMobile"
-            class="hidden fixed inset-0 z-[5010] p-4 items-center justify-center pointer-events-none lg:!flex lg:static lg:p-0 lg:z-auto lg:pointer-events-auto">
-            <div id="trackingIosWrapper"
-                class="ios-pop-wrapper pointer-events-auto w-full max-w-lg lg:max-w-none mx-auto lg:mx-0 lg-no-anim flex flex-col max-h-[90vh] lg:max-h-none h-fit">
-                <div id="trackingScrollWrapper"
-                    class="relative bg-white dark:bg-pup-darkcard rounded-3xl shadow-2xl lg:shadow-xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 font-sans flex flex-col h-full lg:h-fit overflow-hidden overflow-y-auto lg:overflow-visible">
+    <!-- Document Tracking Modal (Desktop & Mobile Modal View) -->
+    <div id="trackingOverlayMobile" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[5000]"
+        onclick="closeMobileTracking()"></div>
 
-                    <button type="button" onclick="closeMobileTracking()"
-                        class="lg:hidden absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 hover:text-red-500 z-10 transition-colors">
-                        <i class="ph-bold ph-x text-lg"></i>
-                    </button>
+    <div id="trackingContainerMobile"
+        class="hidden fixed inset-0 z-[5010] p-4 items-center justify-center pointer-events-none">
+        <div id="trackingIosWrapper"
+            class="ios-pop-wrapper pointer-events-auto w-full max-w-lg sm:max-w-xl mx-auto flex flex-col max-h-[90vh] h-fit">
+            <div id="trackingScrollWrapper"
+                class="relative bg-white dark:bg-pup-darkcard rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 font-sans flex flex-col h-full max-h-[85vh] overflow-y-auto form-scroll">
 
+                <button type="button" onclick="closeMobileTracking()"
+                    class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full text-gray-500 hover:text-red-500 z-10 transition-colors shadow-sm cursor-pointer"
+                    title="Close Tracking">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+
+                <div
+                    class="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-3 mb-6 pr-8">
+                    <h3 class="font-sans text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                        <i class="ph-fill ph-file-search text-pup-maroon dark:text-pup-gold"></i> PROPOSAL STATUS
+                    </h3>
+                </div>
+
+                <!-- Current Location Box -->
+                <div id="currentLocBox"
+                    class="hidden flex items-start gap-3 mb-6 bg-gray-50 dark:bg-[#111] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
                     <div
-                        class="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-3 mb-6 mt-4 lg:mt-0">
-                        <h3 class="font-sans text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                            <i class="ph-fill text-pup-maroon dark:text-pup-gold"></i> PROPOSAL STATUS
-                        </h3>
+                        class="w-10 h-10 rounded-full bg-pup-maroon/10 dark:bg-pup-gold/10 flex items-center justify-center shrink-0">
+                        <i class="ph-fill ph-map-pin text-xl text-pup-maroon dark:text-pup-gold animate-bounce"></i>
                     </div>
-
-                    <!-- Current Location Box -->
-                    <div id="currentLocBox"
-                        class="hidden flex items-start gap-3 mb-6 bg-gray-50 dark:bg-[#111] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
-                        <div
-                            class="w-10 h-10 rounded-full bg-pup-maroon/10 dark:bg-pup-gold/10 flex items-center justify-center shrink-0">
-                            <i class="ph-fill ph-map-pin text-xl text-pup-maroon dark:text-pup-gold animate-bounce"></i>
-                        </div>
-                        <div class="flex flex-col">
-                            <span
-                                class="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Current
-                                Office Location</span>
-                            <strong id="infoCurrentLoc"
-                                class="text-gray-900 dark:text-white text-sm leading-tight">Office Name</strong>
-                        </div>
+                    <div class="flex flex-col">
+                        <span
+                            class="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Current
+                            Office Location</span>
+                        <strong id="infoCurrentLoc"
+                            class="text-gray-900 dark:text-white text-sm leading-tight">Office Name</strong>
                     </div>
-
-                    <!-- Selected Document Info -->
-                    <div id="docInfo" class="mb-6 hidden">
-                        <h4 id="infoEventName" class="font-black text-lg text-gray-900 dark:text-white leading-tight">
-                            Select a Document</h4>
-                        <div class="flex gap-2 mt-2 flex-wrap">
-                            <span id="infoStatus"
-                                class="bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider">Status</span>
-                            <span id="infoType"
-                                class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider">Type</span>
-                        </div>
-
-                        <!-- Rejection Alert -->
-                        <div id="rejectAlert" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-                            <p class="text-xs font-bold text-red-800 mb-1 flex items-center gap-1.5"><i
-                                    class="ph-bold ph-warning-circle"></i> Reason for Rejection:</p>
-                            <p id="rejectReasonText" class="text-xs text-red-600 leading-snug"></p>
-                        </div>
-                    </div>
-
-                    <!-- Timeline -->
-                    <div class="relative flex-grow mb-8">
-                        <!-- Vertical Line -->
-                        <div class="absolute left-[11px] top-2 bottom-6 w-0.5 bg-gray-200 dark:bg-gray-800"></div>
-
-                        <div class="space-y-6 relative z-10" id="timelineContainer">
-                            <!-- Steps injected via JS -->
-                        </div>
-                    </div>
-
-                    <!-- Redirect Button -->
-                    <div class="mt-auto border-t border-gray-100 dark:border-gray-800 pt-6">
-                        <a href="{% url 'organizer_document_tracking' %}"
-                            class="w-full bg-gray-900 hover:bg-black dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 font-bold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-md text-center">
-                            <i class="ph-bold text-lg"></i> View Full Tracking Details ->
-                        </a>
-                    </div>
-
                 </div>
+
+                <!-- Selected Document Info -->
+                <div id="docInfo" class="mb-6 hidden">
+                    <h4 id="infoEventName" class="font-black text-lg text-gray-900 dark:text-white leading-tight">
+                        Select a Document</h4>
+                    <div class="flex gap-2 mt-2 flex-wrap">
+                        <span id="infoStatus"
+                            class="bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider">Status</span>
+                        <span id="infoType"
+                            class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider">Type</span>
+                    </div>
+
+                    <!-- Rejection Alert -->
+                    <div id="rejectAlert" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p class="text-xs font-bold text-red-800 mb-1 flex items-center gap-1.5"><i
+                                class="ph-bold ph-warning-circle"></i> Reason for Rejection:</p>
+                        <p id="rejectReasonText" class="text-xs text-red-600 leading-snug"></p>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="relative flex-grow mb-8">
+                    <!-- Vertical Line -->
+                    <div class="absolute left-[11px] top-2 bottom-6 w-0.5 bg-gray-200 dark:bg-gray-800"></div>
+
+                    <div class="space-y-6 relative z-10" id="timelineContainer">
+                        <!-- Steps injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Redirect Button -->
+                <div class="mt-auto border-t border-gray-100 dark:border-gray-800 pt-6">
+                    <a href="{% url 'organizer_document_tracking' %}"
+                        class="w-full bg-gray-900 hover:bg-black dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 font-bold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-md text-center">
+                        <i class="ph-bold text-lg"></i> View Full Tracking Details ->
+                    </a>
+                </div>
+
             </div>
         </div>
-
     </div>
 
 </div>
@@ -850,7 +1034,263 @@
                 closeCustomSelect();
             }
         });
+
+        // Initialize audience and evaluation state
+        updateSelectedOrgs();
+
+        // Responsive Mobile Phase layout listener
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                const p1 = document.getElementById('formPhase1');
+                const p2 = document.getElementById('formPhase2');
+                if (p1) p1.classList.remove('hidden');
+                if (p2) p2.classList.remove('hidden');
+            } else {
+                setMobilePhase(currentMobilePhase);
+            }
+        });
     });
+
+    // ==========================================
+    // 🟢 MOBILE PHASING CONTROLLERS
+    // ==========================================
+    let currentMobilePhase = 1;
+
+    function setMobilePhase(phase) {
+        if (window.innerWidth >= 1024) return;
+        currentMobilePhase = phase;
+        const p1 = document.getElementById('formPhase1');
+        const p2 = document.getElementById('formPhase2');
+        const bar = document.getElementById('mobileProgressBar');
+        const step1 = document.getElementById('step1Indicator');
+        const step2 = document.getElementById('step2Indicator');
+        const phaseText = document.getElementById('mobilePhaseText');
+
+        if (phase === 1) {
+            if (p2) {
+                p2.classList.add('hidden');
+                p2.classList.remove('flex', 'phase-slide-active');
+            }
+            if (p1) {
+                p1.classList.remove('hidden');
+                p1.classList.add('flex', 'phase-slide-active');
+            }
+            if (bar) bar.style.width = '50%';
+            if (phaseText) phaseText.innerText = 'Phase 1 of 2: Document & Organization Details';
+            if (step1) {
+                step1.classList.add('text-pup-maroon', 'dark:text-pup-gold', 'font-black');
+                step1.classList.remove('text-gray-400');
+            }
+            if (step2) {
+                step2.classList.remove('text-pup-maroon', 'dark:text-pup-gold', 'font-black');
+                step2.classList.add('text-gray-400');
+            }
+        } else {
+            if (p1) {
+                p1.classList.add('hidden');
+                p1.classList.remove('flex', 'phase-slide-active');
+            }
+            if (p2) {
+                p2.classList.remove('hidden');
+                p2.classList.add('flex', 'phase-slide-active');
+            }
+            if (bar) bar.style.width = '100%';
+            if (phaseText) phaseText.innerText = 'Phase 2 of 2: Event Schedule & Letter Information';
+            if (step2) {
+                step2.classList.add('text-pup-maroon', 'dark:text-pup-gold', 'font-black');
+                step2.classList.remove('text-gray-400');
+            }
+            if (step1) {
+                step1.classList.remove('text-pup-maroon', 'dark:text-pup-gold', 'font-black');
+                step1.classList.add('text-gray-400');
+            }
+        }
+
+        const formTop = document.getElementById('createEventForm');
+        if (formTop) {
+            formTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function proceedToMobilePhase2() {
+        const reqName = document.getElementById('reqName');
+        const letterType = document.getElementById('letterType').value;
+        const advName = document.getElementById('advName');
+        const targetAudience = document.getElementById('targetAudience').value;
+        const allowedOrgs = document.getElementById('allowedOrgsInput').value;
+
+        if (reqName && !reqName.value.trim()) {
+            reqName.focus();
+            alert('Please enter the Requester Name.');
+            return;
+        }
+
+        if (letterType !== 'flag_raising' && advName && !advName.value.trim()) {
+            advName.focus();
+            alert('Please enter the Adviser Full Name.');
+            return;
+        }
+
+        if (targetAudience === 'SPECIFIC' && (!allowedOrgs || !allowedOrgs.trim())) {
+            alert('Please select at least one organization for specific availability.');
+            return;
+        }
+
+        setMobilePhase(2);
+    }
+
+    // ==========================================
+    // 🟢 AUDIENCE & EVALUATION CONTROLLERS
+    // ==========================================
+    function setAudienceMode(mode) {
+        const targetAudienceInput = document.getElementById('targetAudience');
+        const allowedOrgsInput = document.getElementById('allowedOrgsInput');
+        const btnAll = document.getElementById('btnAudienceAll');
+        const btnSpecific = document.getElementById('btnAudienceSpecific');
+        const wrapper = document.getElementById('specificOrgsWrapper');
+        const badge = document.getElementById('audienceBadge');
+
+        if (!targetAudienceInput) return;
+        targetAudienceInput.value = mode;
+
+        const activeClasses = ['bg-white', 'dark:bg-[#222]', 'text-pup-maroon', 'dark:text-pup-gold', 'shadow-sm'];
+        const inactiveClasses = ['text-gray-600', 'dark:text-gray-400', 'hover:text-gray-900', 'dark:hover:text-white'];
+
+        if (mode === 'ALL') {
+            if (btnAll) {
+                btnAll.classList.add(...activeClasses);
+                btnAll.classList.remove(...inactiveClasses);
+            }
+            if (btnSpecific) {
+                btnSpecific.classList.remove(...activeClasses);
+                btnSpecific.classList.add(...inactiveClasses);
+            }
+            if (wrapper) {
+                wrapper.classList.remove('grid-rows-[1fr]', 'opacity-100');
+                wrapper.classList.add('grid-rows-[0fr]', 'opacity-0');
+            }
+            if (allowedOrgsInput) allowedOrgsInput.value = 'ALL';
+            if (badge) {
+                badge.innerText = 'All Organizations';
+                badge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 transition-all';
+            }
+        } else {
+            if (btnSpecific) {
+                btnSpecific.classList.add(...activeClasses);
+                btnSpecific.classList.remove(...inactiveClasses);
+            }
+            if (btnAll) {
+                btnAll.classList.remove(...activeClasses);
+                btnAll.classList.add(...inactiveClasses);
+            }
+            if (wrapper) {
+                wrapper.classList.remove('grid-rows-[0fr]', 'opacity-0');
+                wrapper.classList.add('grid-rows-[1fr]', 'opacity-100');
+            }
+            updateSelectedOrgs();
+        }
+    }
+
+    function updateSelectedOrgs() {
+        const checkboxes = document.querySelectorAll('input[name="target_org_choice"]');
+        const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+        const selectedVals = checkedBoxes.map(cb => cb.value);
+
+        const allowedOrgsInput = document.getElementById('allowedOrgsInput');
+        const summaryText = document.getElementById('selectedOrgsListText');
+        const badge = document.getElementById('audienceBadge');
+        const targetAudienceInput = document.getElementById('targetAudience');
+
+        checkboxes.forEach(cb => {
+            const card = cb.closest('.org-check-card');
+            if (card) {
+                if (cb.checked) {
+                    card.classList.add('border-pup-maroon', 'dark:border-pup-gold', 'bg-pup-maroon/5', 'dark:bg-pup-gold/5');
+                } else {
+                    card.classList.remove('border-pup-maroon', 'dark:border-pup-gold', 'bg-pup-maroon/5', 'dark:bg-pup-gold/5');
+                }
+            }
+        });
+
+        const isSpecific = targetAudienceInput && targetAudienceInput.value === 'SPECIFIC';
+
+        if (allowedOrgsInput) {
+            allowedOrgsInput.value = isSpecific ? (selectedVals.join(',') || '') : 'ALL';
+        }
+
+        if (summaryText) {
+            summaryText.innerText = selectedVals.length > 0 ? selectedVals.join(', ') : 'None selected (Please select at least 1)';
+        }
+
+        if (isSpecific && badge) {
+            if (selectedVals.length === 0) {
+                badge.innerText = 'No Orgs Selected';
+                badge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-400 transition-all';
+            } else if (selectedVals.length === 1) {
+                badge.innerText = `${selectedVals[0]} Only`;
+                badge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 transition-all';
+            } else {
+                badge.innerText = `${selectedVals.length} Orgs Selected`;
+                badge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 transition-all';
+            }
+        }
+    }
+
+    function toggleAllOrgCheckboxes(select) {
+        const checkboxes = document.querySelectorAll('input[name="target_org_choice"]');
+        checkboxes.forEach(cb => {
+            cb.checked = select;
+        });
+        updateSelectedOrgs();
+    }
+
+    function setEvaluationMode(enabled) {
+        const hasEvalInput = document.getElementById('hasEvaluation');
+        const btnWith = document.getElementById('btnEvalWith');
+        const btnWithout = document.getElementById('btnEvalWithout');
+        const badge = document.getElementById('evalBadge');
+        const helperText = document.getElementById('evalHelperText');
+
+        if (!hasEvalInput) return;
+        hasEvalInput.value = enabled ? 'true' : 'false';
+
+        const activeClasses = ['bg-white', 'dark:bg-[#222]', 'text-pup-maroon', 'dark:text-pup-gold', 'shadow-sm'];
+        const inactiveClasses = ['text-gray-600', 'dark:text-gray-400', 'hover:text-gray-900', 'dark:hover:text-white'];
+
+        if (enabled) {
+            if (btnWith) {
+                btnWith.classList.add(...activeClasses);
+                btnWith.classList.remove(...inactiveClasses);
+            }
+            if (btnWithout) {
+                btnWithout.classList.remove(...activeClasses);
+                btnWithout.classList.add(...inactiveClasses);
+            }
+            if (badge) {
+                badge.innerText = 'Feedback Enabled';
+                badge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-400 transition-all';
+            }
+            if (helperText) {
+                helperText.innerText = 'Students will be prompted to submit ratings and feedback in the Evaluation Hub after attending this event.';
+            }
+        } else {
+            if (btnWithout) {
+                btnWithout.classList.add(...activeClasses);
+                btnWithout.classList.remove(...inactiveClasses);
+            }
+            if (btnWith) {
+                btnWith.classList.remove(...activeClasses);
+                btnWith.classList.add(...inactiveClasses);
+            }
+            if (badge) {
+                badge.innerText = 'No Evaluation';
+                badge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 transition-all';
+            }
+            if (helperText) {
+                helperText.innerText = 'No feedback or ratings will be required from students for this event.';
+            }
+        }
+    }
 
     function openCustomSelect() {
         const menuWrapper = document.getElementById('customSelectMenuWrapper');
@@ -967,6 +1407,8 @@
         const advNameWrapper = document.getElementById('advNameWrapper');
         const evtTitleInput = document.getElementById('evtTitle');
         const orgAcr = document.getElementById('reqOrg').value;
+        const availabilitySec = document.getElementById('availabilitySection');
+        const evaluationSec = document.getElementById('evaluationSection');
 
         const show = (el) => { if (el) { el.classList.remove('grid-rows-[0fr]', 'opacity-0'); el.classList.add('grid-rows-[1fr]', 'opacity-100'); } };
         const hide = (el) => { if (el) { el.classList.remove('grid-rows-[1fr]', 'opacity-100'); el.classList.add('grid-rows-[0fr]', 'opacity-0'); } };
@@ -977,6 +1419,8 @@
             hide(excuseFields);
             hide(standardDescDiv);
             hide(advNameWrapper);
+            if (availabilitySec) availabilitySec.classList.add('hidden');
+            if (evaluationSec) evaluationSec.classList.add('hidden');
             if (advNameInput) advNameInput.required = false;
             if (evtTitleInput) {
                 evtTitleInput.value = `Flag Raising - ${orgAcr}`;
@@ -989,6 +1433,8 @@
             hide(excuseFields);
             show(standardDescDiv);
             show(advNameWrapper);
+            if (availabilitySec) availabilitySec.classList.remove('hidden');
+            if (evaluationSec) evaluationSec.classList.remove('hidden');
             if (advNameInput) advNameInput.required = true;
             if (evtTitleInput) {
                 evtTitleInput.readOnly = false;
@@ -1002,6 +1448,8 @@
             show(excuseFields);
             show(standardDescDiv);
             show(advNameWrapper);
+            if (availabilitySec) availabilitySec.classList.remove('hidden');
+            if (evaluationSec) evaluationSec.classList.remove('hidden');
             if (advNameInput) advNameInput.required = true;
             if (evtTitleInput) {
                 evtTitleInput.readOnly = false;
@@ -1143,12 +1591,71 @@
     }
 
     function generateLetter() {
+        const reqNameInput = document.getElementById('reqName');
+        const advNameInput = document.getElementById('advName');
+        const titleInput = document.getElementById('evtTitle');
+        const venueInput = document.getElementById('evtVenue');
+        const dateInput = document.getElementById('evtDate');
+        const startTimeInput = document.getElementById('evtStartTime');
+        const endTimeInput = document.getElementById('evtEndTime');
         const type = document.getElementById('letterType').value;
-        const title = document.getElementById('evtTitle').value;
-        const venue = document.getElementById('evtVenue').value;
-        const dateRaw = document.getElementById('evtDate').value;
-        const sTime = formatTime(document.getElementById('evtStartTime').value);
-        const eTime = formatTime(document.getElementById('evtEndTime').value);
+
+        // Validation for Phase 1 fields
+        if (reqNameInput && !reqNameInput.value.trim()) {
+            if (window.innerWidth < 1024) setMobilePhase(1);
+            reqNameInput.focus();
+            alert("Please enter Requester Name.");
+            return;
+        }
+
+        if (type !== 'flag_raising' && advNameInput && !advNameInput.value.trim()) {
+            if (window.innerWidth < 1024) setMobilePhase(1);
+            advNameInput.focus();
+            alert("Please enter Adviser Full Name.");
+            return;
+        }
+
+        // Validation for Phase 2 fields
+        if (titleInput && !titleInput.value.trim()) {
+            if (window.innerWidth < 1024) setMobilePhase(2);
+            titleInput.focus();
+            alert("Please enter Event Title.");
+            return;
+        }
+
+        if (dateInput && !dateInput.value) {
+            if (window.innerWidth < 1024) setMobilePhase(2);
+            dateInput.focus();
+            alert("Please select Event Date.");
+            return;
+        }
+
+        if (startTimeInput && !startTimeInput.value) {
+            if (window.innerWidth < 1024) setMobilePhase(2);
+            startTimeInput.focus();
+            alert("Please select Start Time.");
+            return;
+        }
+
+        if (endTimeInput && !endTimeInput.value) {
+            if (window.innerWidth < 1024) setMobilePhase(2);
+            endTimeInput.focus();
+            alert("Please select End Time.");
+            return;
+        }
+
+        if (venueInput && !venueInput.value.trim()) {
+            if (window.innerWidth < 1024) setMobilePhase(2);
+            venueInput.focus();
+            alert("Please enter Venue.");
+            return;
+        }
+
+        const title = titleInput.value;
+        const venue = venueInput.value;
+        const dateRaw = dateInput.value;
+        const sTime = formatTime(startTimeInput.value);
+        const eTime = formatTime(endTimeInput.value);
 
         if (type === 'flag_raising') {
             document.getElementById('flagModalTitle').innerText = title;
@@ -1354,6 +1861,22 @@
         formData.append('end_time', document.getElementById('evtEndTime').value);
         formData.append('venue', document.getElementById('evtVenue').value);
         formData.append('description', finalDesc);
+
+        // 🟢 Audience & Evaluation Settings
+        const targetAudienceVal = document.getElementById('targetAudience') ? document.getElementById('targetAudience').value : 'ALL';
+        const allowedOrgsVal = document.getElementById('allowedOrgsInput') ? document.getElementById('allowedOrgsInput').value : 'ALL';
+        const hasEvalVal = document.getElementById('hasEvaluation') ? document.getElementById('hasEvaluation').value : 'true';
+
+        if (targetAudienceVal === 'SPECIFIC' && (!allowedOrgsVal || allowedOrgsVal.trim() === '')) {
+            alert('Please select at least one organization for specific event availability.');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        formData.append('target_audience', targetAudienceVal);
+        formData.append('allowed_orgs', allowedOrgsVal);
+        formData.append('has_evaluation', hasEvalVal);
 
         try {
             const response = await fetch('/organizer/api/submit-proposal/', { method: 'POST', body: formData });

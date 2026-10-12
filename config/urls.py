@@ -130,6 +130,7 @@ urlpatterns = [
     path('organizer/document-tracking', views.organizer_document_tracking, name='organizer_document_tracking'),
     
     # 🟢 FORCE CHANGE PASSWORD URLS 🟢
+    path('force-change-password', views.unified_force_change_password_view, name='unified_force_change_password'),
     path('organizer/force-change-password', views.organizer_force_change_password_view, name='organizer_force_change_password'),
     path('organizer/api/force-change-send-otp/', views.force_change_send_otp, name='force_change_send_otp'),
     path('organizer/api/force-change-finalize/', views.force_change_finalize, name='force_change_finalize'),

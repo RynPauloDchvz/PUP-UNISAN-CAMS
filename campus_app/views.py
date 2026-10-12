@@ -279,7 +279,7 @@ def forgot_password_send_otp(request):
                 'otp': temp_code,
             })
 
-            email_msg = EmailMultiAlternatives(subject, text_content, '"PUP UNISAN CAMS Admin" <pupunicams@gmail.com>', [email_to_verify])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email_to_verify])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": f"Verification code sent to {email_to_verify}"})
@@ -376,7 +376,7 @@ def send_student_register_otp(request):
         html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
 
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, '"PUP UNISAN CAMS Admin" <pupunicams@gmail.com>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent! Please check your email inbox (and spam folder)."})
@@ -471,6 +471,8 @@ def student_profile(request):
     # 🟢 STATS FOR STUDENT
     all_events_count = Event.objects.filter(
         Q(org_id=student.organization) | 
+        Q(allowed_orgs='ALL') |
+        Q(allowed_orgs__icontains=student.organization) |
         Q(is_flag_raising=True) |
         Q(event_title__icontains='Flag Raising') | 
         Q(event_title__icontains='General Assembly') | 
@@ -1017,9 +1019,11 @@ def student_school_events(request):
     except Student.DoesNotExist:
         return redirect('index')
 
-    # 🟢 RBAC Filtered: Own Org + Global Events
+    # 🟢 RBAC Filtered: Own Org + Target Orgs + Global Events
     all_events = Event.objects.filter(
         Q(org_id=student.organization) | 
+        Q(allowed_orgs='ALL') |
+        Q(allowed_orgs__icontains=student.organization) |
         Q(is_flag_raising=True) |
         Q(event_title__icontains='Flag Raising') | 
         Q(event_title__icontains='General Assembly') | 
@@ -1082,9 +1086,12 @@ def student_event_calendar(request):
     except Student.DoesNotExist:
         return redirect('index')
 
-    # 🟢 RBAC Filtered: Own Org + Global Events
+    # 🟢 RBAC Filtered: Own Org + Target Orgs + Global Events
     approved_events = Event.objects.filter(
         Q(org_id=student.organization) | 
+        Q(allowed_orgs='ALL') |
+        Q(allowed_orgs__icontains=student.organization) |
+        Q(is_flag_raising=True) |
         Q(event_title__icontains='Flag Raising') | 
         Q(event_title__icontains='General Assembly') | 
         Q(event_title__icontains='Student Week')
@@ -1152,14 +1159,16 @@ def student_evaluation(request):
     except Student.DoesNotExist:
         return redirect('index')
 
-    # 🟢 RBAC Filtered: Own Org + Global Events
+    # 🟢 RBAC Filtered: Own Org + Target Orgs + Global Events (WITH EVALUATION ONLY)
     all_events = Event.objects.filter(
         Q(org_id=student.organization) | 
+        Q(allowed_orgs='ALL') |
+        Q(allowed_orgs__icontains=student.organization) |
         Q(is_flag_raising=True) |
         Q(event_title__icontains='Flag Raising') | 
         Q(event_title__icontains='General Assembly') | 
         Q(event_title__icontains='Student Week')
-    ).filter(event_status='Approved').order_by('-event_date', '-start_time')
+    ).filter(event_status='Approved', has_evaluation=True).order_by('-event_date', '-start_time')
     
     # 🟢 ATTENDANCE CHECK FOR EVALUATION (Must have timed out) 🟢
     attendance_qs = Attendance.objects.filter(student=student)
@@ -1388,7 +1397,7 @@ def force_change_send_otp(request):
         html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
         
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, '"PUP UNISAN CAMS Admin" <pupunicams@gmail.com>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent to your email."})
@@ -1604,9 +1613,12 @@ def organizer_school_events(request):
         org_acronym = "UNKNOWN"
         org_profile = None
 
-    # 🟢 RBAC Filtered Ledger: Own Org + Global Events
+    # 🟢 RBAC Filtered Ledger: Own Org + Target Orgs + Global Events
     all_events = Event.objects.filter(
         Q(org_id=org_acronym) | 
+        Q(allowed_orgs='ALL') |
+        Q(allowed_orgs__icontains=org_acronym) |
+        Q(is_flag_raising=True) |
         Q(event_title__icontains='Flag Raising') | 
         Q(event_title__icontains='General Assembly') | 
         Q(event_title__icontains='Student Week')
@@ -1782,12 +1794,15 @@ def organizer_create_events(request):
             'date': ae['event_date'].strftime('%Y-%m-%d')
         })
 
+    all_orgs_list = [{'code': k, 'name': v} for k, v in ORG_FULL_NAMES.items()]
+
     return render(request, 'organizer/create_events.html', {
         'org_acronym': org_acronym, 
         'full_org_name': ORG_FULL_NAMES.get(org_acronym, org_acronym),
         'events_json': json.dumps(events_data),
         'documents_json': json.dumps(docs_data),
-        'approved_events_json': json.dumps(approved_events_list)
+        'approved_events_json': json.dumps(approved_events_list),
+        'all_orgs_list': all_orgs_list
     })
 
 @user_passes_test(is_organizer_strictly, login_url='/')
@@ -1808,6 +1823,15 @@ def submit_event_proposal(request):
             description = request.POST.get('description')
             is_flag_raising = request.POST.get('is_flag_raising') == 'true'
 
+            # 🟢 Target Audience and Evaluation Settings
+            target_audience = request.POST.get('target_audience', 'ALL')
+            allowed_orgs = request.POST.get('allowed_orgs', 'ALL')
+            has_evaluation = request.POST.get('has_evaluation', 'true') == 'true'
+            if is_flag_raising:
+                target_audience = 'ALL'
+                allowed_orgs = 'ALL'
+                has_evaluation = False
+
             if event_id:
                 # 🟢 RESCHEDULE / EDIT EXISTING EVENT 🟢
                 event = Event.objects.get(id=event_id, org_id=org_acronym)
@@ -1817,6 +1841,9 @@ def submit_event_proposal(request):
                 event.start_time = start_time
                 event.venue = venue
                 event.description = description or f"Updated activity for {org_acronym}."
+                event.target_audience = target_audience
+                event.allowed_orgs = allowed_orgs
+                event.has_evaluation = has_evaluation
                 
                 if hasattr(event, 'end_time'): event.end_time = end_time
                 if hasattr(event, 'adviser_name'): event.adviser_name = adviser_name
@@ -1848,7 +1875,10 @@ def submit_event_proposal(request):
                     description=description or f"Flag Raising ceremony hosted by {org_acronym}.",
                     event_status=status,
                     current_location=loc,
-                    is_flag_raising=is_flag_raising
+                    is_flag_raising=is_flag_raising,
+                    target_audience=target_audience,
+                    allowed_orgs=allowed_orgs,
+                    has_evaluation=has_evaluation
                 )
                 if hasattr(event, 'end_time'): event.end_time = end_time
                 if hasattr(event, 'adviser_name'): event.adviser_name = adviser_name
@@ -4763,7 +4793,7 @@ def student_force_change_password_view(request):
     student = Student.objects.filter(user=request.user).first()
     if not getattr(student, 'force_password_change', False):
         return redirect('/student/dashboard')
-    return render(request, 'student/force_change_password.html')
+    return render(request, 'force_change_password.html', {'role': 'student'})
 
 @user_passes_test(is_student_strictly, login_url='/')
 def student_force_change_send_otp(request):
@@ -5031,6 +5061,8 @@ def update_org_password_profile(request):
 
         return JsonResponse({"status": "success", "message": "Password updated successfully!"})
     return JsonResponse({"status": "error", "message": "Invalid request."})
+
+@user_passes_test(is_adviser_strictly, login_url='/')
 def adviser_force_change_password_view(request):
     adv_profile = AdviserProfile.objects.filter(user=request.user).first()
     if not getattr(adv_profile, 'force_password_change', False):
@@ -5089,4 +5121,16 @@ def adviser_force_change_finalize(request):
             
         return JsonResponse({"status": "success", "message": "Password changed successfully!", "redirect_url": "/adviser/dashboard/"})
     return JsonResponse({"status": "error", "message": "Invalid request."})
+
+@login_required(login_url='/')
+def unified_force_change_password_view(request):
+    user = request.user
+    if user.is_staff and not OrgProfile.objects.filter(user=user).exists():
+        return adviser_force_change_password_view(request)
+    elif OrgProfile.objects.filter(user=user).exists():
+        return organizer_force_change_password_view(request)
+    elif Student.objects.filter(user=user).exists():
+        return student_force_change_password_view(request)
+    return redirect('/')
+
 
