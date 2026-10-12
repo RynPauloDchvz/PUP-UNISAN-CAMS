@@ -1411,14 +1411,33 @@ def force_change_send_otp(request):
             return JsonResponse({"status": "error", "message": "Failed to send email. " + str(e)})
     return JsonResponse({"status": "error", "message": "Invalid request."})
 
+def save_base64_as_image_field(b64_string, field, filename_prefix="profile"):
+    if not b64_string:
+        return
+    try:
+        import base64
+        from django.core.files.base import ContentFile
+        from django.utils import timezone
+        if "," in b64_string:
+            b64_string = b64_string.split(",")[1]
+        img_data = base64.b64decode(b64_string)
+        file_name = f"{filename_prefix}_{int(timezone.now().timestamp())}.jpg"
+        field.save(file_name, ContentFile(img_data), save=False)
+    except Exception as e:
+        print(f"Error saving base64 profile image: {e}")
+
 @user_passes_test(is_organizer_strictly, login_url='/')
 def force_change_finalize(request):
     if request.method == 'POST':
         password = request.POST.get('password')
         otp = request.POST.get('otp')
+        face_image = request.POST.get('face_image')
         
         if otp != request.session.get('force_change_otp'):
             return JsonResponse({"status": "error", "message": "Invalid or expired OTP code."})
+            
+        if not face_image:
+            return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
             
         user = request.user
         user.set_password(password)
@@ -1427,14 +1446,17 @@ def force_change_finalize(request):
         from django.contrib.auth import update_session_auth_hash
         update_session_auth_hash(request, user)
         
-        org_profile = OrgProfile.objects.get(user=user)
-        org_profile.force_password_change = False
-        org_profile.save()
+        org_profile = OrgProfile.objects.filter(user=user).first()
+        if org_profile:
+            org_profile.force_password_change = False
+            org_profile.face_encoding = face_image
+            save_base64_as_image_field(face_image, org_profile.profile_picture, f"org_{org_profile.organization}")
+            org_profile.save()
         
         if 'force_change_otp' in request.session:
             del request.session['force_change_otp']
             
-        return JsonResponse({"status": "success", "message": "Password changed successfully!", "redirect_url": "/organizer/homepage"})
+        return JsonResponse({"status": "success", "message": "Password changed and face registered successfully!", "redirect_url": "/organizer/homepage"})
     return JsonResponse({"status": "error", "message": "Invalid request."})
 
 @user_passes_test(is_organizer_strictly, login_url='/')
@@ -4842,9 +4864,13 @@ def student_force_change_finalize(request):
     if request.method == 'POST':
         password = request.POST.get('password')
         otp = request.POST.get('otp')
+        face_image = request.POST.get('face_image')
         
         if otp != request.session.get('student_force_change_otp'):
             return JsonResponse({"status": "error", "message": "Invalid or expired OTP code."})
+            
+        if not face_image:
+            return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
             
         user = request.user
         user.set_password(password)
@@ -4853,9 +4879,12 @@ def student_force_change_finalize(request):
         from django.contrib.auth import update_session_auth_hash
         update_session_auth_hash(request, user)
         
-        student = Student.objects.get(user=user)
-        student.force_password_change = False
-        student.save()
+        student = Student.objects.filter(user=user).first()
+        if student:
+            student.force_password_change = False
+            student.face_encoding = face_image
+            save_base64_as_image_field(face_image, student.profile_picture, f"student_{student.student_number}")
+            student.save()
         
         if 'student_force_change_otp' in request.session:
             del request.session['student_force_change_otp']
@@ -5116,9 +5145,13 @@ def adviser_force_change_finalize(request):
     if request.method == 'POST':
         password = request.POST.get('password')
         otp = request.POST.get('otp')
+        face_image = request.POST.get('face_image')
         
         if otp != request.session.get('adviser_force_change_otp'):
             return JsonResponse({"status": "error", "message": "Invalid or expired OTP code."})
+            
+        if not face_image:
+            return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
             
         user = request.user
         user.set_password(password)
@@ -5127,14 +5160,16 @@ def adviser_force_change_finalize(request):
         from django.contrib.auth import update_session_auth_hash
         update_session_auth_hash(request, user)
         
-        adv_profile = AdviserProfile.objects.get(user=user)
+        adv_profile, _ = AdviserProfile.objects.get_or_create(user=user)
         adv_profile.force_password_change = False
+        adv_profile.face_encoding = face_image
+        save_base64_as_image_field(face_image, adv_profile.profile_picture, f"adviser_{user.username}")
         adv_profile.save()
         
         if 'adviser_force_change_otp' in request.session:
             del request.session['adviser_force_change_otp']
             
-        return JsonResponse({"status": "success", "message": "Password changed successfully!", "redirect_url": "/adviser/dashboard/"})
+        return JsonResponse({"status": "success", "message": "Password changed and face registered successfully!", "redirect_url": "/adviser/dashboard/"})
     return JsonResponse({"status": "error", "message": "Invalid request."})
 
 @login_required(login_url='/')

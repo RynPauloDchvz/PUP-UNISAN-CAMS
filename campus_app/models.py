@@ -20,6 +20,9 @@ class OrgProfile(models.Model):
 
 class AdviserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
+    cover_photo = models.ImageField(upload_to='covers/', null=True, blank=True)
+    face_encoding = models.TextField(null=True, blank=True)
     force_password_change = models.BooleanField(default=True)
 
     def __str__(self):

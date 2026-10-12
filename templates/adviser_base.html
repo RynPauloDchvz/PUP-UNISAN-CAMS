@@ -150,7 +150,11 @@
                 <!-- Sidebar Name Tag (Visible when expanded) -->
                 <div class="brand-text-wrapper w-full mb-2">
                     <div class="flex items-center gap-3 p-3 bg-white/5 dark:bg-black/5 rounded-2xl border border-white/10 dark:border-black/5">
-                        <div class="w-10 h-10 bg-white/10 dark:bg-black/10 text-white dark:text-black rounded-full flex items-center justify-center text-sm font-black shrink-0 border border-white/10">AD</div>
+                        {% if request.user.adviserprofile.profile_picture %}
+                            <img src="{{ request.user.adviserprofile.profile_picture.url }}" class="w-10 h-10 rounded-full object-cover shrink-0 border border-white/10 shadow-sm">
+                        {% else %}
+                            <div class="w-10 h-10 bg-white/10 dark:bg-black/10 text-white dark:text-black rounded-full flex items-center justify-center text-sm font-black shrink-0 border border-white/10">AD</div>
+                        {% endif %}
                         <div class="overflow-hidden leading-tight">
                             <p class="text-[11px] font-black text-white dark:text-black truncate uppercase">{{ request.user.username|default:"Adviser" }}</p>
                             <p class="text-[9px] font-bold text-white/40 dark:text-black/40 truncate uppercase">Org Adviser</p>
@@ -229,7 +233,11 @@
                             <p class="font-bold text-sm text-gray-900 dark:text-white group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition">{{ request.user.username|default:"Adviser" }}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">Org Adviser</p>
                         </div>
-                        <div class="w-9 h-9 md:w-10 md:h-10 bg-pup-maroon dark:bg-pup-gold text-white dark:text-black rounded-full flex items-center justify-center text-sm font-bold shadow-md border-2 border-transparent group-hover:border-pup-maroon dark:group-hover:border-pup-gold transition">AD</div>
+                        {% if request.user.adviserprofile.profile_picture %}
+                            <img src="{{ request.user.adviserprofile.profile_picture.url }}" class="w-9 h-9 md:w-10 md:h-10 rounded-full object-cover shadow-md border-2 border-transparent group-hover:border-pup-maroon dark:group-hover:border-pup-gold transition">
+                        {% else %}
+                            <div class="w-9 h-9 md:w-10 md:h-10 bg-pup-maroon dark:bg-pup-gold text-white dark:text-black rounded-full flex items-center justify-center text-sm font-bold shadow-md border-2 border-transparent group-hover:border-pup-maroon dark:group-hover:border-pup-gold transition">AD</div>
+                        {% endif %}
                     </div>
                 </div>
             </header>
