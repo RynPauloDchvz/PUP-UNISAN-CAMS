@@ -995,6 +995,23 @@
                     }
                 });
             });
+
+            // Live GPS Location Sync for Document Tracking
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    fetch("{% url 'update_user_location' %}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token }}"
+                        },
+                        body: JSON.stringify({
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude
+                        })
+                    }).catch(() => {});
+                }, () => {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 });
+            }
         });
         </script>
 

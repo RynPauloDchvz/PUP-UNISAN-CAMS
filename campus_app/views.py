@@ -469,15 +469,16 @@ def student_profile(request):
     recent_notifications = notifications[:10]  # Increased to top 10 for better coverage
 
     # 🟢 STATS FOR STUDENT
-    all_events_count = Event.objects.filter(
-        Q(org_id=student.organization) | 
-        Q(allowed_orgs='ALL') |
-        Q(allowed_orgs__icontains=student.organization) |
-        Q(is_flag_raising=True) |
-        Q(event_title__icontains='Flag Raising') | 
-        Q(event_title__icontains='General Assembly') | 
-        Q(event_title__icontains='Student Week')
-    ).filter(event_status='Approved', event_date__lt=timezone.now().date()).count()
+    all_past_events = Event.objects.filter(event_status='Approved', event_date__lt=timezone.now().date())
+    all_events_count = 0
+    for pe in all_past_events:
+        target_aud = getattr(pe, 'target_audience', 'ALL')
+        allowed_orgs_str = getattr(pe, 'allowed_orgs', 'ALL')
+        if target_aud == 'SPECIFIC' and allowed_orgs_str and allowed_orgs_str != 'ALL':
+            allowed_list = [o.strip().upper() for o in allowed_orgs_str.split(',') if o.strip()]
+            if student.organization.strip().upper() not in allowed_list:
+                continue
+        all_events_count += 1
 
     attended_count = Attendance.objects.filter(student=student).count()
     present_count = Attendance.objects.filter(student=student, face_matched=True, is_valid_location=True).count()
@@ -1019,16 +1020,17 @@ def student_school_events(request):
     except Student.DoesNotExist:
         return redirect('index')
 
-    # 🟢 RBAC Filtered: Own Org + Target Orgs + Global Events
-    all_events = Event.objects.filter(
-        Q(org_id=student.organization) | 
-        Q(allowed_orgs='ALL') |
-        Q(allowed_orgs__icontains=student.organization) |
-        Q(is_flag_raising=True) |
-        Q(event_title__icontains='Flag Raising') | 
-        Q(event_title__icontains='General Assembly') | 
-        Q(event_title__icontains='Student Week')
-    ).filter(event_status='Approved').order_by('-event_date', '-start_time')
+    # 🟢 RBAC Filtered: Own Org + Target Orgs (Clean Check)
+    raw_events = Event.objects.filter(event_status='Approved').order_by('-event_date', '-start_time')
+    all_events = []
+    for e in raw_events:
+        target_aud = getattr(e, 'target_audience', 'ALL')
+        allowed_orgs_str = getattr(e, 'allowed_orgs', 'ALL')
+        if target_aud == 'SPECIFIC' and allowed_orgs_str and allowed_orgs_str != 'ALL':
+            allowed_list = [o.strip().upper() for o in allowed_orgs_str.split(',') if o.strip()]
+            if student.organization.strip().upper() not in allowed_list:
+                continue
+        all_events.append(e)
     
     # 🟢 DETAILED ATTENDANCE TRACKING 🟢
     attendance_qs = Attendance.objects.filter(student=student)
@@ -1049,6 +1051,7 @@ def student_school_events(request):
         else: img_url = '/static/images/PUPLogo.png'
 
         att_record = attendance_map.get(str(e.id))
+        att_scope = getattr(e, 'attendance_scope', 'CAMPUS_ONLY')
 
         events_data.append({
             'id': e.id,
@@ -1064,6 +1067,9 @@ def student_school_events(request):
             'image': img_url,
             'description': clean_desc(e.description),
             'is_flag_raising': getattr(e, 'is_flag_raising', False) or 'flag raising' in e.event_title.lower(),
+            'has_evaluation': getattr(e, 'has_evaluation', True),
+            'attendance_scope': att_scope,
+            'allow_outside_campus': att_scope == 'OUTSIDE_CAMPUS',
             'target_lat': float(e.target_latitude) if e.target_latitude else 13.84615,
             'target_lng': float(e.target_longitude) if e.target_longitude else 121.96955,
             'already_attended': att_record is not None,
@@ -1651,6 +1657,7 @@ def organizer_school_events(request):
 
         att_record = attendance_map.get(str(e.id))
 
+        att_scope = getattr(e, 'attendance_scope', 'CAMPUS_ONLY')
         events_data.append({
             'id': e.id,
             'title': e.event_title,
@@ -1665,6 +1672,9 @@ def organizer_school_events(request):
             'image': img_url,
             'description': clean_desc(e.description),
             'is_flag_raising': getattr(e, 'is_flag_raising', False) or 'flag raising' in e.event_title.lower(),
+            'has_evaluation': getattr(e, 'has_evaluation', True),
+            'attendance_scope': att_scope,
+            'allow_outside_campus': att_scope == 'OUTSIDE_CAMPUS',
             'attendance_count': att_count,
             'evaluation_count': eval_count,
             'target_lat': float(e.target_latitude) if e.target_latitude else 13.84615,
@@ -1711,6 +1721,10 @@ def organizer_create_events(request):
     admin_loc = UserLocation.objects.filter(user__is_superuser=True).order_by('-last_updated').first()
     if admin_loc and admin_loc.latitude and admin_loc.longitude:
         ADMIN_COORDS = [float(admin_loc.latitude), float(admin_loc.longitude)]
+
+    org_loc = UserLocation.objects.filter(user=request.user).order_by('-last_updated').first()
+    if org_loc and org_loc.latitude and org_loc.longitude:
+        HUB_COORDS = [float(org_loc.latitude), float(org_loc.longitude)]
     
     for e in events:
         events_data.append({
@@ -1724,43 +1738,41 @@ def organizer_create_events(request):
             'requester_name': getattr(e, 'requester_name', '') or "",
             'adviser_name': getattr(e, 'adviser_name', '') or "",
             'status': e.event_status.upper() if e.event_status else "",
-            'org': org_acronym
+            'org': org_acronym,
+            'target_audience': getattr(e, 'target_audience', 'ALL'),
+            'allowed_orgs': getattr(e, 'allowed_orgs', 'ALL'),
+            'has_evaluation': getattr(e, 'has_evaluation', True),
+            'attendance_scope': getattr(e, 'attendance_scope', 'CAMPUS_ONLY'),
         })
 
         if e.event_status == 'Pending Adviser':
             loc = "Office of the Org Adviser (Initial Review)"
             coords = ADVISER_COORDS
             progress = 1 
-        elif e.event_status == 'Pending Admin':
-            loc = "Office of the Admin (Initial Clearance)"
-            coords = ADMIN_COORDS
-            progress = 2 
         elif e.event_status in ['Admin Approved', 'Adviser Approved']:
             loc = "Student Organization Office (Gathering Signatures)"
             coords = HUB_COORDS
-            progress = 3 
+            progress = 2 
         elif e.event_status == 'Permit Verification':
-            loc = "Office of the Org Adviser (Signature Verification)"
+            loc = "Office of the Org Adviser (Requirements Verification)"
             coords = ADVISER_COORDS
-            progress = 4 
+            progress = 3 
         elif e.event_status == 'Final Admin Review':
             loc = "Office of the Admin (Final Clearance)"
             coords = ADMIN_COORDS
-            progress = 5 
+            progress = 4 
         elif e.event_status == 'Approved':
             loc = "Live in Portal (PUP Unisan Student Org Hub)"
             coords = HUB_COORDS
-            progress = 6 
+            progress = 5 
         elif e.event_status == 'Rejected':
             loc = "Returned to Organizer (Correction Required)"
             coords = HUB_COORDS
             
             # Deduce step index for rejection timeline display
             curr_loc = str(e.current_location).lower()
-            if "adviser" in curr_loc:
-                progress = 4 if ("verify" in curr_loc or "signature" in curr_loc) else 1
-            elif "admin" in curr_loc:
-                progress = 5 if ("final" in curr_loc or "clearance" in curr_loc) else 2
+            if "verify" in curr_loc or "signature" in curr_loc or "requirement" in curr_loc:
+                progress = 3
             else:
                 progress = 1
         else:
@@ -1823,10 +1835,11 @@ def submit_event_proposal(request):
             description = request.POST.get('description')
             is_flag_raising = request.POST.get('is_flag_raising') == 'true'
 
-            # 🟢 Target Audience and Evaluation Settings
+            # 🟢 Target Audience, Evaluation, and Attendance Scope Settings
             target_audience = request.POST.get('target_audience', 'ALL')
             allowed_orgs = request.POST.get('allowed_orgs', 'ALL')
             has_evaluation = request.POST.get('has_evaluation', 'true') == 'true'
+            attendance_scope = request.POST.get('attendance_scope', 'CAMPUS_ONLY')
             if is_flag_raising:
                 target_audience = 'ALL'
                 allowed_orgs = 'ALL'
@@ -1844,6 +1857,7 @@ def submit_event_proposal(request):
                 event.target_audience = target_audience
                 event.allowed_orgs = allowed_orgs
                 event.has_evaluation = has_evaluation
+                event.attendance_scope = attendance_scope
                 
                 if hasattr(event, 'end_time'): event.end_time = end_time
                 if hasattr(event, 'adviser_name'): event.adviser_name = adviser_name
@@ -1878,7 +1892,8 @@ def submit_event_proposal(request):
                     is_flag_raising=is_flag_raising,
                     target_audience=target_audience,
                     allowed_orgs=allowed_orgs,
-                    has_evaluation=has_evaluation
+                    has_evaluation=has_evaluation,
+                    attendance_scope=attendance_scope
                 )
                 if hasattr(event, 'end_time'): event.end_time = end_time
                 if hasattr(event, 'adviser_name'): event.adviser_name = adviser_name
@@ -2212,7 +2227,7 @@ def organizer_manage_attendance(request):
             'img': img,
             'captured_face': att.capture_image.url if att.capture_image else None,
             'captured_face_out': att.capture_image_out.url if att.capture_image_out else None,
-            'is_global': current_event.is_flag_raising
+            'is_global': getattr(current_event, 'attendance_scope', 'CAMPUS_ONLY') == 'OUTSIDE_CAMPUS'
         })
 
     context = {
@@ -2671,41 +2686,39 @@ def organizer_document_tracking(request):
     if admin_loc and admin_loc.latitude and admin_loc.longitude:
         ADMIN_COORDS = [float(admin_loc.latitude), float(admin_loc.longitude)]
 
+    org_loc = UserLocation.objects.filter(user=request.user).order_by('-last_updated').first()
+    if org_loc and org_loc.latitude and org_loc.longitude:
+        HUB_COORDS = [float(org_loc.latitude), float(org_loc.longitude)]
+
     for e in events:
         if e.event_status == 'Pending Adviser':
             loc = "Office of the Org Adviser (Initial Review)"
             coords = ADVISER_COORDS
             progress = 1 
-        elif e.event_status == 'Pending Admin':
-            loc = "Office of the Admin (Initial Clearance)"
-            coords = ADMIN_COORDS
-            progress = 2 
         elif e.event_status in ['Admin Approved', 'Adviser Approved']:
             loc = "Student Organization Office (Gathering Signatures)"
             coords = HUB_COORDS
-            progress = 3 
+            progress = 2 
         elif e.event_status == 'Permit Verification':
-            loc = "Office of the Org Adviser (Signature Verification)"
+            loc = "Office of the Org Adviser (Requirements Verification)"
             coords = ADVISER_COORDS
-            progress = 4 
+            progress = 3 
         elif e.event_status == 'Final Admin Review':
             loc = "Office of the Admin (Final Clearance)"
             coords = ADMIN_COORDS
-            progress = 5 
+            progress = 4 
         elif e.event_status == 'Approved':
             loc = "Live in Portal (PUP Unisan Student Org Hub)"
             coords = HUB_COORDS
-            progress = 6 
+            progress = 5 
         elif e.event_status == 'Rejected':
             loc = "Returned to Organizer (Correction Required)"
             coords = HUB_COORDS
             
             # Deduce step index for rejection timeline display
             curr_loc = str(e.current_location).lower()
-            if "adviser" in curr_loc:
-                progress = 4 if ("verify" in curr_loc or "signature" in curr_loc) else 1
-            elif "admin" in curr_loc:
-                progress = 5 if ("final" in curr_loc or "clearance" in curr_loc) else 2
+            if "verify" in curr_loc or "signature" in curr_loc or "requirement" in curr_loc:
+                progress = 3
             else:
                 progress = 1
         else:
@@ -2812,8 +2825,8 @@ def upload_signed_permit(request):
             org_acronym = org_profile.organization.strip()
             
             event = Event.objects.get(id=event_id, org_id=org_acronym)
-            event.event_status = 'Final Admin Review' 
-            event.current_location = "Office of the Admin (Final Clearance)"
+            event.event_status = 'Permit Verification' 
+            event.current_location = "Office of the Org Adviser (Requirements Verification)"
             
             if requirement_mode:
                 event.requirement_mode = int(requirement_mode)
@@ -3138,17 +3151,25 @@ def record_attendance(request):
             if not event:
                 return JsonResponse({'status': 'error', 'message': 'Event not found or not yet approved.'})
 
-            # 🟢 GLOBAL ATTENDANCE FOR FLAG RAISING 🟢
-            if getattr(event, 'is_flag_raising', False) or 'flag' in event.event_title.lower() or 'ceremony' in event.event_title.lower():
+            # 🟢 AUDIENCE RBAC CHECK (For Students) 🟢
+            if student:
+                target_aud = getattr(event, 'target_audience', 'ALL')
+                allowed_orgs_str = getattr(event, 'allowed_orgs', 'ALL')
+                if target_aud == 'SPECIFIC' and allowed_orgs_str and allowed_orgs_str != 'ALL':
+                    allowed_list = [o.strip().upper() for o in allowed_orgs_str.split(',') if o.strip()]
+                    if student.organization.strip().upper() not in allowed_list:
+                        return JsonResponse({'status': 'error', 'message': f'Attendance for this event is restricted to: {allowed_orgs_str}. You are not authorized to attend.'})
+
+            # 🟢 ATTENDANCE SCOPE CHECK 🟢
+            is_outside_allowed = getattr(event, 'attendance_scope', 'CAMPUS_ONLY') == 'OUTSIDE_CAMPUS'
+            if is_outside_allowed:
                 is_valid_location = True
 
             # Check for existing attendance
             # 🟢 HUMAN-READABLE LOCATION (Reverse Geocoding Logic) 🟢
             location_name = "Unknown Location"
-            is_flag_raising_event = getattr(event, 'is_flag_raising', False) or 'flag' in event.event_title.lower() or 'ceremony' in event.event_title.lower()
-
-            if is_flag_raising_event:
-                location_name = "Global Remote Access"
+            if is_outside_allowed:
+                location_name = "Remote / Outside Campus"
             elif lat and lng and lat != 'null' and lng != 'null':
                 lat_f, lng_f = float(lat), float(lng)
                 zones = [
@@ -3345,6 +3366,10 @@ def submit_evaluation(request):
             event = Event.objects.filter(id=event_id, event_status='Approved').first()
             if not event:
                 return JsonResponse({'status': 'error', 'message': 'Event not found.'})
+
+            # 🟢 ENFORCE EVALUATION ENABLED SETTING 🟢
+            if not getattr(event, 'has_evaluation', True):
+                return JsonResponse({'status': 'error', 'message': 'Evaluation is not required or enabled for this event.'})
 
             # 🟢 ENFORCE TIME OUT BEFORE EVALUATION 🟢
             attendance = Attendance.objects.filter(student=student, event=event).first()

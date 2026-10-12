@@ -65,6 +65,7 @@ class Event(models.Model):
     target_audience = models.CharField(max_length=50, default='ALL') # 'ALL' or 'SPECIFIC'
     allowed_orgs = models.TextField(default='ALL') # 'ALL' or comma-separated acronyms e.g. 'ITO,YEO'
     has_evaluation = models.BooleanField(default=True) # True = With Evaluation, False = Without Evaluation
+    attendance_scope = models.CharField(max_length=50, default='CAMPUS_ONLY') # 'CAMPUS_ONLY' or 'OUTSIDE_CAMPUS'
     
     event_date = models.DateField()
     start_time = models.TimeField()

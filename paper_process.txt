@@ -1,102 +1,86 @@
 ================================================================================
-PUP UNISAN CAMS - EVENT APPROVAL & PAPER PROCESS WORKFLOW (UPDATED)
+PUP UNISAN CAMS - EVENT APPROVAL & PAPER PROCESS WORKFLOW (OFFICIAL 5-STEP)
 File: paper_process.txt
 ================================================================================
 
 [OVERVIEW]
-Pinadaling proseso para sa pag-apruba ng event proposal at manual paper routing.
-Tinatanggal ang redundant na 'Admin Initial Review' sa system at ang '2nd Permit Verification'
-pabalik kay Adviser, upang maging 100% tugma sa totoong proseso ng PUP campus.
+Ang bagong opisyal na 5-Hakbang (5-Step) na proseso para sa pag-apruba ng event proposal,
+manual paper routing, at pag-upload ng mga opisyal na dokumento sa PUP Unisan CAMS.
+Inalis na ang lumang redundant na Initial Review ng Admin sa system, ngunit nananatili
+ang pagsusuri ng Adviser sa mga in-upload na requirements bago ito dumeretso sa Final Admin Review.
 
 ================================================================================
-BUONG PROSESO (PHASES & STEPS)
+BUONG PROSESO (PHASES & 5-STEP SYSTEM WORKFLOW)
 ================================================================================
 
 PHASE 1: SYSTEM (INITIAL PROPOSAL REVIEW)
 --------------------------------------------------------------------------------
-Step 1: Create Request (Student Org)
-- Ang Student Organization ay gagawa ng Event Proposal / Request Letter sa loob ng system (Create Events).
-- Nase-save ang event status bilang "Pending Adviser".
-- Lokasyon: "Office of the Adviser".
-
-Step 2: Adviser's Initial Review (Adviser)
-- Makikita ni Organization Adviser ang proposal sa kanyang Adviser Dashboard.
-- Kapag inaprubahan (Approve) ni Adviser sa system, magiging "Adviser Approved" (Awaiting Manual Signatures) ang status.
-- Magiging available at bubukas na ang PRINT / Download ng Event Letter para sa Student Org.
-- Dahilan: Kailangan may initial go-signal at "Duly noted by the organization adviser" bago ipasa sa Admin/Office.
-
+1. Step 1: Pending Adviser (Initial Review)
+   - Gumagawa ang Student Org ng Event Proposal / Request Letter sa loob ng system.
+   - Status: "Pending Adviser"
+   - Lokasyon: Office of the Org Adviser (Initial Review)
+   - Adviser Action (sa dashboard.html):
+     * APPROVE: Diretsong magiging "Adviser Approved" (Ready for Printing & F2F Routing).
+     * REJECT: Magiging "Rejected" kalakip ang opisyal na Rejection Remarks/Reason.
+       Makikita ito ng Organizer sa Document Tracking modal.
 
 PHASE 2: MANUAL / F2F (FORM & ROUTING SIGNATURES)
 --------------------------------------------------------------------------------
-Step 3: Pass to Admin Office (Student Org -> Admin / OSAS)
-- Personal na pupunta ang Student Org sa Office of Student Affairs and Services (OSAS / Admin) dala ang printed Event Letter.
-- NOTE: Wala nang 'Initial Review' na iki-click ang Admin sa computer. Rekta tanggap na lang ng papel ang Admin office.
+2. Step 2: Adviser Approved (Printed & F2F Routing / Gathering Signatures)
+   - Kapag na-approve ni Adviser, puwede nang i-print ng Org ang Request Letter.
+   - Dadalhin ng Student Org ang printed letter sa Office of Student Affairs and Services (OSAS / Admin).
+   - Iaabot ng Admin sa Student Org ang opisyal na hard copy form (PUP-RPCA-5-OFSS-003).
+   - Iikutin ng Student Org ang form at letter para papirmahan nang pisikal sa mga sumusunod:
+     1. Organization Adviser (Manual Signature)
+     2. Area Chairperson
+     3. Security Office
+     4. Property Office
+     5. Head of Student Affairs (Recommending Approval)
+     6. Campus Director (Dr. Edwin G. Malabuyoc)
 
-Step 4: Receive Form PUP-RPCA-5-OFSS-003 (Admin -> Student Org)
-- Iaabot agad ng Admin sa Student Org ang opisyal na hard copy form (PUP-RPCA-5-OFSS-003) para sulatan at punan ng detalye.
-
-Step 5: Manual Routing & Signatures (Student Org)
-- Iikutin ng Student Org ang form at letter para papirmahan nang pisikal sa mga sumusunod na kinauukulan:
-  1. Organization Adviser (Manual Signature)
-  2. Area Chairperson
-  3. Security Office
-  4. Property Office
-  5. Head of Student Affairs / Ma'am Janoras (Recommending Approval)
-  6. Campus Director (Dr. Edwin G. Malabuyoc)
-
-
-PHASE 3: SYSTEM (FINALIZATION & UPLOAD)
+PHASE 3: REQUIREMENTS VERIFICATION (ADVISER CHECK)
 --------------------------------------------------------------------------------
-Step 6: Upload Requirements (Student Org)
-- Kapag kumpleto na ang lahat ng manual na pirma sa Form 003 at Request Letter, i-i-scan o pipicturan ito ng Student Org.
-- I-u-upload ito ng Org pabalik sa system sa pamamagitan ng kanilang Document Vault.
+3. Step 3: Adviser Finalize Event Requirements (DB Status: Permit Verification)
+   - Kapag kumpleto na ang lahat ng manual na pirma sa Form 003 at Request Letter,
+     i-i-scan o pipicturan ito ng Student Org at i-u-upload sa Document Vault.
+   - Pagka-upload, magiging status: "Permit Verification".
+   - Lokasyon: Office of the Org Adviser (Requirements Verification).
+   - Bubuksan ni Adviser ang kanyang dashboard (Permit Verification tab) para i-check
+     kung kumpleto at wasto ang mga in-upload na signed requirements bago ipadala sa Admin.
+   - Kapag na-verify ni Adviser, ifo-forward ito sa Admin.
 
-Step 7: Direct to Admin Final Check (System Automation)
-- Pagka-upload ng dokumento, DIRETSO NA AGAD ang status sa "Final Admin Review".
-- Lokasyon: "Office of the Admin / OSAS (Final Clearance)".
-- NOTE: HINDI NA ITO DADAAN KAY ADVISER sa system dahil nakapirma na siya manually sa papel habang iniikot ang form.
+PHASE 4: FINAL ADMIN CLEARANCE
+--------------------------------------------------------------------------------
+4. Step 4: Final Admin Review (Uploaded Signed Documents)
+   - Status: "Final Admin Review".
+   - Lokasyon: Office of the Admin (Final Clearance).
+   - Bubuksan ng Admin ang Admin Dashboard (Event Records / Approvals) para sa pinal na
+     clearance ng in-upload na kompletong signed documents.
 
-Step 8: Final Approval & Publication (Admin)
-- Bubuksan ng Admin ang Admin Dashboard para suriin ang mga in-upload na scanned papers.
-- Kapag kumpleto at maayos ang pirma, iki-click ng Admin ang "Final Approved".
-- Magiging "Approved" ang status ng event:
-  * Officially LIVE at PUBLISHED na sa Student Events Feed.
-  * Aktibo na ang attendance hub.
-  * Naka-record na sa Event History at Document Tracking bilang ganap na naaprubahan.
-
-================================================================================
-PAGHAHAMBING: LUMANG SETUP VS BAGONG SETUP
-================================================================================
-
-LUMANG 6-STEP WORKFLOW:
-1. Pending Adviser (Adviser 1st Review)
-2. Pending Admin (Admin Initial Review sa system)  <-- [TINANGGAL]
-3. Admin Approved (Awaiting Documents)
-4. Permit Verification (Adviser 2nd Review sa system) <-- [TINANGGAL]
-5. Final Admin Review (Admin 2nd Review)
-6. Approved (Published)
-
-BAGONG 4-STEP SYSTEM WORKFLOW:
-1. Pending Adviser       -> Adviser Initial Review (System)
-2. Adviser Approved      -> Ready to Print & Manual F2F Routing (Physical Paper)
-3. Final Admin Review    -> Pagka-upload ng signed papers, rekta Admin na (System)
-4. Approved              -> Admin Final Approval at Publish (System)
+PHASE 5: PUBLICATION & LIVE EVENT
+--------------------------------------------------------------------------------
+5. Step 5: Approved (Published Event by Admin)
+   - Iki-click ng Admin ang "Fully Approve & Publish".
+   - Status: "Approved".
+   - Lokasyon: Live in Portal (PUP Unisan Student Org Hub).
+   - Ang event ay ganap nang naka-publish, makikita ng mga estudyante, at aktibo na ang attendance.
 
 ================================================================================
-MGA GAGAWING PAGBABAGO SA SYSTEM (ACTION ITEMS)
+OPISYAL NA 5-STEP DOCUMENT TRACKING TIMELINE
 ================================================================================
+1. Pending Adviser (Initial Review)
+2. Adviser Approved (Printed & F2F Routing / Gathering Signatures) or Rejected (with reason)
+3. Adviser Finalize Event Requirements
+4. Final Admin Review (Uploaded Signed Documents)
+5. Approved (Published Event by Admin)
 
-1. ADVISER SIDE:
-   - Sa Adviser Dashboard, isang beses na lang magre-review: sa Event Proposal (Phase 1).
-   - Pag nag-approve si Adviser, magiging "Adviser Approved" agad (hindi na dadaan sa "Pending Admin").
-   - Tanggalin na ang lumang "Permit Verification" tab/section sa dashboard ni Adviser.
-
-2. ORGANIZER SIDE:
-   - Sa Create Events at Profile/Tracker: Bubukas agad ang Print Letter kapag "Adviser Approved".
-   - Sa Document Vault: Pag nag-upload ng scanned documents, status ay magiging "Final Admin Review" agad.
-   - Sa Document Tracking: I-update ang step timeline tracker mula 6 steps patungong 4 steps.
-
-3. ADMIN SIDE:
-   - Tanggalin na ang "Initial Clearance" approval button sa Admin Dashboard.
-   - Tanging ang "Final Admin Review" (pagsusuri sa in-upload na signed documents) ang aaprubahan ni Admin bago maging "Approved / Published".
+================================================================================
+STATUS AT LOCATION MAPPING SA SYSTEM
+================================================================================
+- Progress 1: Pending Adviser          -> Office of the Org Adviser (Initial Review)
+- Progress 2: Adviser Approved         -> Student Organization Office (Gathering Signatures)
+- Progress 3: Permit Verification      -> Office of the Org Adviser (Requirements Verification)
+- Progress 4: Final Admin Review       -> Office of the Admin (Final Clearance)
+- Progress 5: Approved                 -> Live in Portal (PUP Unisan Student Org Hub)
+- Rejected (if any):                   -> Returned to Organizer (Correction Required) + Reason banner
 ================================================================================

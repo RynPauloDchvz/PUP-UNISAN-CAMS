@@ -498,10 +498,12 @@
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             }
             
-            // 🟢 INSTANT GLOBAL ATTENDANCE BYPASS 🟢
-            if (currentEvent && currentEvent.is_flag_raising) {
+            // 🟢 ATTENDANCE SCOPE CHECK 🟢
+            const isOutsideAllowed = currentEvent && (currentEvent.allow_outside_campus || currentEvent.attendance_scope === 'OUTSIDE_CAMPUS');
+
+            if (isOutsideAllowed) {
                 isLocationVerified = true;
-                document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500"></i> GLOBAL ATTENDANCE VERIFIED`;
+                document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500"></i> OUTSIDE CAMPUS ATTENDANCE ALLOWED`;
             }
 
             navigator.geolocation.watchPosition(pos => {
@@ -509,10 +511,10 @@
                 map.setView([userLat, userLng], 17);
                 L.marker([userLat, userLng]).addTo(map);
                 
-                // 🟢 GLOBAL ATTENDANCE FOR FLAG RAISING 🟢
-                if (currentEvent && currentEvent.is_flag_raising) {
+                // 🟢 ATTENDANCE SCOPE CHECK 🟢
+                if (isOutsideAllowed) {
                     isLocationVerified = true;
-                    document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500"></i> GLOBAL ATTENDANCE VERIFIED`;
+                    document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500"></i> OUTSIDE CAMPUS ATTENDANCE ALLOWED`;
                 } else {
                     // Standard GEOFENCING: 300m radius from PUP Unisan (13.84615, 121.96955)
                     const target = L.latLng(13.84615, 121.96955);

@@ -244,6 +244,14 @@
 
             <!-- Modal Body -->
             <div class="p-6 sm:p-8 overflow-y-auto flex-grow hide-scrollbar">
+                <!-- Rejection Reason Banner (shown only if rejected) -->
+                <div id="modalRejectBox" class="hidden mb-6 p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50">
+                    <div class="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-xs uppercase tracking-wider mb-1">
+                        <i class="ph-bold ph-warning-circle text-base"></i> Official Adviser Rejection Reason
+                    </div>
+                    <p id="modalRejectReason" class="text-sm text-red-700 dark:text-red-300 font-medium"></p>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-5 md:gap-0 gap-8">
                     
                     <!-- Left: Detailed Timeline -->
@@ -404,6 +412,8 @@
             case 'Rejected': return { bg: 'bg-red-100 dark:bg-red-900/20', text: 'text-red-600 dark:text-red-400', border: 'border-red-200 dark:border-red-800' };
             case 'Admin Approved':
             case 'Adviser Approved': return { bg: 'bg-blue-100 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800' };
+            case 'Permit Verification': return { bg: 'bg-purple-100 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-800' };
+            case 'Final Admin Review': return { bg: 'bg-indigo-100 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-200 dark:border-indigo-800' };
             default: return { bg: 'bg-amber-100 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800' };
         }
     }
@@ -433,6 +443,18 @@
         statusBadge.innerText = doc.status;
         statusBadge.className = `font-bold text-[0.65rem] px-3 py-1 rounded-full uppercase tracking-widest border ${color.bg} ${color.text} ${color.border}`;
 
+        // Rejection Reason Banner
+        const rejectBox = document.getElementById('modalRejectBox');
+        const rejectReason = document.getElementById('modalRejectReason');
+        if (rejectBox && rejectReason) {
+            if (doc.status === 'Rejected' && doc.rejectReason) {
+                rejectReason.innerText = doc.rejectReason;
+                rejectBox.classList.remove('hidden');
+            } else {
+                rejectBox.classList.add('hidden');
+            }
+        }
+
         renderTimeline(doc);
         
         const modalContent = document.getElementById('trackingModalContent');
@@ -440,7 +462,7 @@
         document.getElementById('trackingModal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
 
-        setTimeout(() => initTrackingMap(doc.coords, doc.currentLoc), 150);
+        setTimeout(() => initTrackingMap(doc.coords, doc.currentLoc, doc), 150);
     }
 
     function closeTrackingModal() {
@@ -464,12 +486,11 @@
         container.innerHTML = '';
         
         const steps = [
-            { name: "Adviser Review", desc: "Faculty oversight & initial check" },
-            { name: "Admin Clearance", desc: "Initial clearance from Admin Office" },
-            { name: "Signature Gathering", desc: "Printing & Manual signature process" },
-            { name: "Permit Verification", desc: "Adviser verification of uploaded files" },
-            { name: "Final Approval", desc: "Admin final record verification" },
-            { name: "System Published", desc: "Event is live in the Portal" }
+            { name: "Pending Adviser", desc: "Initial Review (Faculty proposal check)" },
+            { name: "Adviser Approved", desc: "Printed & F2F Routing / Gathering Signatures" },
+            { name: "Adviser Finalize Event Requirements", desc: "Verification of uploaded requirements" },
+            { name: "Final Admin Review", desc: "Admin verification of uploaded signed documents" },
+            { name: "Approved", desc: "Published Event by Admin (Live in Portal)" }
         ];
 
         steps.forEach((step, index) => {
@@ -501,32 +522,38 @@
                 </div>
                 <div class="flex flex-col -mt-0.5">
                     <span class="text-xs font-bold uppercase tracking-tight text-gray-900 dark:text-white">${step.name}</span>
-                    <span class="text-[0.65rem] text-gray-500 dark:text-gray-400 font-medium">${getStatusText(statusClass, doc.status)}</span>
+                    <span class="text-[0.65rem] text-gray-500 dark:text-gray-400 font-medium">${getStatusText(statusClass, doc.status, step.desc)}</span>
                 </div>
             `;
             container.appendChild(stepEl);
         });
     }
 
-    function getStatusText(statusClass, status) {
+    function getStatusText(statusClass, status, defaultDesc) {
         if (statusClass === 'completed') return 'Completed and Verified';
-        if (statusClass === 'current') return 'In Progress / Action Needed';
+        if (statusClass === 'current') return defaultDesc ? `${defaultDesc} — In Progress` : 'In Progress / Action Needed';
         if (statusClass === 'rejected') return 'Rejected / Returned to Org';
-        return 'Pending Previous Steps';
+        return defaultDesc || 'Pending Previous Steps';
     }
 
-    function initTrackingMap(coords, locName) {
+    function initTrackingMap(coords, locName, doc) {
         if (typeof L === 'undefined') {
             console.error('Leaflet is not loaded');
             return;
         }
-        if (map) map.remove();
+        if (map) {
+            map.remove();
+            map = null;
+        }
         
+        const defaultCoords = [13.84575, 121.96915];
+        let targetCoords = (coords && Array.isArray(coords) && coords.length === 2 && !isNaN(coords[0])) ? coords : defaultCoords;
+
         map = L.map('docMap', {
             zoomControl: true,
             attributionControl: false,
             scrollWheelZoom: false
-        }).setView(coords, 18);
+        }).setView(targetCoords, 18);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -551,16 +578,67 @@
             document.head.appendChild(style);
         }
 
-        L.marker(coords, { icon: customIcon }).addTo(map)
-            .bindPopup(`<div class="text-center p-1">
-                <div class="font-black text-pup-maroon dark:text-pup-gold text-[11px] uppercase tracking-tighter mb-1">${locName}</div>
-                <div class="text-[9px] text-gray-500 font-bold leading-tight border-t border-gray-100 dark:border-gray-800 pt-1 mt-1">
-                    <i class="ph-bold ph-map-pin"></i> Barangay Kalilayan Ibaba<br>Unisan, Quezon
+        const popupHtml = `
+            <div class="text-center p-1.5 font-sans min-w-[170px]">
+                <div class="font-black text-pup-maroon dark:text-pup-gold text-[11px] uppercase tracking-tight mb-1" id="trackBubbleLocTitle">
+                    ${locName || 'Physical Office Location'}
                 </div>
-            </div>`, { closeButton: false, className: 'custom-popup' })
+                <div class="text-[9px] text-gray-500 font-bold leading-tight border-t border-gray-100 dark:border-gray-800 pt-1 mt-1 flex items-center justify-center gap-1" id="trackBubbleSubLoc">
+                    <i class="ph-bold ph-map-pin text-pup-maroon dark:text-pup-gold"></i> Locating exact address...
+                </div>
+            </div>
+        `;
+
+        const marker = L.marker(targetCoords, { icon: customIcon }).addTo(map)
+            .bindPopup(popupHtml, { closeButton: false, className: 'custom-popup' })
             .openPopup();
+
+        // 🟢 REAL-TIME ACCURATE ADDRESS RESOLUTION (Reverse Geocoding via Nominatim) 🟢
+        const updateResolvedAddress = (lat, lon) => {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        const parts = data.display_name.split(',');
+                        const cleanAddr = parts.slice(0, 3).join(', ').trim();
+                        const subEl = document.getElementById('trackBubbleSubLoc');
+                        if (subEl) {
+                            subEl.innerHTML = `<i class="ph-bold ph-map-pin text-pup-maroon dark:text-pup-gold"></i> ${cleanAddr}`;
+                        }
+                        const modalCurrentLoc = document.getElementById('modalCurrentLoc');
+                        if (modalCurrentLoc) {
+                            modalCurrentLoc.innerHTML = `<span>${locName}</span> <span class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1"><i class="ph-bold ph-map-pin text-pup-maroon dark:text-pup-gold"></i> ${cleanAddr}</span>`;
+                        }
+                    }
+                })
+                .catch(() => {
+                    const subEl = document.getElementById('trackBubbleSubLoc');
+                    if (subEl) {
+                        subEl.innerHTML = `<i class="ph-bold ph-map-pin text-pup-maroon dark:text-pup-gold"></i> Barangay Kalilayan Ibaba, Unisan`;
+                    }
+                });
+        };
+
+        // Resolve initial coordinates address
+        updateResolvedAddress(targetCoords[0], targetCoords[1]);
+
+        // If the document is currently in the custody of the Student Organization (e.g. gathering signatures / returned),
+        // use live GPS location to pinpoint exact real-world spot
+        const isWithOrg = doc && (doc.status === 'Admin Approved' || doc.status === 'Adviser Approved' || doc.status === 'Rejected');
+        if (isWithOrg && "geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const liveCoords = [pos.coords.latitude, pos.coords.longitude];
+                if (map) {
+                    map.setView(liveCoords, 18);
+                    marker.setLatLng(liveCoords);
+                    updateResolvedAddress(liveCoords[0], liveCoords[1]);
+                }
+            }, () => {}, { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 });
+        }
             
-        setTimeout(() => map.invalidateSize(), 250);
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+        }, 250);
     }
 </script>
 {% endblock extra_js %}

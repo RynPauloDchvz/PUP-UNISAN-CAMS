@@ -544,6 +544,22 @@
             bodyEl.innerHTML = `Great news! Your event proposal for <strong>"${title}"</strong> has received initial approval from your Adviser.<br><br><span class="text-pup-maroon dark:text-pup-gold font-bold">ACTION REQUIRED:</span> Please print the documents, secure all necessary manual signatures, and upload both the <strong class="text-gray-900 dark:text-white">Signed Request Letter</strong> and <strong class="text-gray-900 dark:text-white">Permit to Conduct Activity</strong> in your Document Vault to finalize the publication.`;
             reasonBox.classList.add('hidden');
         }
+        else if (status === 'Permit Verification') {
+            icon.className = "w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 border-4 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30 text-purple-500 text-4xl";
+            icon.innerHTML = '<i class="ph-fill ph-file-search"></i>';
+            titleEl.innerText = "Requirements Verification";
+            titleEl.className = "text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-500 mb-2 uppercase tracking-wide";
+            bodyEl.innerHTML = `Your uploaded signed documents for <strong>"${title}"</strong> are currently being verified by your Organization Adviser. Once verified, it will proceed to the Admin for final clearance.`;
+            reasonBox.classList.add('hidden');
+        }
+        else if (status === 'Final Admin Review') {
+            icon.className = "w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 border-4 border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 text-4xl";
+            icon.innerHTML = '<i class="ph-fill ph-stamp"></i>';
+            titleEl.innerText = "Final Admin Clearance";
+            titleEl.className = "text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-500 mb-2 uppercase tracking-wide";
+            bodyEl.innerHTML = `Your verified documents for <strong>"${title}"</strong> are now in the Admin Office (OSAS) for final clearance and publication.`;
+            reasonBox.classList.add('hidden');
+        }
         else if (status === 'Rejected') {
             icon.className = "w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-5 border-4 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 text-red-500 text-4xl";
             icon.innerHTML = '<i class="ph-fill ph-x-circle"></i>';

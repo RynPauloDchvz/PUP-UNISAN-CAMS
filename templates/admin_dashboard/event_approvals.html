@@ -553,64 +553,298 @@
     .spin { animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
 
-    /* Success Message State (Small Modal) */
-    .success-mini-modal {
+    /* 🚀 FULLSCREEN PUBLISH OVERLAY & AIRPLANE TAKEOFF ANIMATION 🚀 */
+    .fullscreen-publish-overlay {
         position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        inset: 0;
+        z-index: 99999;
+        width: 100vw;
+        height: 100vh;
         background: var(--card-bg);
-        z-index: 10000;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        text-align: center;
-        padding: 40px;
-        border-radius: 24px;
-        border: 1px solid var(--border);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        width: 90%;
-        max-width: 400px;
-        animation: modalSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        border-radius: 0 !important;
+        border: none !important;
+        margin: 0 !important;
+        overflow: hidden;
+        user-select: none;
     }
 
-    /* Loading Steps Animation */
-    .loading-step-container {
+    /* Atmospheric sky background */
+    .flight-sky-backdrop {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 1;
+    }
+    .sky-drift-cloud {
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(ellipse at center, rgba(148, 163, 184, 0.12) 0%, rgba(148, 163, 184, 0) 70%);
+        filter: blur(24px);
+    }
+    .sky-drift-cloud-1 {
+        width: 420px;
+        height: 180px;
+        top: 15%;
+        left: 5%;
+        animation: cloudDriftSlow 20s linear infinite;
+    }
+    .sky-drift-cloud-2 {
+        width: 320px;
+        height: 140px;
+        bottom: 20%;
+        right: 10%;
+        animation: cloudDriftSlow 26s linear infinite reverse;
+    }
+    @keyframes cloudDriftSlow {
+        0% { transform: translateX(-40px); }
+        50% { transform: translateX(40px); }
+        100% { transform: translateX(-40px); }
+    }
+
+    /* Airplane Arena & Flight Dynamics */
+    .airplane-stage {
+        position: relative;
+        width: 100%;
+        height: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: visible;
+        margin-bottom: 15px;
+    }
+
+    .airplane-carrier {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.4s ease;
+    }
+
+    /* Phase 1: Startup / Spooling */
+    .airplane-carrier.starting {
+        animation: planeSpooling 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes planeSpooling {
+        0% { transform: translateY(0px) rotate(6deg) scale(0.96); }
+        100% { transform: translateY(-4px) rotate(9deg) scale(1); }
+    }
+
+    /* Phase 2: Steady Cruise */
+    .airplane-carrier.flying {
+        animation: planeCruising 2.2s ease-in-out infinite alternate;
+    }
+    @keyframes planeCruising {
+        0% { transform: translateY(0px) rotate(8deg); }
+        50% { transform: translateY(-12px) rotate(13deg); }
+        100% { transform: translateY(-4px) rotate(9deg); }
+    }
+
+    /* Phase 3: Blast Takeoff Offscreen */
+    .airplane-carrier.takeoff {
+        animation: planeBlastOff 1.05s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+    }
+    @keyframes planeBlastOff {
+        0% {
+            transform: translateY(0px) rotate(9deg) scale(1);
+            opacity: 1;
+        }
+        20% {
+            transform: translate(-18px, 6px) rotate(4deg) scale(0.95);
+            opacity: 1;
+        }
+        100% {
+            transform: translate(450px, -280px) rotate(32deg) scale(1.45);
+            opacity: 0;
+        }
+    }
+
+    /* Smoke Particles Emitter at Tail / Engine */
+    .smoke-emitter {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        pointer-events: none;
+    }
+    .smoke-particle {
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(148, 163, 184, 0.5) 0%, rgba(148, 163, 184, 0.15) 50%, transparent 75%);
+        opacity: 0;
+        filter: blur(5px);
+        pointer-events: none;
+    }
+    [data-theme="dark"] .smoke-particle {
+        background: radial-gradient(circle, rgba(226, 232, 240, 0.45) 0%, rgba(148, 163, 184, 0.12) 50%, transparent 75%);
+    }
+
+    .airplane-carrier.starting .smoke-particle {
+        animation: puffDriftStart 1.1s ease-out infinite;
+    }
+    .airplane-carrier.flying .smoke-particle {
+        animation: puffBillowFlight 1.35s ease-out infinite;
+    }
+    .airplane-carrier.takeoff .smoke-particle {
+        animation: puffRocketBlast 0.75s ease-out forwards;
+    }
+
+    /* Staggered Smoke Puffs */
+    .puff-1 { width: 16px; height: 16px; animation-delay: 0s !important; }
+    .puff-2 { width: 22px; height: 22px; animation-delay: 0.16s !important; }
+    .puff-3 { width: 28px; height: 28px; animation-delay: 0.32s !important; }
+    .puff-4 { width: 34px; height: 34px; animation-delay: 0.48s !important; }
+    .puff-5 { width: 40px; height: 40px; animation-delay: 0.64s !important; }
+    .puff-6 { width: 46px; height: 46px; animation-delay: 0.80s !important; }
+    .puff-7 { width: 52px; height: 52px; animation-delay: 0.96s !important; }
+    .puff-8 { width: 58px; height: 58px; animation-delay: 1.12s !important; }
+
+    @keyframes puffDriftStart {
+        0% { transform: translate(-5px, -50%) scale(0.35); opacity: 0.7; }
+        100% { transform: translate(-80px, -50%) scale(2); opacity: 0; }
+    }
+    @keyframes puffBillowFlight {
+        0% { transform: translate(-6px, -50%) scale(0.4); opacity: 0.9; }
+        50% { transform: translate(-65px, -45%) scale(1.6); opacity: 0.55; }
+        100% { transform: translate(-130px, -40%) scale(2.6); opacity: 0; }
+    }
+    @keyframes puffRocketBlast {
+        0% { transform: translate(-8px, -50%) scale(0.6); opacity: 1; }
+        100% { transform: translate(-170px, -30%) scale(3.4); opacity: 0; }
+    }
+
+    /* Jet Engine Core Glow */
+    .engine-pulse {
+        animation: engineGlow 0.5s ease-in-out infinite alternate;
+    }
+    @keyframes engineGlow {
+        0% { r: 3.5px; opacity: 0.7; }
+        100% { r: 6px; opacity: 1; filter: drop-shadow(0 0 8px #f59e0b); }
+    }
+
+    /* Wind motion speedlines */
+    .wind-speedline {
+        position: absolute;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.4), transparent);
+        border-radius: 2px;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .airplane-carrier.flying .wind-speedline,
+    .airplane-carrier.takeoff .wind-speedline {
+        animation: windStreakMove 1.1s linear infinite;
+    }
+    .wline-1 { width: 60px; top: 20%; left: -30px; animation-delay: 0.2s !important; }
+    .wline-2 { width: 90px; bottom: 25%; left: -50px; animation-delay: 0.5s !important; }
+    .wline-3 { width: 75px; top: 75%; left: -40px; animation-delay: 0.8s !important; }
+
+    @keyframes windStreakMove {
+        0% { transform: translateX(80px); opacity: 0; }
+        40% { opacity: 0.6; }
+        100% { transform: translateX(-120px); opacity: 0; }
+    }
+
+    /* 🎴 Single-Step Card & Smooth Sequential Transitions 🎴 */
+    .single-status-wrapper {
+        width: 100%;
+        max-width: 440px;
+        min-height: 105px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .single-status-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        border-radius: 20px;
+        background: var(--input-bg);
+        border: 1px solid var(--border);
+        box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+        width: 100%;
+        backdrop-blur: 8px;
+    }
+    [data-theme="dark"] .single-status-card {
+        background: rgba(255, 255, 255, 0.04);
+        box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.45);
+    }
+    .single-status-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+    .step-badge {
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 3px 9px;
+        border-radius: 9999px;
+    }
+
+    /* Sequential Step Slide & Fade Animation */
+    .step-slide-fade-enter-active {
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .step-slide-fade-leave-active {
+        transition: all 0.28s cubic-bezier(0.7, 0, 0.84, 0);
+    }
+    .step-slide-fade-enter-from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+    }
+    .step-slide-fade-leave-to {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.96);
+    }
+
+    /* Centered Success Celebration Pop */
+    .success-celebration-container {
         display: flex;
         flex-direction: column;
-        gap: 15px;
         align-items: center;
+        text-align: center;
+        width: 100%;
+        max-width: 440px;
         padding: 20px;
     }
-    .step-item {
+    .success-pop-ring {
+        position: relative;
         display: flex;
         align-items: center;
-        gap: 12px;
-        color: var(--text-muted);
-        font-weight: 600;
-        font-size: 0.85rem;
-        opacity: 0.4;
-        transition: 0.3s;
+        justify-content: center;
+        margin-bottom: 24px;
     }
-    .step-item.active {
-        color: var(--pup-maroon);
-        opacity: 1;
-        transform: scale(1.05);
-    }
-    .step-item.completed {
-        color: #28a745;
-        opacity: 1;
-    }
-    .step-dot {
-        width: 10px;
-        height: 10px;
+    .success-pop-pulse {
+        position: absolute;
+        width: 120px;
+        height: 120px;
         border-radius: 50%;
-        background: currentColor;
+        background: rgba(16, 185, 129, 0.22);
+        animation: pulseRing 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        pointer-events: none;
     }
-    .step-spinner {
-        font-size: 1.2rem;
-        animation: spin 1s linear infinite;
+    @keyframes pulseRing {
+        0% { transform: scale(0.85); opacity: 0.9; }
+        50% { transform: scale(1.35); opacity: 0.25; }
+        100% { transform: scale(1.6); opacity: 0; }
     }
 
     /* Calendar Button Styles */
@@ -818,43 +1052,6 @@
     <!-- 🏛️ MAIN APPROVAL/RECORD MODAL 🏛️ -->
     <div id="main-backdrop" class="fixed inset-0 z-[5000] flex items-center justify-center bg-black/70 backdrop-blur-md p-0 sm:p-4" v-if="isModalOpen" @click="closeModal" style="opacity: 0; transition: opacity 0.3s ease-out;">
         <div id="main-modal-box" class="bg-[var(--card-bg)] border-0 sm:border border-[var(--border)] rounded-none sm:rounded-2xl w-full max-w-4xl h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative" @click.stop>
-                    
-                    <!-- 🟢 STEP-BY-STEP LOADING OVERLAY (MODAL LEVEL) 🟢 -->
-                    <div v-if="actionLoading" class="absolute inset-0 z-[6000] bg-[var(--card-bg)] flex items-center justify-center">
-                        <div class="loading-step-container">
-                            <h3 style="font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px; color: var(--text-main); font-size: 1.2rem;">
-                                <i class="ph-bold ph-gear-six spin" style="display: inline-block; margin-right: 10px;"></i> Processing Request
-                            </h3>
-                            
-                            <div :class="['step-item', loadingStep >= 1 ? (loadingStep > 1 ? 'completed' : 'active') : '']">
-                                <i v-if="loadingStep > 1" class="ph-bold ph-check-circle text-green-500"></i>
-                                <i v-else-if="loadingStep === 1" class="ph-bold ph-spinner step-spinner"></i>
-                                <div v-else class="step-dot"></div>
-                                <span>Updating System Records...</span>
-                            </div>
-
-                            <div :class="['step-item', loadingStep >= 2 ? (loadingStep > 2 ? 'completed' : 'active') : '']">
-                                <i v-if="loadingStep > 2" class="ph-bold ph-check-circle text-green-500"></i>
-                                <i v-else-if="loadingStep === 2" class="ph-bold ph-spinner step-spinner"></i>
-                                <div v-else class="step-dot"></div>
-                                <span>Notifying Organization...</span>
-                            </div>
-
-                            <div v-if="selectedEvent && selectedEvent.status === 'FINAL ADMIN REVIEW'" :class="['step-item', loadingStep >= 3 ? (loadingStep > 3 ? 'completed' : 'active') : '']">
-                                <i v-if="loadingStep > 3" class="ph-bold ph-check-circle text-green-500"></i>
-                                <i v-else-if="loadingStep === 3" class="ph-bold ph-spinner step-spinner"></i>
-                                <div v-else class="step-dot"></div>
-                                <span>Publishing to Student Hub...</span>
-                            </div>
-
-                            <div :class="['step-item', loadingStep >= 4 ? (loadingStep > 4 ? 'completed' : 'active') : '']">
-                                <i v-if="loadingStep > 4" class="ph-bold ph-check-circle text-green-500"></i>
-                                <i v-else-if="loadingStep === 4" class="ph-bold ph-spinner step-spinner"></i>
-                                <div v-else class="step-dot"></div>
-                                <span>Finalizing Uploads...</span>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="av-modal-header" style="border-bottom: 1px solid var(--border); background: var(--input-bg); flex-shrink: 0; z-index: 20;">
                         <h3 class="av-modal-title">
@@ -867,23 +1064,226 @@
                     
                     <div class="av-modal-body" v-if="selectedEvent" style="padding-bottom: 96px;">
                         
-                        <!-- 🟢 SUCCESS MINI MODAL (GLOBAL TO VUE APP) 🟢 -->
+                        <!-- 🚀 TRUE FULLSCREEN EDGE-TO-EDGE PUBLISH & SUCCESS PORTAL 🚀 -->
                         <teleport to="body">
                             <transition 
                                 enter-active-class="transition duration-300 ease-out"
-                                enter-from-class="opacity-0 scale-90 translate-y-10"
-                                enter-to-class="opacity-100 scale-100 translate-y-0"
+                                enter-from-class="opacity-0"
+                                enter-to-class="opacity-100"
                                 leave-active-class="transition duration-200 ease-in"
-                                leave-from-class="opacity-100 scale-100 translate-y-0"
-                                leave-to-class="opacity-0 scale-90 translate-y-10"
+                                leave-from-class="opacity-100"
+                                leave-to-class="opacity-0"
                             >
-                                <div v-if="showSuccessMsg" class="success-mini-modal">
-                                    <i class="ph-fill ph-check-circle" style="font-size: 5rem; color: #28a745; margin-bottom: 20px;"></i>
-                                    <h2 style="font-size: 1.5rem; font-weight: 900; color: var(--text-main); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Success!</h2>
-                                    <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">[[ statusMessage ]]</p>
+                                <div v-if="actionLoading || showSuccessMsg" 
+                                     id="fullscreen-publish-overlay"
+                                     class="fullscreen-publish-overlay px-4 py-8 sm:p-10">
+                                    
+                                    <!-- Atmospheric Sky Drift Backdrop -->
+                                    <div class="flight-sky-backdrop">
+                                        <div class="sky-drift-cloud sky-drift-cloud-1"></div>
+                                        <div class="sky-drift-cloud sky-drift-cloud-2"></div>
+                                    </div>
+
+                                    <!-- ✈️ PHASE 1: AIRPLANE FLIGHT & STEP-BY-STEP PROCESSING ✈️ -->
+                                    <div v-if="actionLoading" class="w-full max-w-lg flex flex-col items-center relative z-20">
+                                        
+                                        <!-- AIRPLANE FLIGHT STAGE -->
+                                        <div class="airplane-stage">
+                                            <div :class="['airplane-carrier', planeStatus]">
+                                                <!-- Smoke Tail / Engine Emitter -->
+                                                <div class="smoke-emitter">
+                                                    <span class="smoke-particle puff-1"></span>
+                                                    <span class="smoke-particle puff-2"></span>
+                                                    <span class="smoke-particle puff-3"></span>
+                                                    <span class="smoke-particle puff-4"></span>
+                                                    <span class="smoke-particle puff-5"></span>
+                                                    <span class="smoke-particle puff-6"></span>
+                                                    <span class="smoke-particle puff-7"></span>
+                                                    <span class="smoke-particle puff-8"></span>
+                                                </div>
+
+                                                <!-- Wind Speedlines -->
+                                                <div class="wind-speedline wline-1"></div>
+                                                <div class="wind-speedline wline-2"></div>
+                                                <div class="wind-speedline wline-3"></div>
+
+                                                <!-- Crisp Vector Jet Airliner -->
+                                                <svg viewBox="0 0 130 70" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-32 sm:w-44 h-auto drop-shadow-2xl">
+                                                    <!-- Engine Thrust Core -->
+                                                    <circle cx="16" cy="35" r="5" fill="#f59e0b" class="engine-pulse" />
+                                                    <circle cx="16" cy="35" r="3" fill="#ef4444" />
+                                                    
+                                                    <!-- Main Fuselage -->
+                                                    <path d="M16 35 L46 30 L95 30 C108 30 120 32 125 35 C120 38 108 40 95 40 L46 40 Z" fill="url(#fuselageGrad)" stroke="var(--border)" stroke-width="1.2" />
+                                                    
+                                                    <!-- Cockpit Canopy Glass -->
+                                                    <path d="M102 31.5 C108 31.5 116 33 118 35 C116 36 108 36.5 103 36.5 Z" fill="#38bdf8" />
+                                                    
+                                                    <!-- Passenger Cabin Windows -->
+                                                    <circle cx="52" cy="35" r="1.6" fill="var(--bg-body)" />
+                                                    <circle cx="61" cy="35" r="1.6" fill="var(--bg-body)" />
+                                                    <circle cx="70" cy="35" r="1.6" fill="var(--bg-body)" />
+                                                    <circle cx="79" cy="35" r="1.6" fill="var(--bg-body)" />
+                                                    <circle cx="88" cy="35" r="1.6" fill="var(--bg-body)" />
+
+                                                    <!-- Top Wing (Swept) -->
+                                                    <path d="M58 31 L38 8 C36 5 40 4 44 5 L78 31 Z" fill="url(#wingGradAdmin)" stroke="var(--border)" stroke-width="1.2" />
+                                                    
+                                                    <!-- Bottom Wing (Swept) -->
+                                                    <path d="M58 39 L38 62 C36 65 40 66 44 65 L78 39 Z" fill="url(#wingGradAdmin)" stroke="var(--border)" stroke-width="1.2" />
+                                                    
+                                                    <!-- Tail Stabilizers (PUP Maroon) -->
+                                                    <path d="M18 33 L26 16 C27 14 30 14 31 16 L34 33 Z" fill="var(--pup-maroon)" stroke="var(--border)" stroke-width="0.8" />
+                                                    <path d="M19 37 L26 48 C27 50 30 50 31 48 L33 37 Z" fill="var(--pup-maroon)" stroke="var(--border)" stroke-width="0.8" />
+
+                                                    <defs>
+                                                        <linearGradient id="fuselageGrad" x1="16" y1="35" x2="125" y2="35" gradientUnits="userSpaceOnUse">
+                                                            <stop stop-color="#f1f5f9" class="dark:stop-color-[#334155]" />
+                                                            <stop offset="0.6" stop-color="#ffffff" class="dark:stop-color-[#1e293b]" />
+                                                            <stop offset="1" stop-color="#e2e8f0" class="dark:stop-color-[#0f172a]" />
+                                                        </linearGradient>
+                                                        <linearGradient id="wingGradAdmin" x1="38" y1="8" x2="78" y2="39" gradientUnits="userSpaceOnUse">
+                                                            <stop stop-color="var(--pup-maroon)" />
+                                                            <stop offset="1" stop-color="#991b1b" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                </svg>
+                                            </div>
+                                        </div>
+
+                                        <!-- Header Title & Flight Status -->
+                                        <div class="text-center mb-6">
+                                            <span class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[11px] font-black tracking-widest uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20 mb-2">
+                                                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                                Official Clearance In-Flight
+                                            </span>
+                                            <h2 class="text-xl sm:text-2xl font-black uppercase tracking-wider text-[var(--text-main)]">
+                                                Publishing Event
+                                            </h2>
+                                            <p class="text-xs sm:text-sm text-[var(--text-muted)] font-medium mt-1">
+                                                Synchronizing records and broadcasting updates across PUP Campus
+                                            </p>
+                                        </div>
+
+                                        <!-- 🎴 SEQUENTIAL SINGLE-STATUS TRANSITION STAGE 🎴 -->
+                                        <div class="single-status-wrapper">
+                                            <transition name="step-slide-fade" mode="out-in">
+                                                <!-- STEP 1 -->
+                                                <div v-if="loadingStep === 1" key="step-1" class="single-status-card">
+                                                    <div class="single-status-icon">
+                                                        <i class="ph-bold ph-database text-amber-500 text-2xl"></i>
+                                                    </div>
+                                                    <div class="flex-1 text-left min-w-0">
+                                                        <div class="flex items-center gap-2 mb-1">
+                                                            <span class="step-badge bg-amber-500/10 text-amber-500 border border-amber-500/20">Phase 1 of 4</span>
+                                                            <i class="ph-bold ph-spinner animate-spin text-amber-500 text-xs"></i>
+                                                        </div>
+                                                        <h4 class="font-black text-sm sm:text-base text-[var(--text-main)]">Updating System Records...</h4>
+                                                        <p class="text-xs text-[var(--text-muted)] mt-0.5 truncate">Writing administrative logs & archiving approvals</p>
+                                                    </div>
+                                                </div>
+
+                                                <!-- STEP 2 -->
+                                                <div v-else-if="loadingStep === 2" key="step-2" class="single-status-card">
+                                                    <div class="single-status-icon">
+                                                        <i class="ph-bold ph-bell-ringing text-blue-500 text-2xl"></i>
+                                                    </div>
+                                                    <div class="flex-1 text-left min-w-0">
+                                                        <div class="flex items-center gap-2 mb-1">
+                                                            <span class="step-badge bg-blue-500/10 text-blue-500 border border-blue-500/20">Phase 2 of 4</span>
+                                                            <i class="ph-bold ph-spinner animate-spin text-blue-500 text-xs"></i>
+                                                        </div>
+                                                        <h4 class="font-black text-sm sm:text-base text-[var(--text-main)]">Notifying Organization...</h4>
+                                                        <p class="text-xs text-[var(--text-muted)] mt-0.5 truncate">Dispatching clearance receipt & adviser notifications</p>
+                                                    </div>
+                                                </div>
+
+                                                <!-- STEP 3 -->
+                                                <div v-else-if="loadingStep === 3" key="step-3" class="single-status-card">
+                                                    <div class="single-status-icon">
+                                                        <i class="ph-bold ph-broadcast text-indigo-500 text-2xl"></i>
+                                                    </div>
+                                                    <div class="flex-1 text-left min-w-0">
+                                                        <div class="flex items-center gap-2 mb-1">
+                                                            <span class="step-badge bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">Phase 3 of 4</span>
+                                                            <i class="ph-bold ph-spinner animate-spin text-indigo-500 text-xs"></i>
+                                                        </div>
+                                                        <h4 class="font-black text-sm sm:text-base text-[var(--text-main)]">Publishing to Student Hub...</h4>
+                                                        <p class="text-xs text-[var(--text-muted)] mt-0.5 truncate">Making event visible on live student feed & campus calendar</p>
+                                                    </div>
+                                                </div>
+
+                                                <!-- STEP 4 -->
+                                                <div v-else-if="loadingStep >= 4" key="step-4" class="single-status-card">
+                                                    <div class="single-status-icon">
+                                                        <i class="ph-bold ph-seal-check text-emerald-500 text-2xl"></i>
+                                                    </div>
+                                                    <div class="flex-1 text-left min-w-0">
+                                                        <div class="flex items-center gap-2 mb-1">
+                                                            <span class="step-badge bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Phase 4 of 4</span>
+                                                            <i v-if="loadingStep === 4" class="ph-bold ph-spinner animate-spin text-emerald-500 text-xs"></i>
+                                                            <i v-else class="ph-bold ph-check text-emerald-500 text-xs font-bold"></i>
+                                                        </div>
+                                                        <h4 class="font-black text-sm sm:text-base text-[var(--text-main)]">Finalizing Uploads...</h4>
+                                                        <p class="text-xs text-[var(--text-muted)] mt-0.5 truncate">Sealing signed permits & physical routing documents</p>
+                                                    </div>
+                                                </div>
+                                            </transition>
+                                        </div>
+
+                                        <!-- 🚥 SEGMENTED PROGRESS BARS 🚥 -->
+                                        <div class="flex items-center gap-2.5 mt-5">
+                                            <div :class="['h-1.5 rounded-full transition-all duration-500', loadingStep >= 1 ? 'w-10 bg-amber-500' : 'w-2.5 bg-gray-300 dark:bg-gray-700 opacity-40']"></div>
+                                            <div :class="['h-1.5 rounded-full transition-all duration-500', loadingStep >= 2 ? 'w-10 bg-blue-500' : 'w-2.5 bg-gray-300 dark:bg-gray-700 opacity-40']"></div>
+                                            <div :class="['h-1.5 rounded-full transition-all duration-500', loadingStep >= 3 ? 'w-10 bg-indigo-500' : 'w-2.5 bg-gray-300 dark:bg-gray-700 opacity-40']"></div>
+                                            <div :class="['h-1.5 rounded-full transition-all duration-500', loadingStep >= 4 ? 'w-10 bg-emerald-500' : 'w-2.5 bg-gray-300 dark:bg-gray-700 opacity-40']"></div>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- 🎉 PHASE 2: CENTERED SUCCESS CELEBRATION POP 🎉 -->
+                                    <transition 
+                                        enter-active-class="transition duration-500 cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+                                        enter-from-class="opacity-0 scale-75 translate-y-8"
+                                        enter-to-class="opacity-100 scale-100 translate-y-0"
+                                        leave-active-class="transition duration-200 ease-in"
+                                        leave-from-class="opacity-100 scale-100"
+                                        leave-to-class="opacity-0 scale-90"
+                                    >
+                                        <div v-if="showSuccessMsg" class="success-celebration-container relative z-20">
+                                            <!-- Glowing Pop Checkmark Badge -->
+                                            <div class="success-pop-ring">
+                                                <div class="success-pop-pulse"></div>
+                                                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center shadow-2xl shadow-emerald-500/25">
+                                                    <i class="ph-fill ph-check-circle text-5xl sm:text-6xl text-emerald-500"></i>
+                                                </div>
+                                            </div>
+
+                                            <!-- Live Status Badge -->
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 mb-3">
+                                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                                                Official Clearance Approved
+                                            </span>
+
+                                            <h2 class="text-2xl sm:text-3xl font-black text-[var(--text-main)] uppercase tracking-tight mb-2">
+                                                [[ currentAction === 'approve' ? 'Event Published!' : 'Action Completed!' ]]
+                                            </h2>
+                                            <p class="text-xs sm:text-sm text-[var(--text-muted)] font-medium leading-relaxed max-w-sm mb-6">
+                                                [[ statusMessage || 'The event proposal has been cleared and officially published.' ]]
+                                            </p>
+
+                                            <!-- Return to Records Button -->
+                                            <button @click="dismissSuccessAndClose" class="w-full py-3.5 px-6 rounded-xl font-black uppercase text-xs tracking-wider bg-[var(--pup-maroon)] hover:bg-[#600000] text-white shadow-lg shadow-red-900/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2">
+                                                <span>Done & Return to Records</span>
+                                                <i class="ph-bold ph-arrow-right"></i>
+                                            </button>
+                                        </div>
+                                    </transition>
+
                                 </div>
                             </transition>
                         </teleport>
+
 
                         <!-- Header Info -->
                         <div style="display:flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--border); padding-bottom: 15px; margin-bottom: 5px;">
@@ -1228,6 +1628,8 @@
             
             const showSuccessMsg = ref(false);
             const statusMessage = ref('');
+            const planeStatus = ref('idle');
+            const currentAction = ref('approve');
 
             const searchPending = ref('');
             const searchHistory = ref('');
@@ -1666,14 +2068,24 @@
                 return cookieValue;
             };
 
+            const dismissSuccessAndClose = () => {
+                showSuccessMsg.value = false;
+                actionLoading.value = false;
+                planeStatus.value = 'idle';
+                if(isModalOpen.value) closeModal();
+            };
+
             const updateEventStatus = async (status, payloadData = {}) => {
+                currentAction.value = status;
                 actionLoading.value = true;
+                planeStatus.value = 'starting';
                 loadingStep.value = 1;
                 
                 try {
-                    // Artificial delays to show steps to admin
-                    await new Promise(r => setTimeout(r, 800));
-                    loadingStep.value = 2;
+                    // Phase 1: Updating System Records...
+                    await new Promise(r => setTimeout(r, 900));
+                    planeStatus.value = 'flying';
+                    loadingStep.value = 2; // Phase 2: Notifying Organization...
                     
                     const payload = { event_id: selectedEvent.value.id, action: status, ...payloadData };
                     const response = await fetch("{% url 'admin_api_action' %}", {
@@ -1684,14 +2096,17 @@
                     const data = await response.json();
                     
                     if(data.status === 'success') {
-                        if (selectedEvent.value.status === 'FINAL ADMIN REVIEW') {
-                            loadingStep.value = 3;
-                            await new Promise(r => setTimeout(r, 1000));
-                        }
+                        await new Promise(r => setTimeout(r, 950));
+                        loadingStep.value = 3; // Phase 3: Publishing to Student Hub...
+                        await new Promise(r => setTimeout(r, 950));
                         
-                        loadingStep.value = 4;
-                        await new Promise(r => setTimeout(r, 800));
+                        loadingStep.value = 4; // Phase 4: Finalizing Uploads...
+                        await new Promise(r => setTimeout(r, 950));
                         loadingStep.value = 5; // Completed
+
+                        // Airplane takes off and flies off the screen!
+                        planeStatus.value = 'takeoff';
+                        await new Promise(r => setTimeout(r, 1100)); // wait for takeoff fly-away
 
                         statusMessage.value = data.message;
                         showSuccessMsg.value = true;
@@ -1727,15 +2142,22 @@
                             }
                         }
                         
-                        setTimeout(() => { if(isModalOpen.value) closeModal(); }, 2500);
+                        // Fallback auto-close after celebration pop
+                        setTimeout(() => { 
+                            if(showSuccessMsg.value) {
+                                dismissSuccessAndClose();
+                            }
+                        }, 3200);
 
                     } else { 
                         alert(data.message); 
                         actionLoading.value = false;
+                        planeStatus.value = 'idle';
                     }
                 } catch(err) { 
                     alert('Error connecting to server.'); 
                     actionLoading.value = false;
+                    planeStatus.value = 'idle';
                 }
             };
 
@@ -1801,6 +2223,7 @@
                 
                 currentDocCount, activeDocs,
                 showSuccessMsg, statusMessage,
+                planeStatus, currentAction, dismissSuccessAndClose,
                 loadingStep, activeTab, selectedDocUrl, mobileDropdownOpen, parsedDescription,
                 isCalendarOpen, selectedCalendarEvent, openCalendarModal, closeCalendarModal, closeCalendarEventModal, parsedCalendarDescription,
                 getOrgStyle

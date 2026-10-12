@@ -37,55 +37,9 @@
         100% { transform: scale(0.2); opacity: 0; }
     }
 
-    /* 📄 Professional Document Preview System 📄 */
-    .document-wrapper {
-        width: 100%;
-        min-height: 400px;
-        background: #f0f0f0;
-        border-radius: 0.75rem;
-        overflow: hidden; 
-        display: block;
-        position: relative;
-    }
-    .dark .document-wrapper {
-        background: #222;
-    }
-    .document-page {
-        width: 800px !important; 
-        min-height: 1000px;
-        background: white !important;
-        color: black !important;
-        font-family: 'Times New Roman', serif !important;
-        padding: 2rem !important; /* Standard padding for updated letters */
-        border: 1px solid #e5e7eb;
-        transform-origin: top left; 
-        transition: transform 0.2s ease;
-        position: relative;
-        display: block;
-        margin: 0;
-    }
-    
-    .document-preview-container {
-        opacity: 1;
-        max-height: none;
-        overflow: visible;
-        transform: none;
-        transition: opacity 0.5s ease, max-height 0.5s ease-in-out, transform 0.5s ease-out;
-    }
-    .document-preview-container.active {
-        opacity: 1;
-        max-height: 5000px;
-        transform: translateY(0);
-    }
-
     .modal-scroll::-webkit-scrollbar { width: 4px; }
     .modal-scroll::-webkit-scrollbar-track { background: transparent; }
     .modal-scroll::-webkit-scrollbar-thumb { background: #80000033; border-radius: 10px; }
-
-    @media (max-width: 640px) {
-        .document-wrapper { margin: 0 !important; border-radius: 0.5rem; }
-        .document-page { margin: 0 !important; border: none !important; }
-    }
 </style>
 {% endblock %}
 
@@ -332,66 +286,82 @@
             </div>
 
             <!-- File Viewer (For Processed Document Records) -->
-            <div v-if="selectedEvent.status !== 'REJECTED'" class="flex flex-col gap-4 animate-fade-in w-full mb-8">
+            <div v-if="selectedEvent.status !== 'REJECTED'" class="flex flex-col gap-4 animate-fade-in w-full mb-4">
                 <div class="flex justify-between items-center mb-2">
                     <h4 class="text-xs font-black text-gray-900 dark:text-[#D4AF37] uppercase tracking-widest flex items-center gap-2">
                         <i class="ph-bold ph-folder-open text-xl text-pup-maroon dark:text-pup-gold"></i> Processed Document Records
                     </h4>
-                    <span class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-gray-200 dark:border-gray-700">
+                    <span v-if="hasUploadedDocs" class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-gray-200 dark:border-gray-700">
                         [[ currentDocCount ]] FILES ATTACHED
                     </span>
                 </div>
 
-                <!-- Desktop Segmented Tab Switches (Hidden on Mobile) -->
-                <div class="hidden sm:flex relative p-1 bg-gray-200/80 dark:bg-gray-800/80 rounded-xl shrink-0">
-                    <div class="absolute inset-y-1 left-1 right-1 flex pointer-events-none">
-                        <div class="h-full bg-white dark:bg-pup-darkcard rounded-lg shadow-sm transition-all duration-300 ease-out"
-                             :style="{ width: `${100 / activeDocs.length}%`, transform: `translateX(${(activeDocs.findIndex(d => d.label === activeFileTab) === -1 ? 0 : activeDocs.findIndex(d => d.label === activeFileTab)) * 100}%)` }"></div>
+                <!-- If documents are uploaded, show tabs and viewer -->
+                <div v-if="hasUploadedDocs" class="flex flex-col gap-4">
+                    <!-- Desktop Segmented Tab Switches (Hidden on Mobile) -->
+                    <div class="hidden sm:flex relative p-1 bg-gray-200/80 dark:bg-gray-800/80 rounded-xl shrink-0">
+                        <div class="absolute inset-y-1 left-1 right-1 flex pointer-events-none">
+                            <div class="h-full bg-white dark:bg-pup-darkcard rounded-lg shadow-sm transition-all duration-300 ease-out"
+                                 :style="{ width: `${100 / activeDocs.length}%`, transform: `translateX(${(activeDocs.findIndex(d => d.label === activeFileTab) === -1 ? 0 : activeDocs.findIndex(d => d.label === activeFileTab)) * 100}%)` }"></div>
+                        </div>
+                        
+                        <button v-for="(doc, index) in activeDocs" :key="doc.label"
+                                @click="activeFileTab = doc.label"
+                                :class="['relative z-10 flex-1 px-4 py-3 text-xs font-bold capitalize transition-colors duration-300',
+                                        (activeFileTab === doc.label || (!activeFileTab && index === 0)) ? 'text-pup-maroon dark:text-pup-gold' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white']">
+                            [[ doc.label ]]
+                        </button>
                     </div>
-                    
-                    <button v-for="(doc, index) in activeDocs" :key="doc.label"
-                            @click="activeFileTab = doc.label"
-                            :class="['relative z-10 flex-1 px-4 py-3 text-xs font-bold capitalize transition-colors duration-300',
-                                    (activeFileTab === doc.label || (!activeFileTab && index === 0)) ? 'text-pup-maroon dark:text-pup-gold' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white']">
-                        [[ doc.label ]]
-                    </button>
-                </div>
 
-                <!-- Mobile Accordion Dropdown (Hidden on Desktop) -->
-                <div class="sm:hidden bg-gray-100 dark:bg-[#111] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm shrink-0">
-                    <div @click="mobileDropdownOpen = !mobileDropdownOpen" class="p-4 flex justify-between items-center cursor-pointer bg-white dark:bg-pup-darkcard">
-                        <span class="font-bold capitalize text-pup-maroon dark:text-pup-gold text-sm">[[ activeFileTab || activeDocs[0]?.label ]]</span>
-                        <i class="ph-bold ph-caret-down transition-transform duration-300 text-gray-400" :class="{'rotate-180': mobileDropdownOpen}"></i>
-                    </div>
-                    <div class="grid transition-all duration-300 ease-in-out" :style="{ gridTemplateRows: mobileDropdownOpen ? '1fr' : '0fr' }">
-                        <div class="overflow-hidden flex flex-col divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
-                            <div v-for="(doc, index) in activeDocs" :key="'mob-doc-'+index" 
-                                 @click="activeFileTab = doc.label; mobileDropdownOpen = false"
-                                 class="p-4 bg-gray-50 dark:bg-[#151515] cursor-pointer capitalize font-medium transition-colors text-sm"
-                                 :class="{'text-pup-maroon dark:text-pup-gold font-bold': activeFileTab === doc.label || (!activeFileTab && index === 0), 'text-gray-600 dark:text-gray-400': !(activeFileTab === doc.label || (!activeFileTab && index === 0))}">
-                                [[ doc.label ]]
+                    <!-- Mobile Accordion Dropdown (Hidden on Desktop) -->
+                    <div class="sm:hidden bg-gray-100 dark:bg-[#111] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm shrink-0">
+                        <div @click="mobileDropdownOpen = !mobileDropdownOpen" class="p-4 flex justify-between items-center cursor-pointer bg-white dark:bg-pup-darkcard">
+                            <span class="font-bold capitalize text-pup-maroon dark:text-pup-gold text-sm">[[ activeFileTab || activeDocs[0]?.label ]]</span>
+                            <i class="ph-bold ph-caret-down transition-transform duration-300 text-gray-400" :class="{'rotate-180': mobileDropdownOpen}"></i>
+                        </div>
+                        <div class="grid transition-all duration-300 ease-in-out" :style="{ gridTemplateRows: mobileDropdownOpen ? '1fr' : '0fr' }">
+                            <div class="overflow-hidden flex flex-col divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
+                                <div v-for="(doc, index) in activeDocs" :key="'mob-doc-'+index" 
+                                     @click="activeFileTab = doc.label; mobileDropdownOpen = false"
+                                     class="p-4 bg-gray-50 dark:bg-[#151515] cursor-pointer capitalize font-medium transition-colors text-sm"
+                                     :class="{'text-pup-maroon dark:text-pup-gold font-bold': activeFileTab === doc.label || (!activeFileTab && index === 0), 'text-gray-600 dark:text-gray-400': !(activeFileTab === doc.label || (!activeFileTab && index === 0))}">
+                                    [[ doc.label ]]
+                                </div>
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Document Image Display -->
+                    <div class="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col items-center justify-center overflow-hidden min-h-[400px] sm:min-h-[500px]">
+                        <template v-for="(doc, index) in activeDocs" :key="'img-'+doc.label">
+                            <img v-if="(activeFileTab === doc.label || (!activeFileTab && index === 0)) && doc.url" 
+                                 :src="doc.url" 
+                                 @click="viewActualDoc(doc.label, doc.url)"
+                                 class="w-full h-auto object-contain mx-auto animate-fade-in cursor-pointer hover:scale-[1.02] transition-transform" />
+                            <div v-else-if="(activeFileTab === doc.label || (!activeFileTab && index === 0)) && !doc.url" class="text-center py-20 w-full h-full flex flex-col items-center justify-center">
+                                <i class="ph-fill ph-image-broken text-6xl text-gray-300 dark:text-gray-700 mb-4 block"></i>
+                                <span class="text-sm font-bold text-gray-500 uppercase tracking-widest">Document not attached</span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
-                
-                <!-- Document Image Display -->
-                <div class="bg-white dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col items-center justify-center overflow-hidden min-h-[400px] sm:min-h-[500px]">
-                    <template v-for="(doc, index) in activeDocs" :key="'img-'+doc.label">
-                        <img v-if="(activeFileTab === doc.label || (!activeFileTab && index === 0)) && doc.url" 
-                             :src="doc.url" 
-                             @click="viewActualDoc(doc.label, doc.url)"
-                             class="w-full h-auto object-contain mx-auto animate-fade-in cursor-pointer hover:scale-[1.02] transition-transform" />
-                        <div v-else-if="(activeFileTab === doc.label || (!activeFileTab && index === 0)) && !doc.url" class="text-center py-20 w-full h-full flex flex-col items-center justify-center">
-                            <i class="ph-fill ph-image-broken text-6xl text-gray-300 dark:text-gray-700 mb-4 block"></i>
-                            <span class="text-sm font-bold text-gray-500 uppercase tracking-widest">Record not found</span>
-                        </div>
-                    </template>
+
+                <!-- If documents are not yet uploaded (e.g. In Progress / gathering physical signatures) -->
+                <div v-else class="text-center py-14 px-4 bg-white dark:bg-[#111] rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                    <div class="w-14 h-14 mx-auto mb-3.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <i class="ph-bold ph-hourglass-high text-2xl"></i>
+                    </div>
+                    <h4 class="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider mb-1">
+                        Awaiting Signed Documents Upload
+                    </h4>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
+                        The proposal has passed initial review. The student organization is currently gathering physical manual signatures before uploading the signed copies.
+                    </p>
                 </div>
             </div>
 
             <!-- Rejection Remarks -->
-            <div v-if="selectedEvent.status === 'REJECTED'" class="bg-red-50 dark:bg-red-900/10 p-6 rounded-2xl border border-red-200 dark:border-red-900/40 animate-fade-in shadow-sm shadow-red-500/5 mb-8">
+            <div v-if="selectedEvent.status === 'REJECTED'" class="bg-red-50 dark:bg-red-900/10 p-6 rounded-2xl border border-red-200 dark:border-red-900/40 animate-fade-in shadow-sm shadow-red-500/5 mb-4">
                 <div class="flex items-center gap-3 mb-3">
                     <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
                         <i class="ph-bold ph-warning-circle text-xl"></i>
@@ -401,144 +371,6 @@
                 <p class="text-sm text-red-800 dark:text-red-300 font-bold leading-relaxed bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-red-100 dark:border-red-900/20">
                     [[ selectedEvent.remarks || 'No detailed remarks provided for this rejection.' ]]
                 </p>
-            </div>
-
-            <!-- Segmented Tab Switches for Generated Letters -->
-            <div v-if="!selectedEvent.letter_url && selectedEvent.status !== 'REJECTED' && generatedLetterTabs.length > 1" class="flex relative p-1 bg-gray-200/80 dark:bg-gray-800/80 rounded-xl shrink-0 mt-2 mb-2">
-                <div class="absolute inset-y-1 left-1 right-1 flex pointer-events-none">
-                    <div class="h-full bg-white dark:bg-pup-darkcard rounded-lg shadow-sm transition-all duration-300 ease-out"
-                         :style="{ width: `${100 / generatedLetterTabs.length}%`, transform: `translateX(${(generatedLetterTabs.findIndex(t => t.id === activeTab) === -1 ? 0 : generatedLetterTabs.findIndex(t => t.id === activeTab)) * 100}%)` }"></div>
-                </div>
-                
-                <button v-for="tab in generatedLetterTabs" :key="tab.id"
-                        @click="switchDocTab(tab.id)"
-                        :class="['relative z-10 flex-1 px-2 sm:px-4 py-3 text-[10px] sm:text-xs font-bold capitalize transition-colors duration-300',
-                                activeTab === tab.id ? 'text-pup-maroon dark:text-pup-gold' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white']">
-                    [[ tab.label ]]
-                </button>
-            </div>
-
-            <!-- Formal Letter Preview Container -->
-            <div v-if="!selectedEvent.letter_url && selectedEvent.status !== 'REJECTED'" class="document-preview-container active" id="document-preview-container">
-                <div class="document-wrapper mx-auto">
-                    <div class="document-page mx-auto shadow-2xl" id="document-preview-card">
-                        
-                        <!-- Main Document Content -->
-                        <div v-if="activeTab === 'main'">
-                            <p class="mb-10 font-bold">[[ selectedEvent.date ]]</p>
-                            
-                            <p class="mb-8 leading-tight">
-                                <strong>Dr. EDWIN G. MALABUYOC</strong><br>
-                                Director<br>
-                                This Campus
-                            </p>
-
-                            <p class="mb-10 leading-tight">
-                                Thru/Attn: &nbsp; &nbsp;<strong>ANNABEL S. JANORAS</strong><br>
-                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Head of Students Services<br>
-                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;This Campus
-                            </p>
-
-                            <div v-if="parsedDescription">
-                                <!-- STANDARD / INITIAL PROPOSAL -->
-                                <div v-if="parsedDescription.type === 'standard' || parsedDescription.type === 'new_event'">
-                                    <p class="mb-8">
-                                        Re: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>Approval of Organizational Student Activity</strong>
-                                    </p>
-                                    <p class="mb-6">Dear <strong>Dr. Malabuyoc</strong>:</p>
-                                    <p class="mb-6">Greetings!</p>
-                                    <p class="mb-6 text-justify indent-10 leading-relaxed">
-                                        To comply with the commitment to UPHOLD E2E Program: Upscaling Holistic Development from Enrollment to Employment, the <strong>[[ selectedEvent.full_org || selectedEvent.org ]]</strong> will be conducting an activity entitled <strong>"[[ selectedEvent.title ]]"</strong>. [[ parsedDescription.originalDesc ]]
-                                    </p>
-                                    <p class="mb-10 text-justify indent-10 leading-relaxed">
-                                        The activity is scheduled for <strong>[[ selectedEvent.date ]]</strong>, <strong>[[ selectedEvent.time ]]</strong> to <strong>[[ selectedEvent.end_time || '(End Time)' ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>.
-                                    </p>
-                                    <p class="mb-12">Thank you for your kind consideration and usual support.</p>
-                                </div>
-
-                                <!-- RESCHEDULE LETTER -->
-                                <div v-if="parsedDescription.type === 'reschedule'">
-                                    <p class="mb-8">
-                                        Re: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>Scheduling of Organizational Student Activity</strong>
-                                    </p>
-                                    <p class="mb-6">Dear <strong>Dr. Malabuyoc</strong>:</p>
-                                    <p class="mb-6">Greetings!</p>
-                                    
-                                    <p class="mb-6 text-justify indent-10 leading-relaxed">
-                                        We hope this letter finds you well. <strong>[[ selectedEvent.full_org || selectedEvent.org ]]</strong> respectfully requests a rescheduling of our upcoming event entitled <strong>"[[ selectedEvent.title ]]"</strong>. The event was originally set for <strong>[[ parsedDescription.origDate || '(Original Date)' ]]</strong>.
-                                    </p>
-                                    <p class="mb-6 text-justify indent-10 leading-relaxed">
-                                        We propose moving the event to <strong>[[ selectedEvent.date ]]</strong>, from <strong>[[ selectedEvent.time ]] to [[ selectedEvent.end_time || '(End Time)' ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>.
-                                    </p>
-                                    <p class="mb-10 text-justify indent-10 leading-relaxed">
-                                        This request is made due to [[ parsedDescription.reason ]]. [[ parsedDescription.originalDesc ]]
-                                    </p>
-                                    <p class="mb-12">We look forward to your response and understanding regarding this proposed change. Thank you for your usual support!</p>
-                                </div>
-                            </div>
-
-                            <p class="mb-10">Respectfully yours,</p>
-
-                            <div class="mb-12">
-                                <p class="font-bold uppercase mb-0 whitespace-nowrap">[[ selectedEvent.requester_name || '(Requester Name)' ]]</p>
-                                <p class="mt-0">[[ selectedEvent.org ]] President</p>
-                            </div>
-
-                            <div class="mb-8">
-                                <p class="mb-8">Noted by:</p>
-                                <p class="font-bold uppercase mb-0 whitespace-nowrap">[[ selectedEvent.adviser_name || '(Adviser Name)' ]]</p>
-                                <p class="mt-0">[[ selectedEvent.org ]] Adviser</p>
-                            </div>
-                        </div>
-
-                        <!-- Excuse & Equipment Document Content -->
-                        <div v-if="activeTab === 'excuse'">
-                            <p class="mb-10 font-bold">[[ selectedEvent.date ]]</p>
-                            
-                            <p class="mb-8 leading-tight">
-                                <strong>Dr. EDWIN G. MALABUYOC</strong><br>
-                                Director<br>
-                                This Campus
-                            </p>
-
-                            <p class="mb-10 leading-tight">
-                                Thru/Attn: &nbsp; &nbsp;<strong>ANNABEL S. JANORAS</strong><br>
-                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Head of Students Services<br>
-                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;This Campus
-                            </p>
-
-                            <p class="mb-8">
-                                Re: &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <strong>Excuse and Request Usage of Equipment/Facility</strong>
-                            </p>
-                            <p class="mb-6">Dear <strong>Dr. Malabuyoc</strong>:</p>
-                            <p class="mb-6">Greetings!</p>
-                            
-                            <p class="mb-6 text-justify indent-10 leading-relaxed">
-                                The <strong>[[ selectedEvent.full_org || selectedEvent.org ]]</strong> is organizing an event entitled <strong>"[[ selectedEvent.title ]]"</strong> on <strong>[[ selectedEvent.date ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>. 
-                            </p>
-                            <p class="mb-6 text-justify indent-10 leading-relaxed" v-if="parsedDescription.type === 'new_event'">
-                                We respectfully request the excusal of <strong>[[ parsedDescription.target || 'all affected students' ]]</strong> whose classes will be affected, and we also request usage of the aforementioned facility, together with <strong>[[ parsedDescription.equipment || 'the necessary equipment' ]]</strong>.
-                            </p>
-                            <p class="mb-10 text-justify indent-10 leading-relaxed" v-else>
-                                We respectfully request the usage of the facility and aforementioned equipment for the success of this event.
-                            </p>
-                            <p class="mb-12">We look forward to your response. Thank you for your kind consideration and usual support!</p>
-
-                            <p class="mb-10">Respectfully yours,</p>
-
-                            <div class="mb-12">
-                                <p class="font-bold uppercase mb-0 whitespace-nowrap">[[ selectedEvent.requester_name || '(Requester Name)' ]]</p>
-                                <p class="mt-0">[[ selectedEvent.org ]] President</p>
-                            </div>
-
-                            <div class="mb-8">
-                                <p class="mb-8">Noted by:</p>
-                                <p class="font-bold uppercase mb-0 whitespace-nowrap">[[ selectedEvent.adviser_name || '(Adviser Name)' ]]</p>
-                                <p class="mt-0">[[ selectedEvent.org ]] Adviser</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
             
             <div class="h-4"></div>
@@ -623,7 +455,6 @@
                     isFilterExpanded.value = false;
                 };
                 const selectedEvent = ref(null);
-                const activeTab = ref('main');
                 const activeFileTab = ref('');
                 const mobileDropdownOpen = ref(false);
 
@@ -705,61 +536,9 @@
                 
                 const historyEvents = ref(parsedData);
 
-                const activeTabLabel = computed(() => {
-                    if (!selectedEvent.value) return 'Request Letter';
-                    const desc = selectedEvent.value.description || "";
-                    if (desc.includes("[RESCHEDULE]")) return 'Reschedule Letter';
-                    return 'Request Letter';
-                });
-
-                const generatedLetterTabs = computed(() => {
-                    if (!selectedEvent.value) return [];
-                    const tabs = [
-                        { id: 'main', label: activeTabLabel.value }
-                    ];
-                    if (currentDocCount.value != 2) {
-                        tabs.push({ id: 'excuse', label: 'Excuse & Equipment' });
-                    }
-                    return tabs;
-                });
-
-                const switchDocTab = (tab) => {
-                    activeTab.value = tab;
-                    setTimeout(updateMobileScale, 50);
-                };
-
-                // --- 📱 Responsive Document Scaling Logic 📱 ---
-                const updateMobileScale = () => {
-                    const wrapper = document.querySelector('.document-wrapper');
-                    const page = document.getElementById('document-preview-card');
-                    if (!wrapper || !page) return;
-
-                    if (window.innerWidth <= 640) {
-                        const wrapperWidth = wrapper.offsetWidth;
-                        const availableWidth = wrapperWidth - 64; 
-                        const pageWidth = 800; 
-                        const scale = availableWidth / pageWidth;
-                        
-                        page.style.transform = `scale(${scale})`;
-                        page.style.width = `${pageWidth}px`;
-                        
-                        const scaledHeight = (page.offsetHeight * scale) + 64;
-                        if (scaledHeight > 100) {
-                            wrapper.style.height = `${scaledHeight}px`;
-                            wrapper.style.minHeight = `${scaledHeight}px`;
-                        }
-                    } else {
-                        page.style.transform = 'none';
-                        page.style.width = '800px'; 
-                        wrapper.style.height = 'auto';
-                        wrapper.style.minHeight = '500px';
-                    }
-                };
-
                 onMounted(() => {
                     setTimeout(() => {
                         isLoading.value = false;
-                        window.addEventListener('resize', updateMobileScale);
                         window.addEventListener('resize', () => { isMobileScreen.value = window.innerWidth <= 640; });
 
                         const urlParams = new URLSearchParams(window.location.search);
@@ -789,37 +568,6 @@
                     });
                 });
 
-                const parsedDescription = computed(() => {
-                    if (!selectedEvent.value) return { type: 'standard', originalDesc: '' };
-                    let desc = selectedEvent.value.description || "";
-
-                    if (desc.includes("[RESCHEDULE]")) {
-                        let reasonStr = "Unforeseen circumstances";
-                        let origDateStr = "N/A";
-                        let origDescStr = "";
-                        desc.split('|').forEach(part => {
-                            if(part.includes("Reason:")) reasonStr = part.split('Reason:')[1]?.trim() || reasonStr;
-                            if(part.includes("Original:")) origDateStr = part.split('Original:')[1]?.trim() || origDateStr;
-                            if(part.includes("Desc:")) origDescStr = part.split('Desc:')[1]?.trim() || origDescStr;
-                        });
-                        return { type: 'reschedule', reason: reasonStr, origDate: origDateStr, originalDesc: origDescStr };
-                    }
-                    else if (desc.includes("[NEW EVENT]")) {
-                        let targetStr = "N/A";
-                        let equipStr = "N/A";
-                        let origDescStr = "";
-                        desc.split('|').forEach(part => {
-                            if(part.includes("Target:")) targetStr = part.split('Target:')[1]?.trim() || targetStr;
-                            if(part.includes("Equipment:")) equipStr = part.split('Equipment:')[1]?.trim() || equipStr;
-                            if(part.includes("Desc:")) origDescStr = part.split('Desc:')[1]?.trim() || origDescStr;
-                        });
-                        return { type: 'new_event', target: targetStr, equipment: equipStr, originalDesc: origDescStr }; 
-                    }
-                    else {
-                        return { type: 'standard', originalDesc: desc };
-                    }
-                });
-
                 const currentDocCount = computed(() => {
                     if (!selectedEvent.value) return 0;
                     return selectedEvent.value.requirement_mode ? parseInt(selectedEvent.value.requirement_mode) : 4;
@@ -845,6 +593,10 @@
                     }
                 });
 
+                const hasUploadedDocs = computed(() => {
+                    return activeDocs.value.some(d => !!d.url);
+                });
+
                 const openModal = (event, jsEvent) => {
                     if (jsEvent) {
                        const wrapper = document.getElementById('history-modal-wrapper');
@@ -854,14 +606,10 @@
                        }
                     }
                     selectedEvent.value = event;
-                    activeTab.value = 'main';
                     activeFileTab.value = activeDocs.value[0]?.label || '';
                     isModalOpen.value = true;
                     isModalClosing.value = false;
                     document.body.style.overflow = 'hidden';
-                    // Double check scaling with a bit more delay to ensure DOM is ready
-                    setTimeout(updateMobileScale, 100);
-                    setTimeout(updateMobileScale, 500);
                 };
 
                 const closeModal = () => {
@@ -888,8 +636,7 @@
                     isLoading, searchQuery, statusFilter, isFilterExpanded, selectFilter, filteredEvents,
                     isModalOpen, isModalClosing, selectedEvent, openModal, closeModal,
                     isDocViewerOpen, viewedDocTitle, viewedDocUrl, viewActualDoc, closeDocViewer,
-                    currentDocCount, activeDocs, activeTab, activeFileTab, mobileDropdownOpen, generatedLetterTabs, activeTabLabel, 
-                    switchDocTab, updateMobileScale, parsedDescription,
+                    currentDocCount, activeDocs, activeFileTab, mobileDropdownOpen, hasUploadedDocs,
                     isSelectionMode, selectedEventIds, confirmDownloadModal, isDownloading, isMobileSearchActive, isMobileScreen,
                     cancelSelection, processDownload
                 }

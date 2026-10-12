@@ -680,24 +680,20 @@
         }
 
         function startGeofenceWatch() {
-            let isFlagRaising = false;
-            if (currentEvent) {
-                const titleLower = (currentEvent.title || '').toLowerCase();
-                isFlagRaising = currentEvent.is_flag_raising === true || titleLower.includes('flag') || titleLower.includes('ceremony');
-            }
+            const isOutsideAllowed = currentEvent && (currentEvent.allow_outside_campus || currentEvent.attendance_scope === 'OUTSIDE_CAMPUS');
             
-            if (isFlagRaising) {
+            if (isOutsideAllowed) {
                 isLocationVerified = true; 
-                document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500 text-lg"></i> GLOBAL ACCESS VERIFIED`;
+                document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500 text-lg"></i> OUTSIDE CAMPUS ALLOWED`;
                 updateSubmitButton();
             }
 
             navigator.geolocation.watchPosition((pos) => {
                 userLat = pos.coords.latitude; userLng = pos.coords.longitude;
                 
-                if (isFlagRaising) {
+                if (isOutsideAllowed) {
                     isLocationVerified = true; 
-                    document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500 text-lg"></i> GLOBAL ACCESS VERIFIED`;
+                    document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500 text-lg"></i> OUTSIDE CAMPUS ALLOWED`;
                 } else {
                     const targetLat = currentEvent && currentEvent.target_lat ? currentEvent.target_lat : CAMPUS_COORDS[0];
                     const targetLng = currentEvent && currentEvent.target_lng ? currentEvent.target_lng : CAMPUS_COORDS[1];

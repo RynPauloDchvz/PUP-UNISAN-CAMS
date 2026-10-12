@@ -2,7 +2,26 @@
 {% load static %}
 
 {% block extra_head %}
+<!-- Leaflet OpenStreetMap for Live Paper Tracking -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 <style>
+    #trackingMap { z-index: 10; }
+    .custom-popup .leaflet-popup-content-wrapper {
+        border-radius: 14px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+        padding: 4px;
+    }
+    .custom-popup .leaflet-popup-content {
+        margin: 6px 10px;
+    }
+    @keyframes pulse-red {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(128, 0, 0, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(128, 0, 0, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(128, 0, 0, 0); }
+    }
+
     @media print {
         .print-hide {
             display: none !important;
@@ -338,6 +357,38 @@
                         </p>
                     </div>
 
+                    <!-- ========================================== -->
+                    <!-- 🟢 3. FACE RECOGNITION ATTENDANCE SCOPE 🟢 -->
+                    <!-- ========================================== -->
+                    <div id="attendanceScopeSection" class="transition-all duration-300">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-[0.7rem] font-bold text-pup-maroon dark:text-pup-gold uppercase tracking-wider">
+                                Face Recognition Attendance Scope
+                            </label>
+                            <span id="scopeBadge" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 transition-all">
+                                Campus Only
+                            </span>
+                        </div>
+                        <input type="hidden" id="attendanceScope" value="CAMPUS_ONLY">
+
+                        <!-- Segmented Switcher for Attendance Scope -->
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-[#151515] rounded-xl border border-gray-200 dark:border-gray-800">
+                            <button type="button" id="btnScopeCampus" onclick="setAttendanceScope('CAMPUS_ONLY')"
+                                class="flex items-center justify-center gap-2 py-2.5 px-2 rounded-lg text-xs font-bold transition-all duration-200 bg-white dark:bg-[#222] text-pup-maroon dark:text-pup-gold shadow-sm cursor-pointer">
+                                <i class="ph-bold ph-buildings text-base"></i>
+                                <span>Inside Campus Only</span>
+                            </button>
+                            <button type="button" id="btnScopeOutside" onclick="setAttendanceScope('OUTSIDE_CAMPUS')"
+                                class="flex items-center justify-center gap-2 py-2.5 px-2 rounded-lg text-xs font-bold transition-all duration-200 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+                                <i class="ph-bold ph-globe text-base"></i>
+                                <span>Allow Outside Campus</span>
+                            </button>
+                        </div>
+                        <p id="scopeHelperText" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 pl-1 leading-relaxed">
+                            Strict geofencing enforced: Students can only log face recognition attendance within PUP Unisan campus premises (300m radius).
+                        </p>
+                    </div>
+
                     <!-- Requester Name & Organization -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
@@ -576,75 +627,112 @@
         onclick="closeMobileTracking()"></div>
 
     <div id="trackingContainerMobile"
-        class="hidden fixed inset-0 z-[5010] p-4 items-center justify-center pointer-events-none">
+        class="hidden fixed inset-0 z-[5010] p-3 sm:p-4 items-center justify-center pointer-events-none">
         <div id="trackingIosWrapper"
-            class="ios-pop-wrapper pointer-events-auto w-full max-w-lg sm:max-w-xl mx-auto flex flex-col max-h-[90vh] h-fit">
+            class="ios-pop-wrapper pointer-events-auto w-full max-w-lg sm:max-w-xl mx-auto flex flex-col h-[85vh] max-h-[85vh]">
             <div id="trackingScrollWrapper"
-                class="relative bg-white dark:bg-pup-darkcard rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 font-sans flex flex-col h-full max-h-[85vh] overflow-y-auto form-scroll">
+                class="relative bg-white dark:bg-pup-darkcard rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 font-sans flex flex-col h-full max-h-[85vh] overflow-hidden">
 
-                <button type="button" onclick="closeMobileTracking()"
-                    class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full text-gray-500 hover:text-red-500 z-10 transition-colors shadow-sm cursor-pointer"
-                    title="Close Tracking">
-                    <i class="ph-bold ph-x text-lg"></i>
-                </button>
-
-                <div
-                    class="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-3 mb-6 pr-8">
+                <!-- Fixed Header (Always visible at top) -->
+                <div class="flex justify-between items-center px-6 py-4 sm:px-7 sm:py-4.5 border-b border-gray-100 dark:border-gray-800 shrink-0 bg-white dark:bg-pup-darkcard z-20">
                     <h3 class="font-sans text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
                         <i class="ph-fill ph-file-search text-pup-maroon dark:text-pup-gold"></i> PROPOSAL STATUS
                     </h3>
+                    <button type="button" onclick="closeMobileTracking()"
+                        class="w-9 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full text-gray-500 hover:text-red-500 transition-colors shadow-sm cursor-pointer"
+                        title="Close Tracking">
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
                 </div>
 
-                <!-- Current Location Box -->
-                <div id="currentLocBox"
-                    class="hidden flex items-start gap-3 mb-6 bg-gray-50 dark:bg-[#111] p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
-                    <div
-                        class="w-10 h-10 rounded-full bg-pup-maroon/10 dark:bg-pup-gold/10 flex items-center justify-center shrink-0">
-                        <i class="ph-fill ph-map-pin text-xl text-pup-maroon dark:text-pup-gold animate-bounce"></i>
+                <!-- Scrollable Body Container with Overflow Hint -->
+                <div class="relative flex-grow overflow-hidden flex flex-col min-h-0">
+                    <div id="trackingModalBody" onscroll="checkTrackingScrollHint()"
+                        class="flex-grow overflow-y-auto p-6 sm:p-7 form-scroll space-y-4">
+
+                        <!-- Empty State Placeholder (when no active document is in routing) -->
+                        <div id="noTrackingDocs" class="hidden text-center py-10 px-4 bg-gray-50/70 dark:bg-[#111] rounded-2xl border border-gray-100 dark:border-gray-800 my-2">
+                            <div class="w-14 h-14 mx-auto mb-3.5 rounded-full bg-pup-maroon/10 dark:bg-pup-gold/10 flex items-center justify-center text-pup-maroon dark:text-pup-gold">
+                                <i class="ph-fill ph-file-dashed text-2xl"></i>
+                            </div>
+                            <h4 class="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider mb-1">
+                                No Active Proposal in Routing
+                            </h4>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
+                                There are currently no proposals under review. All previously approved events have already been published in the Student Activity Portal.
+                            </p>
+                            <div class="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-[10px] font-bold uppercase tracking-wider">
+                                <i class="ph-bold ph-check-circle"></i> Routing Complete / Portal Live
+                            </div>
+                        </div>
+
+                        <!-- Selected Document Info -->
+                        <div id="docInfo" class="hidden">
+                            <h4 id="infoEventName" class="font-black text-lg text-gray-900 dark:text-white leading-tight mb-2">
+                                Select a Document</h4>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span id="infoStatus"
+                                    class="bg-blue-100 text-blue-700 border border-blue-200 px-3 py-1 rounded-full text-[10.5px] uppercase font-black tracking-wider">Status</span>
+                                <span id="infoType"
+                                    class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider">Type</span>
+                            </div>
+
+                            <!-- Rejection Alert -->
+                            <div id="rejectAlert" class="hidden mt-3 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl">
+                                <p class="text-xs font-bold text-red-800 dark:text-red-400 mb-1 flex items-center gap-1.5"><i
+                                        class="ph-bold ph-warning-circle"></i> Reason for Rejection:</p>
+                                <p id="rejectReasonText" class="text-xs text-red-600 dark:text-red-300 leading-snug"></p>
+                            </div>
+                        </div>
+
+                        <!-- Current Location Box -->
+                        <div id="currentLocBox"
+                            class="hidden flex items-start gap-3 bg-gray-50 dark:bg-[#111] p-3.5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                            <div
+                                class="w-9 h-9 rounded-full bg-pup-maroon/10 dark:bg-pup-gold/10 flex items-center justify-center shrink-0">
+                                <i class="ph-fill ph-map-pin text-lg text-pup-maroon dark:text-pup-gold animate-bounce"></i>
+                            </div>
+                            <div class="flex flex-col">
+                                <span
+                                    class="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Physical
+                                    Document Office Location</span>
+                                <strong id="infoCurrentLoc"
+                                    class="text-gray-900 dark:text-white text-xs sm:text-sm leading-tight">Office Name</strong>
+                            </div>
+                        </div>
+
+                        <!-- Exact Document Map Location Container -->
+                        <div id="mapWrapper" class="hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="ph-bold ph-map-trifold text-pup-maroon dark:text-pup-gold text-sm"></i> Live Document Map Location
+                                </span>
+                                <span class="text-[10px] font-extrabold text-green-600 dark:text-green-400 flex items-center gap-1">
+                                    <span class="w-2 h-2 rounded-full bg-green-500 animate-ping"></span> Live Pin
+                                </span>
+                            </div>
+                            <div id="trackingMap" class="w-full h-56 sm:h-64 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-inner z-10 relative overflow-hidden bg-gray-100 dark:bg-gray-900"></div>
+                        </div>
+
                     </div>
-                    <div class="flex flex-col">
-                        <span
-                            class="text-[0.65rem] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Current
-                            Office Location</span>
-                        <strong id="infoCurrentLoc"
-                            class="text-gray-900 dark:text-white text-sm leading-tight">Office Name</strong>
+
+                    <!-- Scroll Hint Overlay (Indicates more content below inside body) -->
+                    <div id="trackingScrollHint"
+                        class="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-pup-darkcard via-white/80 dark:via-pup-darkcard/80 to-transparent flex items-end justify-center pb-2.5 transition-all duration-300 z-10 opacity-0">
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-900/90 dark:bg-white/95 text-white dark:text-gray-900 text-[10px] font-black uppercase tracking-wider shadow-lg backdrop-blur-sm pointer-events-auto cursor-pointer hover:scale-105 transition-transform"
+                            onclick="scrollTrackingModalDown()">
+                            <i class="ph-bold ph-arrow-down animate-bounce text-pup-gold dark:text-pup-maroon"></i>
+                            <span>Scroll down for map location</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Selected Document Info -->
-                <div id="docInfo" class="mb-6 hidden">
-                    <h4 id="infoEventName" class="font-black text-lg text-gray-900 dark:text-white leading-tight">
-                        Select a Document</h4>
-                    <div class="flex gap-2 mt-2 flex-wrap">
-                        <span id="infoStatus"
-                            class="bg-blue-100 text-blue-700 border border-blue-200 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider">Status</span>
-                        <span id="infoType"
-                            class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider">Type</span>
-                    </div>
-
-                    <!-- Rejection Alert -->
-                    <div id="rejectAlert" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-                        <p class="text-xs font-bold text-red-800 mb-1 flex items-center gap-1.5"><i
-                                class="ph-bold ph-warning-circle"></i> Reason for Rejection:</p>
-                        <p id="rejectReasonText" class="text-xs text-red-600 leading-snug"></p>
-                    </div>
-                </div>
-
-                <!-- Timeline -->
-                <div class="relative flex-grow mb-8">
-                    <!-- Vertical Line -->
-                    <div class="absolute left-[11px] top-2 bottom-6 w-0.5 bg-gray-200 dark:bg-gray-800"></div>
-
-                    <div class="space-y-6 relative z-10" id="timelineContainer">
-                        <!-- Steps injected via JS -->
-                    </div>
-                </div>
-
-                <!-- Redirect Button -->
-                <div class="mt-auto border-t border-gray-100 dark:border-gray-800 pt-6">
+                <!-- Fixed Footer with View Full Tracking Details Button (Always Visible) -->
+                <div class="p-4 sm:p-5 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-pup-darkcard shrink-0 z-20">
                     <a href="{% url 'organizer_document_tracking' %}"
-                        class="w-full bg-gray-900 hover:bg-black dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 font-bold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-md text-center">
-                        <i class="ph-bold text-lg"></i> View Full Tracking Details ->
+                        class="w-full bg-gray-900 hover:bg-black dark:bg-gray-100 dark:hover:bg-white text-white dark:text-gray-900 font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-md text-center group cursor-pointer hover:shadow-lg">
+                        <span>View Full Tracking Details</span>
+                        <i class="ph-bold ph-arrow-right text-base group-hover:translate-x-1 transition-transform"></i>
                     </a>
                 </div>
 
@@ -987,9 +1075,10 @@
                 const parsedDocs = JSON.parse(docsNode.textContent);
                 allDocuments = typeof parsedDocs === 'string' ? JSON.parse(parsedDocs) : parsedDocs;
 
-                // Show latest document in the panel
-                if (allDocuments.length > 0) {
-                    showTrackingDetails(allDocuments[0].id);
+                // Show only current active proposal (not yet approved/published)
+                const activeDoc = allDocuments.find(d => d.status && d.status !== 'Approved');
+                if (activeDoc) {
+                    showTrackingDetails(activeDoc.id);
                 }
             }
 
@@ -1292,6 +1381,54 @@
         }
     }
 
+    function setAttendanceScope(mode) {
+        const scopeInput = document.getElementById('attendanceScope');
+        const btnCampus = document.getElementById('btnScopeCampus');
+        const btnOutside = document.getElementById('btnScopeOutside');
+        const badge = document.getElementById('scopeBadge');
+        const helperText = document.getElementById('scopeHelperText');
+
+        if (!scopeInput) return;
+        scopeInput.value = mode;
+
+        const activeClasses = ['bg-white', 'dark:bg-[#222]', 'text-pup-maroon', 'dark:text-pup-gold', 'shadow-sm'];
+        const inactiveClasses = ['text-gray-600', 'dark:text-gray-400', 'hover:text-gray-900', 'dark:hover:text-white'];
+
+        if (mode === 'CAMPUS_ONLY') {
+            if (btnCampus) {
+                btnCampus.classList.add(...activeClasses);
+                btnCampus.classList.remove(...inactiveClasses);
+            }
+            if (btnOutside) {
+                btnOutside.classList.remove(...activeClasses);
+                btnOutside.classList.add(...inactiveClasses);
+            }
+            if (badge) {
+                badge.innerText = 'Campus Only';
+                badge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 transition-all';
+            }
+            if (helperText) {
+                helperText.innerText = 'Strict geofencing enforced: Students can only log face recognition attendance within PUP Unisan campus premises (300m radius).';
+            }
+        } else {
+            if (btnOutside) {
+                btnOutside.classList.add(...activeClasses);
+                btnOutside.classList.remove(...inactiveClasses);
+            }
+            if (btnCampus) {
+                btnCampus.classList.remove(...activeClasses);
+                btnCampus.classList.add(...inactiveClasses);
+            }
+            if (badge) {
+                badge.innerText = 'Outside Campus Allowed';
+                badge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 transition-all';
+            }
+            if (helperText) {
+                helperText.innerText = 'Flexible attendance enabled: Students can complete face recognition attendance anywhere (remote / outside campus allowed).';
+            }
+        }
+    }
+
     function openCustomSelect() {
         const menuWrapper = document.getElementById('customSelectMenuWrapper');
         const selectIcon = document.getElementById('customSelectIcon');
@@ -1336,6 +1473,35 @@
         // Function disabled on this page as the list has been moved to document_tracking.html
     }
 
+    let trackingMapInstance = null;
+    let trackingMarkerInstance = null;
+
+    function scrollTrackingModalDown() {
+        const body = document.getElementById('trackingModalBody');
+        if (body) {
+            body.scrollBy({ top: 220, behavior: 'smooth' });
+        }
+    }
+
+    function checkTrackingScrollHint() {
+        const body = document.getElementById('trackingModalBody');
+        const hint = document.getElementById('trackingScrollHint');
+        if (!body || !hint) return;
+
+        // Content overflows if scrollHeight is strictly greater than clientHeight
+        const hasOverflow = body.scrollHeight > (body.clientHeight + 15);
+        // User is near the bottom if remaining scroll is less than 30px
+        const isNearBottom = (body.scrollHeight - body.scrollTop - body.clientHeight) < 30;
+
+        if (hasOverflow && !isNearBottom) {
+            hint.classList.remove('opacity-0', 'pointer-events-none');
+            hint.classList.add('opacity-100');
+        } else {
+            hint.classList.remove('opacity-100');
+            hint.classList.add('opacity-0', 'pointer-events-none');
+        }
+    }
+
     function openMobileTracking(e) {
         const overlay = document.getElementById('trackingOverlayMobile');
         const container = document.getElementById('trackingContainerMobile');
@@ -1346,13 +1512,46 @@
             document.documentElement.style.setProperty('--click-y', e.clientY + 'px');
         }
 
+        const noDocsEl = document.getElementById('noTrackingDocs');
+        const currentLocBox = document.getElementById('currentLocBox');
+        const docInfo = document.getElementById('docInfo');
+        const mapWrapper = document.getElementById('mapWrapper');
+        const bodyEl = document.getElementById('trackingModalBody');
+        if (bodyEl) bodyEl.scrollTop = 0;
+
+        // Only track the single current ongoing event proposal (not published yet)
+        const activeDoc = allDocuments.find(d => d.status && d.status !== 'Approved');
+
+        if (activeDoc) {
+            if (noDocsEl) noDocsEl.classList.add('hidden');
+            if (currentLocBox) currentLocBox.classList.remove('hidden');
+            if (docInfo) docInfo.classList.remove('hidden');
+            if (mapWrapper) mapWrapper.classList.remove('hidden');
+
+            showTrackingDetails(activeDoc.id);
+        } else {
+            // When all events are published or none created, show clean placeholder
+            if (noDocsEl) noDocsEl.classList.remove('hidden');
+            if (currentLocBox) currentLocBox.classList.add('hidden');
+            if (docInfo) docInfo.classList.add('hidden');
+            if (mapWrapper) mapWrapper.classList.add('hidden');
+
+            if (trackingMapInstance) {
+                trackingMapInstance.remove();
+                trackingMapInstance = null;
+            }
+        }
+
         overlay.classList.remove('hidden');
         container.classList.remove('hidden');
         container.classList.add('flex');
 
         iosWrapper.classList.remove('ios-pop-wrapper-close');
-
         document.body.style.overflow = 'hidden';
+
+        setTimeout(() => {
+            checkTrackingScrollHint();
+        }, 200);
     }
 
     function closeMobileTracking() {
@@ -1362,29 +1561,64 @@
 
         iosWrapper.classList.add('ios-pop-wrapper-close');
 
+        if (trackingMapInstance) {
+            trackingMapInstance.remove();
+            trackingMapInstance = null;
+        }
+
         setTimeout(() => {
             overlay.classList.add('hidden');
             container.classList.add('hidden');
             container.classList.remove('flex');
             iosWrapper.classList.remove('ios-pop-wrapper-close');
             document.body.style.overflow = '';
-        }, 400);
+        }, 350);
     }
 
-    let currentDocCoords = null;
+    function formatFlowStatus(status) {
+        switch(status) {
+            case 'Pending Adviser': return 'Pending Adviser (Initial Review)';
+            case 'Admin Approved':
+            case 'Adviser Approved': return 'Adviser Approved (Gathering Signatures)';
+            case 'Permit Verification': return 'Adviser Finalize Event Requirements';
+            case 'Final Admin Review': return 'Final Admin Review (Admin Clearance)';
+            case 'Approved': return 'Approved (Published Event)';
+            case 'Rejected': return 'Rejected (Correction Required)';
+            default: return status || 'Pending';
+        }
+    }
+
     function showTrackingDetails(docId) {
         const doc = allDocuments.find(d => d.id === docId);
         if (!doc) return;
 
-        currentDocCoords = doc.coords;
-
         // UI Updates
         document.getElementById('docInfo').classList.remove('hidden');
         document.getElementById('currentLocBox').classList.remove('hidden');
+        const mapWrapper = document.getElementById('mapWrapper');
+        if (mapWrapper) mapWrapper.classList.remove('hidden');
+
         document.getElementById('infoEventName').innerText = doc.eventName;
-        document.getElementById('infoStatus').innerText = doc.status;
         document.getElementById('infoType').innerText = doc.docType;
         document.getElementById('infoCurrentLoc').innerText = doc.currentLoc;
+
+        const formattedStatus = formatFlowStatus(doc.status);
+        const statusEl = document.getElementById('infoStatus');
+        statusEl.innerText = formattedStatus;
+
+        if (doc.status === 'Approved') {
+            statusEl.className = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 px-3 py-1 rounded-full text-[10.5px] uppercase font-black tracking-wider';
+        } else if (doc.status === 'Rejected') {
+            statusEl.className = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 px-3 py-1 rounded-full text-[10.5px] uppercase font-black tracking-wider';
+        } else if (doc.status === 'Admin Approved' || doc.status === 'Adviser Approved') {
+            statusEl.className = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded-full text-[10.5px] uppercase font-black tracking-wider';
+        } else if (doc.status === 'Permit Verification') {
+            statusEl.className = 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800 px-3 py-1 rounded-full text-[10.5px] uppercase font-black tracking-wider';
+        } else if (doc.status === 'Final Admin Review') {
+            statusEl.className = 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-full text-[10.5px] uppercase font-black tracking-wider';
+        } else {
+            statusEl.className = 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-3 py-1 rounded-full text-[10.5px] uppercase font-black tracking-wider';
+        }
 
         const alertBox = document.getElementById('rejectAlert');
         if (doc.status === 'Rejected') {
@@ -1393,6 +1627,81 @@
         } else {
             alertBox.classList.add('hidden');
         }
+
+        setTimeout(() => {
+            initTrackingLeafletMap(doc.coords, doc.currentLoc);
+            checkTrackingScrollHint();
+        }, 150);
+    }
+
+    function initTrackingLeafletMap(coords, locName) {
+        if (typeof L === 'undefined') {
+            console.error('Leaflet is not loaded');
+            return;
+        }
+        
+        const mapEl = document.getElementById('trackingMap');
+        if (!mapEl) return;
+
+        if (trackingMapInstance) {
+            trackingMapInstance.remove();
+            trackingMapInstance = null;
+        }
+
+        const defaultCoords = [13.84575, 121.96915];
+        const targetCoords = (coords && Array.isArray(coords) && coords.length === 2 && !isNaN(coords[0])) ? coords : defaultCoords;
+
+        trackingMapInstance = L.map('trackingMap', {
+            zoomControl: true,
+            attributionControl: false,
+            scrollWheelZoom: false
+        }).setView(targetCoords, 18);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackingMapInstance);
+
+        const customPulseIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background-color: #800000; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px rgba(128,0,0,0.6); animation: pulse-red 2s infinite;"></div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        const popupHtml = `
+            <div class="text-center p-1.5 font-sans min-w-[160px]">
+                <div class="font-black text-pup-maroon dark:text-pup-gold text-[11px] uppercase tracking-tight mb-1" id="bubbleLocTitle">
+                    ${locName || 'Office Location'}
+                </div>
+                <div class="text-[9px] text-gray-500 font-bold leading-tight border-t border-gray-100 dark:border-gray-800 pt-1 mt-1 flex items-center justify-center gap-1" id="bubbleSubLoc">
+                    <i class="ph-bold ph-map-pin text-pup-maroon dark:text-pup-gold"></i> Barangay Kalilayan Ibaba, Unisan
+                </div>
+            </div>
+        `;
+
+        trackingMarkerInstance = L.marker(targetCoords, { icon: customPulseIcon }).addTo(trackingMapInstance)
+            .bindPopup(popupHtml, { closeButton: false, className: 'custom-popup' })
+            .openPopup();
+
+        // Accurate address resolution via Nominatim: If person or office is in a remote location, show town/city name!
+        if (targetCoords) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${targetCoords[0]}&lon=${targetCoords[1]}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        const parts = data.display_name.split(',');
+                        const cleanAddr = parts.slice(0, 3).join(', ').trim();
+                        const subEl = document.getElementById('bubbleSubLoc');
+                        if (subEl) {
+                            subEl.innerHTML = `<i class="ph-bold ph-map-pin text-pup-maroon dark:text-pup-gold"></i> ${cleanAddr}`;
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+
+        setTimeout(() => {
+            if (trackingMapInstance) trackingMapInstance.invalidateSize();
+            checkTrackingScrollHint();
+        }, 250);
     }
 
     function toggleFormFields() {
@@ -1490,6 +1799,8 @@
         formData.append('end_time', document.getElementById('evtEndTime').value);
         formData.append('venue', document.getElementById('evtVenue').value);
         formData.append('is_flag_raising', 'true');
+        const scopeVal = document.getElementById('attendanceScope') ? document.getElementById('attendanceScope').value : 'CAMPUS_ONLY';
+        formData.append('attendance_scope', scopeVal);
 
         const photoInput = document.getElementById('flagCoverPhoto');
         if (photoInput.files.length > 0) {
@@ -1866,6 +2177,7 @@
         const targetAudienceVal = document.getElementById('targetAudience') ? document.getElementById('targetAudience').value : 'ALL';
         const allowedOrgsVal = document.getElementById('allowedOrgsInput') ? document.getElementById('allowedOrgsInput').value : 'ALL';
         const hasEvalVal = document.getElementById('hasEvaluation') ? document.getElementById('hasEvaluation').value : 'true';
+        const attendanceScopeVal = document.getElementById('attendanceScope') ? document.getElementById('attendanceScope').value : 'CAMPUS_ONLY';
 
         if (targetAudienceVal === 'SPECIFIC' && (!allowedOrgsVal || allowedOrgsVal.trim() === '')) {
             alert('Please select at least one organization for specific event availability.');
@@ -1877,6 +2189,7 @@
         formData.append('target_audience', targetAudienceVal);
         formData.append('allowed_orgs', allowedOrgsVal);
         formData.append('has_evaluation', hasEvalVal);
+        formData.append('attendance_scope', attendanceScopeVal);
 
         try {
             const response = await fetch('/organizer/api/submit-proposal/', { method: 'POST', body: formData });
