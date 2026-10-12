@@ -146,9 +146,15 @@ urlpatterns = [
     path('organizer/upload-permit/', views.upload_signed_permit, name='upload_signed_permit'),
     path('organizer/api/profile-generate-password/', views.generate_org_password_profile, name='generate_org_password_profile'),
     path('organizer/api/profile-update-password/', views.update_org_password_profile, name='update_org_password_profile'),
+    
+    # 404 Preview Route
+    path('404/', views.custom_404_view, name='preview_404'),
 ]
+
+handler404 = 'campus_app.views.custom_404_view'
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 # Force reload comment 4
 
