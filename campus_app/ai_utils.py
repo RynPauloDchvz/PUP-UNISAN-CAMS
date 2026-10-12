@@ -72,16 +72,41 @@ def base64_to_cv2(b64_string):
 
 def verify_face(live_base64, anchor_base64):
     """
-    Verifies if the face in live_base64 matches anchor_base64 using DeepFace.
-    Updated to ArcFace for better accuracy and RetinaFace for robust detection.
+    Verifies if the face in live_base64 matches anchor_base64.
+    If AI_SERVICE_URL is set (e.g. Hugging Face Spaces microservice), it delegates to the cloud API.
+    Otherwise, it runs local DeepFace.
     """
+    ai_service_url = os.environ.get('AI_SERVICE_URL')
+    if ai_service_url:
+        try:
+            import requests
+            endpoint = f"{ai_service_url.rstrip('/')}/verify"
+            response = requests.post(
+                endpoint,
+                json={
+                    "live_base64": live_base64,
+                    "anchor_base64": anchor_base64
+                },
+                timeout=30
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return bool(data.get('is_match', False)), float(data.get('distance', 1.0))
+            else:
+                print(f"AI Service HTTP {response.status_code}: {response.text}")
+        except Exception as e:
+            print(f"Remote AI Service error, falling back to local if available: {e}")
+
+    # Fallback to local DeepFace
+    if DeepFace is None:
+        print("DeepFace is not available locally and remote AI_SERVICE_URL was not reachable.")
+        return False, 1.0
+
     try:
         img1 = base64_to_cv2(live_base64)
         img2 = base64_to_cv2(anchor_base64)
         
-        # 🟢 ArcFace provides superior accuracy for face recognition
-        # 🟢 Switched to 'opencv' detector backend for 10x faster processing on CPU (fixes minute-long delays)
-        # DeepFace supports direct numpy array passing (img1/img2)
+        # ArcFace provides superior accuracy for face recognition
         result = DeepFace.verify(
             img1_path=img1, 
             img2_path=img2, 
@@ -93,9 +118,7 @@ def verify_face(live_base64, anchor_base64):
         is_match = result['verified']
         dist = result.get('distance', 1.0)
         
-        # OpenCV Haar Cascades often produce poorly aligned face crops.
-        # ArcFace's default threshold (0.68) is too strict for misaligned crops.
-        # We manually increase the leniency to 0.85 to compensate for the fast but inaccurate opencv detector.
+        # Compensate for OpenCV detector misalignment
         if not is_match and dist < 0.85:
             is_match = True
             
