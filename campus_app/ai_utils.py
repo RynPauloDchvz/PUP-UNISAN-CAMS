@@ -1,10 +1,28 @@
 import base64
 import os
+import sys
 import tempfile
 import cv2
 import numpy as np
-# pyrefly: ignore [missing-import]
-from deepface import DeepFace
+
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
+try:
+    # pyrefly: ignore [missing-import]
+    from deepface import DeepFace
+except Exception as e:
+    print(f"DeepFace initialization note: {e}")
+    DeepFace = None
+
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer, NEGATE, BOOSTER_DICT
 
 # Initialize VADER

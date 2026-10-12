@@ -24,7 +24,7 @@ import base64
 import zipfile
 from docxtpl import DocxTemplate 
 from .models import OrgProfile, Student, Attendance, Event, LoginLockout, AuditLog, AdviserProfile
-from .utils import log_audit_event
+from .utils import log_audit_event, get_client_ip
 from .middleware import get_current_request
 from .ai_utils import verify_face, get_sentiment, get_rating_sentiment
 from django.core.cache import cache
@@ -155,30 +155,40 @@ def portal_logout_view(request):
 # ==========================================
 def portal_login_view(request):
     if request.method == 'POST':
+        client_ip = get_client_ip(request) or '127.0.0.1'
+        
+        # 1. IP-level brute force check
+        is_ip_locked, ip_remaining = check_account_lockout(f"ip_{client_ip}")
+        if is_ip_locked:
+            return JsonResponse({"status": "lockout", "message": f"Too many failed login attempts from this network. Please wait {int(ip_remaining)}s.", "remaining": ip_remaining})
+
+        # 2. Session-level lockout check
         is_locked, remaining = check_lockout(request, type='portal')
         if is_locked:
-            return JsonResponse({"status": "lockout", "message": "Too many attempts.", "remaining": remaining})
+            return JsonResponse({"status": "lockout", "message": "Too many attempts. Please wait.", "remaining": remaining})
 
         username = request.POST.get('username')
         password = request.POST.get('password')
 
-        # Check if user exists BEFORE applying lockout logic
+        # 3. Check if user exists BEFORE applying account lockout logic
         if not User.objects.filter(username=username).exists():
+            record_failed_attempt(f"ip_{client_ip}")
             log_audit_event(request, 'LOGIN_FAILED', status='Failed', changes={'reason': 'Account does not exist', 'username': username})
             return JsonResponse({"status": "error", "message": "Account does not exist. Please register first."})
 
-        # Check Account Lockout
+        # 4. Check Account Lockout
         is_acc_locked, acc_remaining = check_account_lockout(username)
         if is_acc_locked:
-            return JsonResponse({"status": "lockout", "message": "Account locked.", "remaining": acc_remaining})
+            return JsonResponse({"status": "lockout", "message": f"Account locked due to consecutive failed attempts. Please wait {int(acc_remaining)}s.", "remaining": acc_remaining})
 
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            # Success - reset attempts
+            # Success - reset attempts for both user and IP
             request.session['failed_attempts_portal'] = 0
             if 'lockout_until_portal' in request.session: del request.session['lockout_until_portal']
             reset_account_lockout(username)
+            reset_account_lockout(f"ip_{client_ip}")
 
             if user.is_superuser:
                 login(request, user)
@@ -214,7 +224,8 @@ def portal_login_view(request):
                 log_audit_event(request, 'LOGIN_FAILED', status='Denied', changes={'reason': 'Account role not identified', 'username': username})
                 return JsonResponse({"status": "error", "message": "Account is neither a registered Student nor an Organizer."})
         else:
-            # Failed attempt logic
+            # Failed attempt logic on both username and IP
+            record_failed_attempt(f"ip_{client_ip}")
             is_locked_now, lock_time, total_attempts = record_failed_attempt(username)
             
             # Since we checked existence above, we can attribute this to the user
@@ -225,7 +236,7 @@ def portal_login_view(request):
                 request.session['lockout_until_portal'] = (timezone.now() + timedelta(seconds=lock_time)).isoformat()
                 return JsonResponse({
                     "status": "lockout", 
-                    "message": f"Too many failed attempts ({total_attempts}). Please wait.", 
+                    "message": f"Too many failed attempts ({total_attempts}). Account locked for security.", 
                     "remaining": lock_time
                 })
 
@@ -311,8 +322,25 @@ def verify_reset_code(request):
         typed_code = request.POST.get('code')
         saved_code = request.session.get('reset_code')
 
-        if not saved_code or typed_code != saved_code:
-            return JsonResponse({"status": "error", "message": "Incorrect verification code."})
+        if not saved_code:
+            return JsonResponse({"status": "error", "message": "No active verification session. Please request a new code."})
+
+        if typed_code != saved_code:
+            attempts = request.session.get('failed_reset_code_attempts', 0) + 1
+            request.session['failed_reset_code_attempts'] = attempts
+            if attempts >= 5:
+                # Invalidate OTP immediately to prevent brute-forcing
+                if 'reset_code' in request.session: del request.session['reset_code']
+                if 'reset_user_id' in request.session: del request.session['reset_user_id']
+                if 'failed_reset_code_attempts' in request.session: del request.session['failed_reset_code_attempts']
+                log_audit_event(request, 'UNAUTHORIZED', status='Blocked', changes={'reason': 'OTP brute-force threshold reached (5 failed attempts)'})
+                return JsonResponse({"status": "error", "message": "Too many incorrect OTP attempts (5/5). Your verification code has been invalidated for security. Please request a new code."})
+
+            return JsonResponse({"status": "error", "message": f"Incorrect verification code. Attempt {attempts} of 5."})
+
+        # Success - clear failed attempts counter
+        if 'failed_reset_code_attempts' in request.session:
+            del request.session['failed_reset_code_attempts']
 
         return JsonResponse({"status": "success"})
     return JsonResponse({"status": "error", "message": "Invalid request."})
@@ -323,7 +351,7 @@ def complete_password_reset(request):
         saved_code = request.session.get('reset_code')
 
         if not saved_code or typed_code != saved_code:
-            return JsonResponse({"status": "error", "message": "Incorrect verification code."})
+            return JsonResponse({"status": "error", "message": "Verification code is invalid or has expired."})
             
         new_password = request.POST.get('new_password')
         user_id = request.session.get('reset_user_id')
@@ -345,6 +373,7 @@ def complete_password_reset(request):
         # Cleanup
         if 'reset_code' in request.session: del request.session['reset_code']
         if 'reset_user_id' in request.session: del request.session['reset_user_id']
+        if 'failed_reset_code_attempts' in request.session: del request.session['failed_reset_code_attempts']
         if 'failed_attempts' in request.session: request.session['failed_attempts'] = 0
         if 'lockout_until' in request.session: del request.session['lockout_until']
 
@@ -394,8 +423,16 @@ def verify_student_register_otp(request):
             return JsonResponse({"status": "error", "message": "Please click 'Send OTP' first to receive your code."})
 
         if typed_otp != saved_otp:
-            return JsonResponse({"status": "error", "message": "Incorrect OTP Code! Please make sure you entered it correctly."})
+            attempts = request.session.get('failed_register_otp_attempts', 0) + 1
+            request.session['failed_register_otp_attempts'] = attempts
+            if attempts >= 5:
+                if 'register_otp' in request.session: del request.session['register_otp']
+                if 'failed_register_otp_attempts' in request.session: del request.session['failed_register_otp_attempts']
+                return JsonResponse({"status": "error", "message": "Too many incorrect OTP attempts (5/5). For security reasons, please click 'Send OTP' to request a new code."})
+            return JsonResponse({"status": "error", "message": f"Incorrect OTP Code! Attempt {attempts} of 5."})
 
+        if 'failed_register_otp_attempts' in request.session:
+            del request.session['failed_register_otp_attempts']
         return JsonResponse({"status": "success"})
     return JsonResponse({"status": "error", "message": "Invalid request."})
 
@@ -1433,8 +1470,18 @@ def force_change_finalize(request):
         otp = request.POST.get('otp')
         face_image = request.POST.get('face_image')
         
-        if otp != request.session.get('force_change_otp'):
-            return JsonResponse({"status": "error", "message": "Invalid or expired OTP code."})
+        saved_otp = request.session.get('force_change_otp')
+        if not saved_otp or otp != saved_otp:
+            attempts = request.session.get('failed_fc_otp_attempts', 0) + 1
+            request.session['failed_fc_otp_attempts'] = attempts
+            if attempts >= 5:
+                if 'force_change_otp' in request.session: del request.session['force_change_otp']
+                if 'failed_fc_otp_attempts' in request.session: del request.session['failed_fc_otp_attempts']
+                return JsonResponse({"status": "error", "message": "Too many incorrect OTP attempts (5/5). Please re-request a verification code."})
+            return JsonResponse({"status": "error", "message": f"Invalid or expired OTP code. Attempt {attempts} of 5."})
+
+        if 'failed_fc_otp_attempts' in request.session:
+            del request.session['failed_fc_otp_attempts']
             
         if not face_image:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
@@ -4582,17 +4629,6 @@ def admin_audit_logs(request):
 def staff_login_view(request):
     return redirect('index')
 
-def debug_database_view(request):
-    students = Student.objects.all()
-    org_profiles = OrgProfile.objects.all()
-    return JsonResponse({
-        "status": "success",
-        "database_records": {
-            "Students": json.loads(serialize('json', students)),
-            "Organizers": json.loads(serialize('json', org_profiles))
-        }
-    }, safe=False, json_dumps_params={'indent': 4})
-
 
 from .models import UserLocation
 
@@ -4866,8 +4902,18 @@ def student_force_change_finalize(request):
         otp = request.POST.get('otp')
         face_image = request.POST.get('face_image')
         
-        if otp != request.session.get('student_force_change_otp'):
-            return JsonResponse({"status": "error", "message": "Invalid or expired OTP code."})
+        saved_otp = request.session.get('student_force_change_otp')
+        if not saved_otp or otp != saved_otp:
+            attempts = request.session.get('failed_sfc_otp_attempts', 0) + 1
+            request.session['failed_sfc_otp_attempts'] = attempts
+            if attempts >= 5:
+                if 'student_force_change_otp' in request.session: del request.session['student_force_change_otp']
+                if 'failed_sfc_otp_attempts' in request.session: del request.session['failed_sfc_otp_attempts']
+                return JsonResponse({"status": "error", "message": "Too many incorrect OTP attempts (5/5). Please re-request a verification code."})
+            return JsonResponse({"status": "error", "message": f"Invalid or expired OTP code. Attempt {attempts} of 5."})
+
+        if 'failed_sfc_otp_attempts' in request.session:
+            del request.session['failed_sfc_otp_attempts']
             
         if not face_image:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
@@ -5147,8 +5193,18 @@ def adviser_force_change_finalize(request):
         otp = request.POST.get('otp')
         face_image = request.POST.get('face_image')
         
-        if otp != request.session.get('adviser_force_change_otp'):
-            return JsonResponse({"status": "error", "message": "Invalid or expired OTP code."})
+        saved_otp = request.session.get('adviser_force_change_otp')
+        if not saved_otp or otp != saved_otp:
+            attempts = request.session.get('failed_afc_otp_attempts', 0) + 1
+            request.session['failed_afc_otp_attempts'] = attempts
+            if attempts >= 5:
+                if 'adviser_force_change_otp' in request.session: del request.session['adviser_force_change_otp']
+                if 'failed_afc_otp_attempts' in request.session: del request.session['failed_afc_otp_attempts']
+                return JsonResponse({"status": "error", "message": "Too many incorrect OTP attempts (5/5). Please re-request a verification code."})
+            return JsonResponse({"status": "error", "message": f"Invalid or expired OTP code. Attempt {attempts} of 5."})
+
+        if 'failed_afc_otp_attempts' in request.session:
+            del request.session['failed_afc_otp_attempts']
             
         if not face_image:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})

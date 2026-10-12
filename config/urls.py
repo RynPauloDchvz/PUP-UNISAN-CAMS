@@ -6,8 +6,6 @@ from campus_app import views
 from django.contrib.auth import views as auth_views 
 
 urlpatterns = [
-    path('debug/check-database/', views.debug_database_view, name='debug_database_view'),
-
     # ==========================================
     # ADMIN & ADVISER URLS
     # ==========================================

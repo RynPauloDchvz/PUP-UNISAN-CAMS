@@ -2,6 +2,19 @@ venv/
 __pycache__/
 *.pyc
 
-# I-comment natin ito para isama sa GitHub yung mga ginawang accounts at uploaded pictures
-# db.sqlite3
-# media/
+# Environment Secrets
+.env
+*.env
+*.backup
+*backup*
+
+# Local Database & Testing Media (Laptop Only - Excluded from Git/Deployment)
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Local Documentation & AI Memory (Laptop Only)
+paper_process.txt
+system_security_checklist.txt
+GEMINI.md
