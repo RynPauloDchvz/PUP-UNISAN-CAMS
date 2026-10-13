@@ -28,10 +28,11 @@ except ImportError:
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-4i^o6dlokz8$qjj*)hzy3-n2kdw5wm4e2s*@n3gevmez6ek^0k')
+SECRET_KEY = os.environ.get('SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY') or 'django-insecure-4i^o6dlokz8$qjj*)hzy3-n2kdw5wm4e2s*@n3gevmez6ek^0k'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+raw_debug = os.environ.get('DEBUG') if os.environ.get('DEBUG') is not None else os.environ.get('DJANGO_DEBUG', 'True')
+DEBUG = str(raw_debug).lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = ['*']
 
@@ -193,10 +194,25 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'nbat affu cqed wton
 # ==========================================
 # MEDIA / FILE STORAGE (CLOUDINARY)
 # ==========================================
+cloudinary_cloud = os.environ.get('CLOUDINARY_CLOUD_NAME')
+cloudinary_key = os.environ.get('CLOUDINARY_API_KEY')
+cloudinary_secret = os.environ.get('CLOUDINARY_API_SECRET')
+cloudinary_url = os.environ.get('CLOUDINARY_URL')
+
+if cloudinary_url and (not cloudinary_cloud or not cloudinary_key or not cloudinary_secret):
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(cloudinary_url)
+        cloudinary_key = cloudinary_key or parsed.username
+        cloudinary_secret = cloudinary_secret or parsed.password
+        cloudinary_cloud = cloudinary_cloud or parsed.hostname
+    except Exception:
+        pass
+
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+    'CLOUD_NAME': cloudinary_cloud,
+    'API_KEY': cloudinary_key,
+    'API_SECRET': cloudinary_secret,
 }
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 STORAGES = {
