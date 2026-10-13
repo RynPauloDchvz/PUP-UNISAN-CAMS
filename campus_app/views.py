@@ -290,7 +290,7 @@ def forgot_password_send_otp(request):
                 'otp': temp_code,
             })
 
-            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email_to_verify])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>', [email_to_verify])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": f"Verification code sent to {email_to_verify}"})
@@ -405,7 +405,7 @@ def send_student_register_otp(request):
         html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
 
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent! Please check your email inbox (and spam folder)."})
@@ -1440,7 +1440,7 @@ def force_change_send_otp(request):
         html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
         
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent to your email."})
@@ -2176,7 +2176,7 @@ def send_student_email(student, email_type, context_data=None):
         send_mail(
             subject,
             plain_message,
-            f'"{ "PUP UNISAN CAMS STUDENT ORG" if email_type == "welcome" else "PUP UNISAN CAMS" }" <{settings.EMAIL_HOST_USER}>',
+            f'"{ "PUP UNISAN CAMS STUDENT ORG" if email_type == "welcome" else "PUP UNISAN CAMS" }" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>',
             [student.email_address],
             html_message=html_message,
             fail_silently=True
@@ -4332,7 +4332,7 @@ def send_adviser_review_email(event, is_approved, process_sentence='', remarks='
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
-            from_email=f'"PUP UNISAN CAMS" <{settings.EMAIL_HOST_USER}>',
+            from_email=f'"PUP UNISAN CAMS" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>',
             to=[recipient_email]
         )
         msg.attach_alternative(html_content, "text/html")
@@ -4692,7 +4692,7 @@ def send_account_credentials(email, name, identifier, password, role='student', 
     }
     html_content = render_to_string('system_emails/account_credentials.html', context)
     text_content = strip_tags(html_content)
-    sender = f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>'
+    sender = f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>'
     msg = EmailMultiAlternatives(subject, text_content, sender, [email])
     msg.attach_alternative(html_content, "text/html")
     msg.send()
@@ -4892,7 +4892,7 @@ def student_force_change_send_otp(request):
         html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
         
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent to your email."})
@@ -5096,7 +5096,7 @@ def generate_student_password(request):
         
         try:
             html_content = render_to_string('system_emails/otp_email.html', {'otp': otp})
-            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email_address])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>', [email_address])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({'status': 'success', 'message': 'Verification code sent to your email.'})
@@ -5127,7 +5127,7 @@ def generate_org_password_profile(request):
         
         try:
             html_content = render_to_string('system_emails/otp_email.html', {'otp': otp})
-            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email_address])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>', [email_address])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({'status': 'success', 'message': 'Verification code sent to your email.'})
@@ -5183,7 +5183,7 @@ def adviser_force_change_send_otp(request):
         html_content = render_to_string('system_emails/otp_email.html', {'otp': otp_code})
         
         try:
-            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{settings.EMAIL_HOST_USER}>', [email])
+            email_msg = EmailMultiAlternatives(subject, text_content, f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>', [email])
             email_msg.attach_alternative(html_content, "text/html")
             email_msg.send()
             return JsonResponse({"status": "success", "message": "OTP sent to your email."})
