@@ -43,3 +43,10 @@ def log_audit_event(request, action, target_model=None, target_id=None, status='
     except Exception as e:
         # We don't want audit logging to crash the main app flow
         print(f"CRITICAL: Failed to log audit event: {str(e)}")
+
+# ==========================================
+# HUGGING FACE INFERENCE API UTILITIES
+# ==========================================
+import os
+HF_TOKEN = os.environ.get('HF_TOKEN')
+from .ai_utils import query_huggingface_model, get_hf_sentiment
