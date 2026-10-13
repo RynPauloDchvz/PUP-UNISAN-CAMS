@@ -4653,7 +4653,10 @@ def update_user_location(request):
 
 
 import json
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
@@ -4755,6 +4758,8 @@ def create_student_manual(request):
 
 @user_passes_test(is_admin_strictly, login_url='/')
 def create_student_bulk(request):
+    if pd is None:
+        return JsonResponse({'status': 'error', 'message': 'Spreadsheet parsing library (pandas) is not loaded.'})
     if request.method == 'POST' and request.FILES.getlist('files'):
         files = request.FILES.getlist('files')
         created_count = 0
