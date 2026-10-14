@@ -144,6 +144,22 @@ class Student(models.Model):
     force_password_change = models.BooleanField(default=False)
     face_encoding = models.TextField(null=True, blank=True) 
     email_notifications = models.BooleanField(default=True)
+    co_organizations = models.CharField(max_length=255, blank=True, default='')
+    pending_organizations = models.CharField(max_length=255, blank=True, default='')
+
+    def get_all_organizations(self):
+        orgs = [self.organization.strip()] if self.organization else []
+        if self.co_organizations:
+            for o in self.co_organizations.split(','):
+                o = o.strip()
+                if o and o not in orgs:
+                    orgs.append(o)
+        return orgs
+
+    def get_pending_organizations(self):
+        if not self.pending_organizations:
+            return []
+        return [o.strip() for o in self.pending_organizations.split(',') if o.strip()]
 
     def save(self, *args, **kwargs):
         if self.password and not self.password.startswith('pbkdf2_'): 

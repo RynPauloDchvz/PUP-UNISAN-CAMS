@@ -50,3 +50,50 @@ def log_audit_event(request, action, target_model=None, target_id=None, status='
 import os
 HF_TOKEN = os.environ.get('HF_TOKEN')
 from .ai_utils import query_huggingface_model, get_hf_sentiment
+
+# ==========================================
+# 🟢 STUDENT MULTI-ORG CONTEXT PROCESSOR 🟢
+# ==========================================
+def student_org_context_processor(request):
+    """
+    Supplies active_org, user_orgs, and switcher info across student templates.
+    """
+    if hasattr(request, 'user') and request.user.is_authenticated:
+        try:
+            from .models import Student
+            student = Student.objects.filter(user=request.user).first()
+            if student:
+                user_orgs = student.get_all_organizations()
+                active_org = request.session.get('active_org')
+                if not active_org or active_org not in user_orgs:
+                    active_org = student.organization.strip() if student.organization else (user_orgs[0] if user_orgs else '')
+                    request.session['active_org'] = active_org
+
+                from .views import ORG_FULL_NAMES
+                user_org_details = []
+                for code in user_orgs:
+                    logo = f"/static/images/orgImage/{code}/{code}.png"
+                    if code == "PUSO":
+                        logo = "/static/images/orgImage/PUSO/PUSO.jpg"
+                    user_org_details.append({
+                        'code': code,
+                        'name': ORG_FULL_NAMES.get(code, code),
+                        'logo': logo
+                    })
+
+                return {
+                    'active_org': active_org,
+                    'user_orgs': user_orgs,
+                    'user_org_details': user_org_details,
+                    'active_org_full_name': ORG_FULL_NAMES.get(active_org, active_org),
+                    'is_multi_org': len(user_orgs) > 1
+                }
+        except Exception:
+            pass
+    return {
+        'active_org': '',
+        'user_orgs': [],
+        'user_org_details': [],
+        'active_org_full_name': '',
+        'is_multi_org': False
+    }

@@ -271,7 +271,14 @@
                     <div class="flex items-center gap-3 flex-1 sm:col-span-5 min-w-0">
                         <img src="{% if student.profile_picture %}{{ student.profile_picture.url }}{% else %}{% static 'images/student.jpg' %}{% endif %}" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover shrink-0 border border-gray-200 dark:border-gray-700">
                         <div class="min-w-0">
-                            <p class="font-bold text-gray-900 dark:text-white leading-tight truncate text-sm sm:text-base">{{ student.full_name }}</p>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <p class="font-bold text-gray-900 dark:text-white leading-tight truncate text-sm sm:text-base">{{ student.full_name }}</p>
+                                {% if student.organization|upper != org_acronym|upper %}
+                                <span class="inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                                    Affiliation ({{ student.organization }})
+                                </span>
+                                {% endif %}
+                            </div>
                             <p class="text-[10px] sm:text-xs text-gray-500 truncate mt-0.5">{{ student.email_address }}</p>
                         </div>
                     </div>

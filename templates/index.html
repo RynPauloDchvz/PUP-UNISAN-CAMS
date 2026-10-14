@@ -148,6 +148,46 @@
             </div>
         </div>
 
+        <!-- ============================================== -->
+        <!-- 🟢 MULTI-ORG SELECTION MODAL (STEP 4) 🟢 -->
+        <!-- ============================================== -->
+        <div v-if="showOrgSelectModal" class="fixed inset-0 z-[1000] flex justify-center items-center p-4">
+            <div class="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md" @click="showOrgSelectModal = false"></div>
+            <div class="relative w-full max-w-md bg-white dark:bg-pup-darkcard rounded-3xl p-6 sm:p-8 text-center shadow-2xl border border-gray-100 dark:border-gray-800 animate-in slide-in-from-bottom-8 duration-500 z-10 overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-pup-maroon via-pup-gold to-pup-maroon"></div>
+                
+                <img src="{% static 'images/PUPLogo.png' %}" alt="PUP Logo" class="w-16 h-16 mx-auto mb-3 object-contain drop-shadow-md">
+                
+                <h3 class="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-1.5 uppercase tracking-tight">Choose Organization Portal</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 font-medium">Select which organization dashboard you wish to access today:</p>
+
+                <!-- ORG CHOICES LIST -->
+                <div class="space-y-3 mb-6 max-h-64 overflow-y-auto content-scroll pr-1">
+                    <div v-for="org in orgChoices" :key="org.code" 
+                         @click="selectAndLoginOrg(org.code)"
+                         class="group p-3.5 rounded-2xl border-2 border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-[#1a1a1a] hover:border-pup-gold dark:hover:border-pup-gold hover:bg-pup-gold/5 dark:hover:bg-pup-gold/10 transition-all duration-300 cursor-pointer flex items-center gap-3.5 text-left active:scale-95 shadow-sm">
+                        
+                        <img :src="org.logo" :alt="org.code" class="w-12 h-12 rounded-xl object-contain shrink-0 group-hover:scale-105 transition-transform drop-shadow">
+                        
+                        <div class="flex-1 min-w-0">
+                            <span class="block text-base font-black text-gray-900 dark:text-white group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors">
+                                [[ org.code ]]
+                            </span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400 truncate">
+                                [[ org.name ]]
+                            </span>
+                        </div>
+
+                        <i class="ph-bold ph-arrow-right text-gray-400 group-hover:text-pup-gold group-hover:translate-x-1 transition-all"></i>
+                    </div>
+                </div>
+
+                <button @click="showOrgSelectModal = false" class="w-full py-3 rounded-xl border border-gray-200 dark:border-gray-800 text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#222] transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+
         <!-- THEME TOGGLE (Absolute Top Right) -->
         <button @click="toggleTheme" class="absolute top-4 right-5 sm:top-6 sm:right-6 z-50 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gray-100 dark:bg-pup-darkcard border border-gray-200 dark:border-gray-800 flex items-center justify-center text-lg sm:text-xl hover:text-pup-maroon dark:hover:text-pup-gold transition-all shadow-sm" :class="{'opacity-0 pointer-events-none': isModalActive}">
             <i :class="isDark ? 'ph-fill ph-sun' : 'ph-fill ph-moon'"></i>
@@ -637,6 +677,8 @@
                     lockoutInterval: null,
                     showAttemptModal: false,
                     showWaitModal: false,
+                    showOrgSelectModal: false,
+                    orgChoices: [],
                     
                     modelsLoaded: false,
                     attemptCount: 0,
@@ -670,7 +712,7 @@
             },
             computed: {
                 isModalActive() {
-                    return this.isLocked || this.showAttemptModal || this.showWaitModal;
+                    return this.isLocked || this.showAttemptModal || this.showWaitModal || this.showOrgSelectModal;
                 },
                 // 🟢 DYNAMIC YEAR LEVEL LOGIC 🟢
                 availableYears() {
@@ -767,6 +809,10 @@
                         const response = await fetch('/portal/login/', { method: 'POST', headers: { 'X-CSRFToken': tokenValue }, body: formData });
                         const data = await response.json();
                         if (data.status === 'success') window.location.href = data.redirect_url;
+                        else if (data.status === 'select_org') {
+                            this.orgChoices = data.organizations;
+                            this.showOrgSelectModal = true;
+                        }
                         else if (data.status === 'lockout') {
                             this.isLocked = true;
                             this.lockoutTime = data.remaining;
@@ -786,6 +832,35 @@
                         }
                     } catch (error) { this.showToast("Connection error.", 'error'); }
                     finally { this.isLoggingIn = false; }
+                },
+                async selectAndLoginOrg(orgCode) {
+                    this.isLoggingIn = true;
+                    const formData = new FormData();
+                    formData.append('username', this.loginData.username);
+                    formData.append('password', this.loginData.password);
+                    formData.append('selected_org', orgCode);
+
+                    let tokenValue = '';
+                    const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+                    if (csrfToken) tokenValue = csrfToken.split('=')[1];
+                    else {
+                        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+                        if (csrfInput) tokenValue = csrfInput.value;
+                    }
+
+                    try {
+                        const response = await fetch('/portal/login/', { method: 'POST', headers: { 'X-CSRFToken': tokenValue }, body: formData });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            window.location.href = data.redirect_url;
+                        } else {
+                            this.showToast(data.message || 'Error selecting organization.', 'error');
+                        }
+                    } catch (error) {
+                        this.showToast('Connection error.', 'error');
+                    } finally {
+                        this.isLoggingIn = false;
+                    }
                 },
                 previewImage(event, type) {
                     const file = event.target.files[0];

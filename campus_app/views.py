@@ -217,8 +217,33 @@ def portal_login_view(request):
                     log_audit_event(request, 'LOGIN_FAILED', status='Denied', changes={'reason': 'Unverified Student Account', 'username': username}, actor=user)
                     return JsonResponse({"status": "pending_approval", "message": "Account is still pending approval. Please wait for your Organizer to verify your account."})
                 else:
+                    all_orgs = student.get_all_organizations()
+                    selected_org = request.POST.get('selected_org', '').strip().upper()
+
+                    # If student has multiple approved orgs and hasn't selected one yet
+                    if len(all_orgs) > 1 and not selected_org:
+                        org_choices = []
+                        for code in all_orgs:
+                            logo_path = f"/static/images/orgImage/{code}/{code}.png"
+                            if code == "PUSO":
+                                logo_path = "/static/images/orgImage/PUSO/PUSO.jpg"
+                            org_choices.append({
+                                "code": code,
+                                "name": ORG_FULL_NAMES.get(code, code),
+                                "logo": logo_path
+                            })
+                        return JsonResponse({
+                            "status": "select_org",
+                            "message": "Multiple organizations detected. Please choose which portal to enter.",
+                            "organizations": org_choices
+                        })
+
+                    # Determine active org and save to session
+                    active_org = selected_org if (selected_org and selected_org in [o.upper() for o in all_orgs]) else (student.organization.strip() if student.organization else all_orgs[0])
+                    request.session['active_org'] = active_org
+
                     login(request, user)
-                    log_audit_event(request, 'LOGIN_SUCCESS', status='Success', changes={'role': 'Student'}, actor=user)
+                    log_audit_event(request, 'LOGIN_SUCCESS', status='Success', changes={'role': 'Student', 'active_org': active_org}, actor=user)
                     return JsonResponse({"status": "success", "redirect_url": "/student/dashboard"})
             else:
                 log_audit_event(request, 'LOGIN_FAILED', status='Denied', changes={'reason': 'Account role not identified', 'username': username})
@@ -828,7 +853,13 @@ def student_homepage(request):
     except Student.DoesNotExist:
         return redirect('index')
 
-    org_acronym = student.organization.strip()
+    active_org = request.session.get('active_org')
+    all_student_orgs = student.get_all_organizations()
+    if not active_org or active_org not in all_student_orgs:
+        active_org = student.organization.strip() if student.organization else (all_student_orgs[0] if all_student_orgs else '')
+        request.session['active_org'] = active_org
+
+    org_acronym = active_org.strip()
 
     # 🟢 Fetch OrgProfile for the student's organization
     org_profile = OrgProfile.objects.filter(organization=org_acronym).first()
@@ -2085,8 +2116,17 @@ def organizer_manage_students(request):
     except OrgProfile.DoesNotExist:
         org_acronym = "UNKNOWN"
 
-    pending_students = Student.objects.filter(organization__iexact=org_acronym, is_verified=False)
-    approved_students = Student.objects.filter(organization__iexact=org_acronym, is_verified=True)
+    # 1. Primary pending students (direct registration)
+    primary_pending = Student.objects.filter(organization__iexact=org_acronym, is_verified=False)
+    # 2. Secondary pending students (requested membership to this org via org_selection)
+    secondary_pending = Student.objects.filter(pending_organizations__icontains=org_acronym)
+    pending_students = (primary_pending | secondary_pending).distinct()
+
+    # 1. Primary approved students
+    primary_approved = Student.objects.filter(organization__iexact=org_acronym, is_verified=True)
+    # 2. Secondary approved students
+    secondary_approved = Student.objects.filter(co_organizations__icontains=org_acronym)
+    approved_students = (primary_approved | secondary_approved).distinct()
 
     return render(request, 'organizer/manage_students.html', {
         'org_acronym': org_acronym,
@@ -2101,18 +2141,41 @@ def approve_individual_student(request):
         student_id = request.POST.get('student_id')
         try:
             student = Student.objects.get(id=student_id)
-            student.is_verified = True
-            student.save()
-            
-            # 🟢 SEND HTML WELCOME EMAIL
-            send_student_email(student, 'welcome', {})
+            org_profile = OrgProfile.objects.get(user=request.user)
+            org_acronym = org_profile.organization.strip()
 
-            # 🟢 LOG VERIFICATION
-            log_audit_event(request, 'VERIFICATION', status='Success', changes={'student': student.full_name})
+            # Check if this approval is for a secondary organization request
+            pending_orgs = [o.upper() for o in student.get_pending_organizations()]
+            if org_acronym.upper() in pending_orgs:
+                # Remove from pending organizations
+                remaining_pending = [o for o in student.get_pending_organizations() if o.strip().upper() != org_acronym.upper()]
+                student.pending_organizations = ", ".join(remaining_pending)
 
-            messages.success(request, f"Successfully assigned {student.full_name} to {student.organization}!")
+                # Add to approved co-organizations
+                all_co = [o for o in student.get_all_organizations() if o.strip().upper() != student.organization.strip().upper()]
+                if org_acronym.upper() not in [o.upper() for o in all_co]:
+                    all_co.append(org_acronym)
+                student.co_organizations = ", ".join(all_co)
+                student.save()
+
+                log_audit_event(request, 'SECONDARY_ORG_APPROVED', status='Success', changes={'student': student.full_name, 'org': org_acronym})
+                messages.success(request, f"Successfully approved {student.full_name}'s secondary membership to {org_acronym}!")
+            else:
+                # Primary Organization verification
+                student.is_verified = True
+                student.save()
+                
+                # 🟢 SEND HTML WELCOME EMAIL WITH ORG SELECTION LINK
+                send_student_email(student, 'welcome', {})
+
+                # 🟢 LOG VERIFICATION
+                log_audit_event(request, 'VERIFICATION', status='Success', changes={'student': student.full_name})
+
+                messages.success(request, f"Successfully verified {student.full_name} for {student.organization}!")
         except Student.DoesNotExist:
             messages.error(request, "Student not found.")
+        except Exception as e:
+            messages.error(request, f"Error processing approval: {str(e)}")
     return redirect('organizer_manage_students')
 
 @user_passes_test(is_organizer_strictly, login_url='/')
@@ -2122,26 +2185,52 @@ def reject_individual_student(request):
         reject_reason = request.POST.get('reject_reason', 'No reason provided.')
         try:
             student = Student.objects.get(id=student_id)
-            
-            # Send Email before deletion (otherwise we lose the data)
-            send_student_email(student, 'reject', {
-                'reason': reject_reason,
-                'organization': student.organization
-            })
-            
-            # Log Rejection before deletion
-            log_audit_event(request, 'REJECTION', status='Success', changes={'student': student.full_name, 'reason': reject_reason})
-            
-            # Delete associated User (which cascades to delete the Student record)
-            user_account = student.user
-            if user_account:
-                user_account.delete()
+            org_profile = OrgProfile.objects.get(user=request.user)
+            org_acronym = org_profile.organization.strip()
+
+            pending_orgs = [o.upper() for o in student.get_pending_organizations()]
+            co_orgs = [o.upper() for o in student.get_all_organizations() if o.upper() != student.organization.strip().upper()]
+
+            # If secondary org rejection:
+            if org_acronym.upper() in pending_orgs or org_acronym.upper() in co_orgs:
+                # Remove from pending and co-orgs
+                remaining_pending = [o for o in student.get_pending_organizations() if o.strip().upper() != org_acronym.upper()]
+                student.pending_organizations = ", ".join(remaining_pending)
+
+                remaining_co = [o for o in student.co_organizations.split(',') if o.strip() and o.strip().upper() != org_acronym.upper()]
+                student.co_organizations = ", ".join(remaining_co)
+                student.save()
+
+                # Send Email feedback specifically for this org rejection
+                send_student_email(student, 'reject', {
+                    'reason': reject_reason,
+                    'organization': org_acronym
+                })
+
+                log_audit_event(request, 'SECONDARY_ORG_REJECTED', status='Success', changes={'student': student.full_name, 'org': org_acronym, 'reason': reject_reason})
+                messages.success(request, f"Declined {student.full_name}'s request for {org_acronym}. Their primary account remains active.")
+            elif student.organization.strip().upper() == org_acronym.upper():
+                # Primary registration rejection (Delete unverified account)
+                send_student_email(student, 'reject', {
+                    'reason': reject_reason,
+                    'organization': student.organization
+                })
+                
+                log_audit_event(request, 'REJECTION', status='Success', changes={'student': student.full_name, 'reason': reject_reason})
+                
+                user_account = student.user
+                if user_account:
+                    user_account.delete()
+                else:
+                    student.delete()
+                
+                messages.success(request, f"Successfully rejected {student.full_name} and sent feedback.")
             else:
-                student.delete() # Fallback if no user is linked for some reason
-            
-            messages.success(request, f"Successfully rejected {student.full_name} and sent feedback.")
+                messages.error(request, "Permission denied for this student.")
         except Student.DoesNotExist:
             messages.error(request, "Student not found.")
+        except Exception as e:
+            messages.error(request, f"Error processing rejection: {str(e)}")
     return redirect('organizer_manage_students')
 
 # ==========================================
@@ -2179,6 +2268,8 @@ def send_student_email(student, email_type, context_data=None):
     context_data['email_address'] = student.email_address
     context_data['student_number'] = getattr(student, 'student_number', '') or (student.user.username if student.user else '')
     context_data['organization'] = student.organization
+    if 'org_selection_url' not in context_data:
+        context_data['org_selection_url'] = 'http://127.0.0.1:8000/org-selection/'
 
     html_message = render_to_string(template_name, context_data)
     plain_message = strip_tags(html_message)
@@ -2513,7 +2604,7 @@ def get_all_org_notifications(org_acronym):
     # Ensure acronym is clean
     org_clean = org_acronym.strip() if org_acronym else ""
 
-    # 1. New Student Registrations
+    # 1. New Student Registrations (Primary & Secondary)
     try:
         students = Student.objects.filter(organization__iexact=org_clean, is_verified=False).order_by('-id')
         for s in students:
@@ -2522,6 +2613,15 @@ def get_all_org_notifications(org_acronym):
                 'id': f"stud_{s.id}", 'type': 'student', 'title': 'New Student Registration',
                 'message': f"Mabuhay Iskolar! {s.full_name} is waiting for your approval to join the organization portal.",
                 'sender': 'System Admin', 'date': dt.strftime('%b %d, %Y'), 'timestamp': dt.timestamp(), 'url': '/organizer/manage-students'
+            })
+            
+        sec_students = Student.objects.filter(pending_organizations__icontains=org_clean).order_by('-id')
+        for s in sec_students:
+            dt = getattr(s, 'created_at', None) or now
+            notifications.append({
+                'id': f"stud_sec_{s.id}", 'type': 'student', 'title': 'Secondary Membership Request',
+                'message': f"Mabuhay Iskolar! {s.full_name} ({s.organization}) is requesting secondary membership to {org_clean}.",
+                'sender': 'Student Portal', 'date': dt.strftime('%b %d, %Y'), 'timestamp': dt.timestamp(), 'url': '/organizer/manage-students'
             })
     except Exception: pass
 
@@ -5268,6 +5368,114 @@ def unified_force_change_password_view(request):
 
 def custom_404_view(request, exception=None):
     return render(request, '404.html', status=404)
+
+def org_selection_view(request):
+    """
+    Renders the non-academic organization selection page for students.
+    Can be accessed via welcome email link (with ?student_id=...) or directly.
+    """
+    student_id = request.GET.get('student_id', '').strip()
+    student_obj = None
+    if request.user.is_authenticated and Student.objects.filter(user=request.user).exists():
+        student_obj = Student.objects.get(user=request.user)
+        student_id = student_obj.student_number
+    elif student_id:
+        student_obj = Student.objects.filter(student_number__iexact=student_id).first()
+        if not student_obj and student_id.isdigit():
+            student_obj = Student.objects.filter(id=student_id).first()
+        
+    return render(request, 'org_selection.html', {
+        'student_id': student_id,
+        'student': student_obj
+    })
+
+def submit_org_selection_api(request):
+    """
+    Handles student submission of secondary organization membership request.
+    """
+    if request.method == 'POST':
+        org_code = request.POST.get('org_code', '').strip().upper()
+        student_id = request.POST.get('student_id', '').strip()
+
+        student = None
+        if request.user.is_authenticated and Student.objects.filter(user=request.user).exists():
+            student = Student.objects.get(user=request.user)
+        elif student_id:
+            student = Student.objects.filter(student_number__iexact=student_id).first()
+            if not student and student_id.isdigit():
+                student = Student.objects.filter(id=student_id).first()
+
+        if not student:
+            return JsonResponse({
+                "status": "error",
+                "message": "Student account could not be found. Please access this page using the link in your Welcome Email or log in to your account first."
+            })
+
+        if not org_code:
+            return JsonResponse({"status": "error", "message": "Please select an organization."})
+
+        # Check if already primary
+        if student.organization and student.organization.strip().upper() == org_code:
+            return JsonResponse({
+                "status": "error",
+                "message": f"You are already a member of {org_code} as your primary academic organization."
+            })
+
+        # Check if already approved co-org
+        approved_co_orgs = [o.upper() for o in student.get_all_organizations()]
+        if org_code in approved_co_orgs:
+            return JsonResponse({
+                "status": "error",
+                "message": f"You are already an officially approved member of {org_code}."
+            })
+
+        # Check if already pending
+        pending_orgs = [o.upper() for o in student.get_pending_organizations()]
+        if org_code in pending_orgs:
+            return JsonResponse({
+                "status": "info",
+                "message": f"Your request to join {org_code} is already submitted and pending review by their student organizers."
+            })
+
+        # Append to pending organizations
+        pending_list = student.get_pending_organizations()
+        pending_list.append(org_code)
+        student.pending_organizations = ", ".join(pending_list)
+        student.save()
+
+        log_audit_event(request, 'ORG_SELECTION_REQUEST', status='Success', changes={'student': student.full_name, 'org': org_code}, actor=student.user)
+
+        return JsonResponse({
+            "status": "success",
+            "message": f"Membership request for {org_code} submitted successfully!",
+            "org_code": org_code,
+            "org_name": ORG_FULL_NAMES.get(org_code, org_code)
+        })
+    return JsonResponse({"status": "error", "message": "Invalid request method."})
+
+def switch_active_org_api(request):
+    """
+    Switches active organization context for student session.
+    """
+    if request.method == 'POST':
+        if not request.user.is_authenticated or not Student.objects.filter(user=request.user).exists():
+            return JsonResponse({"status": "error", "message": "Unauthorized."}, status=403)
+
+        student = Student.objects.get(user=request.user)
+        target_org = request.POST.get('target_org', '').strip().upper()
+        allowed_orgs = [o.upper() for o in student.get_all_organizations()]
+
+        if target_org in allowed_orgs:
+            request.session['active_org'] = target_org
+            log_audit_event(request, 'ORG_SWITCH', status='Success', changes={'active_org': target_org}, actor=request.user)
+            return JsonResponse({
+                "status": "success",
+                "active_org": target_org,
+                "org_name": ORG_FULL_NAMES.get(target_org, target_org)
+            })
+        return JsonResponse({"status": "error", "message": "You are not a member of this organization."})
+    return JsonResponse({"status": "error", "message": "Invalid request method."})
+
 
 
 

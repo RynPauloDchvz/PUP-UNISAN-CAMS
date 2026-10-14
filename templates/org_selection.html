@@ -1,0 +1,645 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization Selection | PUP UNISAN CAMS</title>
+    
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}?v=2">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        pup: {
+                            maroon: '#800000',
+                            maroonDark: '#5c0000',
+                            maroonLight: '#9e1b1b',
+                            gold: '#D4AF37',
+                            goldLight: '#F3E5AB',
+                            goldDark: '#B8972E',
+                            darkbg: '#121212',
+                            darkcard: '#1e1e1e',
+                            darkcardHover: '#252525'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glow-maroon': '0 0 25px rgba(128, 0, 0, 0.35)',
+                        'glow-gold': '0 0 25px rgba(212, 175, 55, 0.45)',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --img-pup1: url("{% static 'images/PUP1.jpg' %}");
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background-color: #f8fafc;
+        }
+        
+        .dark html, .dark body {
+            background-color: #121212;
+        }
+
+        .scale-in {
+            animation: scaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.92) translateY(12px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Custom scrollbar for choices area */
+        .content-scroll::-webkit-scrollbar { width: 6px; }
+        .content-scroll::-webkit-scrollbar-track { background: transparent; }
+        .content-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 9999px; }
+        .dark .content-scroll::-webkit-scrollbar-thumb { background-color: #334155; }
+    </style>
+</head>
+<body class="bg-[#f8fafc] dark:bg-pup-darkbg text-gray-800 dark:text-gray-100 h-screen w-screen flex flex-col font-sans transition-colors duration-300 antialiased selection:bg-pup-gold selection:text-black relative">
+
+    <!-- FLOATING THEME TOGGLE -->
+    <button id="themeToggleBtn" aria-label="Toggle Theme" class="fixed top-4 right-4 sm:top-5 sm:right-6 z-[80] w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full bg-white/90 dark:bg-[#1f1f1f]/90 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:text-pup-maroon dark:hover:text-pup-gold shadow-md backdrop-blur-md transition-all active:scale-95 group">
+        <i id="themeIcon" class="ph-fill ph-moon text-lg sm:text-xl transition-transform duration-300 group-hover:rotate-12"></i>
+    </button>
+
+    <!-- SUBTLE BACKGROUND DECORATION (Uniform across entire viewport) -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+        <div class="absolute inset-0 bg-cover bg-center opacity-[0.03] dark:opacity-[0.05] mix-blend-multiply dark:mix-blend-screen" style="background-image: var(--img-pup1);"></div>
+        <div class="absolute -top-32 -left-32 w-96 h-96 bg-pup-maroon/10 dark:bg-pup-maroon/20 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-pup-gold/10 dark:bg-pup-gold/15 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- STEP 1: INITIAL ASKING MODAL (Prompt on page load)           -->
+    <!-- ============================================================ -->
+    <div id="askingModalOverlay" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity duration-300">
+        <div id="askingModalCard" class="w-full max-w-md bg-white dark:bg-pup-darkcard rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-800 text-center scale-in relative overflow-hidden">
+            <!-- Decorative Top Gradient Accent -->
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-pup-maroon via-pup-gold to-pup-maroon"></div>
+
+            <!-- Natural Round PUP Logo (No Box Container) -->
+            <img src="{% static 'images/PUPLogo.png' %}" alt="PUP Logo" class="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 object-contain drop-shadow-md">
+
+            <!-- English Question Headings -->
+            <span class="inline-block px-3 py-1 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-pup-maroon dark:text-pup-gold bg-pup-maroon/5 dark:bg-pup-gold/10 rounded-full mb-2">
+                Student Verification
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2.5 tracking-tight">
+                Are you a member of a Non-Academic Organization?
+            </h2>
+            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
+                Have you joined any non-academic student organizations such as <strong class="text-pup-maroon dark:text-pup-gold font-semibold">Cultural Affairs Office (CAO), The Newsette, PRIDE, ROTC, Supreme Student Council (SSC),</strong> or <strong class="text-pup-maroon dark:text-pup-gold font-semibold">PUSO</strong> in addition to your academic program?
+            </p>
+
+            <!-- Action Buttons (Pure English + Gold in Dark Mode) -->
+            <div class="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
+                <button id="btnAskingNo" type="button" class="flex-1 py-3 px-4 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#2a2a2a] hover:bg-gray-200 dark:hover:bg-[#333] transition-all active:scale-95">
+                    No, I am not a member
+                </button>
+                <button id="btnAskingYes" type="button" class="flex-1 py-3 px-4 rounded-xl text-sm font-extrabold text-white dark:text-black bg-gradient-to-r from-pup-maroon to-pup-maroonLight dark:from-pup-gold dark:to-pup-goldDark hover:from-pup-maroonDark hover:to-pup-maroon dark:hover:from-pup-goldLight dark:hover:to-pup-gold shadow-md hover:shadow-glow-maroon dark:hover:shadow-glow-gold transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <span>Yes, I am a member</span>
+                    <i class="ph-bold ph-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Helpful English Hint -->
+            <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-4 leading-normal">
+                If you select <span class="font-medium text-gray-600 dark:text-gray-300">No</span>, you will exit this page. You can reopen this link anytime from your Welcome Email if needed.
+            </p>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- STEP 2: MAIN VIEW (SEAMLESS HEADER + SCROLL BODY + FIXED DOCK)-->
+    <!-- ============================================================ -->
+    <div id="mainView" class="h-full w-full flex flex-col relative z-10 opacity-0 pointer-events-none transition-opacity duration-500 bg-[#f8fafc] dark:bg-pup-darkbg">
+        
+        <!-- FIXED HEADER (Seamless Background - No mismatched box/border line) -->
+        <header class="flex-shrink-0 w-full bg-[#f8fafc] dark:bg-pup-darkbg px-4 sm:px-6 pt-5 pb-3 z-30 transition-colors duration-300">
+            <div class="max-w-4xl mx-auto flex flex-col items-center text-center">
+                <!-- Natural Round PUP Logo (No Box Container) -->
+                <img src="{% static 'images/PUPLogo.png' %}" alt="PUP Logo" class="w-14 h-14 sm:w-16 sm:h-16 object-contain drop-shadow-md mb-2 transition-transform hover:scale-105 duration-300">
+                
+                <div class="flex items-center justify-center gap-2 text-[11px] sm:text-xs font-bold tracking-widest uppercase text-pup-maroon dark:text-pup-gold mb-0.5">
+                    <span>PUP Unisan Campus</span>
+                    <span class="w-1 h-1 rounded-full bg-gray-400"></span>
+                    <span>CAMS Portal</span>
+                </div>
+                
+                <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                    Select Your Secondary Organization
+                </h1>
+                
+                <p class="max-w-xl text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                    Choose the non-academic organization you actively belong to and submit an official membership request.
+                </p>
+
+                {% if student %}
+                <div class="mt-2.5 inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-pup-maroon/10 dark:bg-pup-gold/15 text-pup-maroon dark:text-pup-gold border border-pup-maroon/20 dark:border-pup-gold/30 shadow-sm">
+                    <i class="ph-bold ph-user-check"></i>
+                    <span>Student: {{ student.full_name }} ({{ student.student_number }})</span>
+                </div>
+                {% else %}
+                <div class="mt-3 max-w-sm mx-auto w-full flex items-center gap-2 bg-white dark:bg-pup-darkcard p-2 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm text-left">
+                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap pl-1">Student No:</span>
+                    <input type="text" id="manualStudentId" placeholder="e.g. 2023-00001-UQ-0" value="{{ student_id|default:'' }}"
+                           class="w-full text-xs font-bold bg-transparent outline-none text-gray-900 dark:text-white px-1">
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- SCROLLABLE CHOICES BODY (Same seamless bg-[#f8fafc] dark:bg-pup-darkbg) -->
+        <div class="flex-1 overflow-y-auto content-scroll w-full px-4 sm:px-6 lg:px-8 py-2 bg-[#f8fafc] dark:bg-pup-darkbg transition-colors duration-300">
+            <div class="max-w-4xl mx-auto pb-6">
+                
+                <!-- Section Subheading -->
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <span class="text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                        <i class="ph-bold ph-squares-four text-pup-gold"></i> Available Organizations (6)
+                    </span>
+                    <span id="selectionCounter" class="text-xs font-medium text-gray-400 dark:text-gray-500">
+                        Click an organization to select
+                    </span>
+                </div>
+
+                <!-- CARDS GRID (items-start ensures ONLY the clicked card expands, not adjacent row cards) -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-5 items-start mb-6">
+                    
+                    <!-- CARD 1: CAO -->
+                    <div class="org-card group relative bg-white dark:bg-pup-darkcard rounded-2xl p-4 sm:p-5 border-2 border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col items-center text-center overflow-hidden"
+                         data-org-code="CAO"
+                         data-org-name="Culture and Arts Office"
+                         data-org-desc="Performing arts, dance troupe, chorale, and cultural events.">
+                        
+                        <div class="selected-pill absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-pup-gold text-pup-maroon flex items-center justify-center opacity-0 scale-50 transition-all duration-300 shadow-md">
+                            <i class="ph-bold ph-check text-xs"></i>
+                        </div>
+
+                        <img src="{% static 'images/orgImage/CAO/CAO.png' %}" alt="CAO Logo" class="w-20 h-20 sm:w-24 sm:h-24 object-contain mb-3 drop-shadow transition-transform duration-300 group-hover:scale-105">
+
+                        <span class="text-base sm:text-lg font-black tracking-tight text-gray-900 dark:text-white group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors">
+                            CAO
+                        </span>
+
+                        <div class="org-details max-h-0 opacity-0 overflow-hidden transition-all duration-300 w-full">
+                            <p class="text-xs font-bold text-pup-maroon dark:text-pup-gold mt-2 leading-snug">
+                                Culture and Arts Office
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                Performing arts, dance troupe, chorale, and cultural events.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- CARD 2: NEWSETTE -->
+                    <div class="org-card group relative bg-white dark:bg-pup-darkcard rounded-2xl p-4 sm:p-5 border-2 border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col items-center text-center overflow-hidden"
+                         data-org-code="NEWSETTE"
+                         data-org-name="The Newsette"
+                         data-org-desc="Official campus student publication and journalism guild.">
+                        
+                        <div class="selected-pill absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-pup-gold text-pup-maroon flex items-center justify-center opacity-0 scale-50 transition-all duration-300 shadow-md">
+                            <i class="ph-bold ph-check text-xs"></i>
+                        </div>
+
+                        <img src="{% static 'images/orgImage/NEWSETTE/NEWSETTE.png' %}" alt="NEWSETTE Logo" class="w-20 h-20 sm:w-24 sm:h-24 object-contain mb-3 drop-shadow transition-transform duration-300 group-hover:scale-105">
+
+                        <span class="text-base sm:text-lg font-black tracking-tight text-gray-900 dark:text-white group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors">
+                            NEWSETTE
+                        </span>
+
+                        <div class="org-details max-h-0 opacity-0 overflow-hidden transition-all duration-300 w-full">
+                            <p class="text-xs font-bold text-pup-maroon dark:text-pup-gold mt-2 leading-snug">
+                                The Newsette
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                Official campus student publication and journalism guild.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- CARD 3: PRIDE -->
+                    <div class="org-card group relative bg-white dark:bg-pup-darkcard rounded-2xl p-4 sm:p-5 border-2 border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col items-center text-center overflow-hidden"
+                         data-org-code="PRIDE"
+                         data-org-name="PRIDEVerse"
+                         data-org-desc="Equality, diversity, safe campus spaces, and student welfare advocacy.">
+                        
+                        <div class="selected-pill absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-pup-gold text-pup-maroon flex items-center justify-center opacity-0 scale-50 transition-all duration-300 shadow-md">
+                            <i class="ph-bold ph-check text-xs"></i>
+                        </div>
+
+                        <img src="{% static 'images/orgImage/PRIDE/PRIDE.png' %}" alt="PRIDE Logo" class="w-20 h-20 sm:w-24 sm:h-24 object-contain mb-3 drop-shadow transition-transform duration-300 group-hover:scale-105">
+
+                        <span class="text-base sm:text-lg font-black tracking-tight text-gray-900 dark:text-white group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors">
+                            PRIDE
+                        </span>
+
+                        <div class="org-details max-h-0 opacity-0 overflow-hidden transition-all duration-300 w-full">
+                            <p class="text-xs font-bold text-pup-maroon dark:text-pup-gold mt-2 leading-snug">
+                                PRIDEVerse
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                Equality, diversity, safe spaces, and student welfare advocacy.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- CARD 4: ROTC -->
+                    <div class="org-card group relative bg-white dark:bg-pup-darkcard rounded-2xl p-4 sm:p-5 border-2 border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col items-center text-center overflow-hidden"
+                         data-org-code="ROTC"
+                         data-org-name="Reserve Officers' Training Corps"
+                         data-org-desc="Leadership, military science, discipline, and defense training.">
+                        
+                        <div class="selected-pill absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-pup-gold text-pup-maroon flex items-center justify-center opacity-0 scale-50 transition-all duration-300 shadow-md">
+                            <i class="ph-bold ph-check text-xs"></i>
+                        </div>
+
+                        <img src="{% static 'images/orgImage/ROTC/ROTC.png' %}" alt="ROTC Logo" class="w-20 h-20 sm:w-24 sm:h-24 object-contain mb-3 drop-shadow transition-transform duration-300 group-hover:scale-105">
+
+                        <span class="text-base sm:text-lg font-black tracking-tight text-gray-900 dark:text-white group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors">
+                            ROTC
+                        </span>
+
+                        <div class="org-details max-h-0 opacity-0 overflow-hidden transition-all duration-300 w-full">
+                            <p class="text-xs font-bold text-pup-maroon dark:text-pup-gold mt-2 leading-snug">
+                                Reserve Officers' Training Corps
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                Leadership, discipline, civic responsibility, and defense training.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- CARD 5: SSC -->
+                    <div class="org-card group relative bg-white dark:bg-pup-darkcard rounded-2xl p-4 sm:p-5 border-2 border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col items-center text-center overflow-hidden"
+                         data-org-code="SSC"
+                         data-org-name="Supreme Student Council"
+                         data-org-desc="Highest student governing body and campus-wide student representation.">
+                        
+                        <div class="selected-pill absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-pup-gold text-pup-maroon flex items-center justify-center opacity-0 scale-50 transition-all duration-300 shadow-md">
+                            <i class="ph-bold ph-check text-xs"></i>
+                        </div>
+
+                        <img src="{% static 'images/orgImage/SSC/SSC.png' %}" alt="SSC Logo" class="w-20 h-20 sm:w-24 sm:h-24 object-contain mb-3 drop-shadow transition-transform duration-300 group-hover:scale-105">
+
+                        <span class="text-base sm:text-lg font-black tracking-tight text-gray-900 dark:text-white group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors">
+                            SSC
+                        </span>
+
+                        <div class="org-details max-h-0 opacity-0 overflow-hidden transition-all duration-300 w-full">
+                            <p class="text-xs font-bold text-pup-maroon dark:text-pup-gold mt-2 leading-snug">
+                                Supreme Student Council
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                Highest student governing body and student representation.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- CARD 6: PUSO -->
+                    <div class="org-card group relative bg-white dark:bg-pup-darkcard rounded-2xl p-4 sm:p-5 border-2 border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col items-center text-center overflow-hidden"
+                         data-org-code="PUSO"
+                         data-org-name="PUP Unisan Sports Organization"
+                         data-org-desc="Varsity sports development, athletic tournaments, and student health.">
+                        
+                        <div class="selected-pill absolute top-2.5 right-2.5 w-6 h-6 rounded-full bg-pup-gold text-pup-maroon flex items-center justify-center opacity-0 scale-50 transition-all duration-300 shadow-md">
+                            <i class="ph-bold ph-check text-xs"></i>
+                        </div>
+
+                        <img src="{% static 'images/orgImage/PUSO/PUSO.jpg' %}" alt="PUSO Logo" class="w-20 h-20 sm:w-24 sm:h-24 object-contain mb-3 drop-shadow rounded-lg transition-transform duration-300 group-hover:scale-105">
+
+                        <span class="text-base sm:text-lg font-black tracking-tight text-gray-900 dark:text-white group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors">
+                            PUSO
+                        </span>
+
+                        <div class="org-details max-h-0 opacity-0 overflow-hidden transition-all duration-300 w-full">
+                            <p class="text-xs font-bold text-pup-maroon dark:text-pup-gold mt-2 leading-snug">
+                                PUP Unisan Sports Org
+                            </p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                Varsity athletics, sports tournaments, and student health.
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- FOOTER (Inside scrollable content) -->
+                <footer class="mt-4 mb-2 text-center text-xs text-gray-400 dark:text-gray-500">
+                    <p>&copy; 2026 Polytechnic University of the Philippines &mdash; Unisan Campus. All rights reserved.</p>
+                    <p class="mt-1">PUP Campus Activity Management System (CAMS)</p>
+                </footer>
+
+            </div>
+        </div>
+
+        <!-- FIXED BOTTOM ACTION DOCK (Restored to fixed bottom with Gold in Dark Mode) -->
+        <div class="flex-shrink-0 w-full bg-[#f8fafc] dark:bg-pup-darkbg px-4 sm:px-6 py-3.5 z-30 transition-colors duration-300 border-t border-gray-200/50 dark:border-gray-800/60">
+            <div class="max-w-4xl mx-auto bg-white dark:bg-pup-darkcard p-3.5 sm:p-4 rounded-2xl border border-gray-200/80 dark:border-gray-800/80 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 transition-colors duration-300">
+                <div class="text-center sm:text-left">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Selected Organization:</span>
+                    <p id="selectedOrgLabel" class="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
+                        None selected yet
+                    </p>
+                </div>
+                
+                <button id="btnConfirmSelection" type="button" disabled
+                        class="w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold text-sm text-gray-400 dark:text-gray-500 bg-gray-200 dark:bg-[#252525] border border-transparent dark:border-gray-800 cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2 shadow-sm">
+                    <i class="ph-bold ph-paper-plane-tilt text-base"></i>
+                    <span>Confirm & Submit Request</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- STEP 3: POST-CONFIRMATION THANK YOU MODAL                   -->
+    <!-- ============================================================ -->
+    <div id="thankYouModalOverlay" class="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 bg-black/60 dark:bg-black/80 backdrop-blur-md hidden transition-opacity duration-300">
+        <div id="thankYouModalCard" class="w-full max-w-md bg-white dark:bg-pup-darkcard rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-800 text-center relative overflow-hidden scale-in">
+            <!-- Top Gradient Accent -->
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-pup-gold to-pup-maroon"></div>
+
+            <!-- Big Checkmark Icon -->
+            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-inner">
+                <i class="ph-bold ph-check-circle text-4xl sm:text-5xl animate-[bounce_1s_ease-in-out]"></i>
+            </div>
+
+            <span class="inline-block px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 rounded-full mb-2">
+                Request Submitted
+            </span>
+            
+            <h2 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">
+                Thank You!
+            </h2>
+            
+            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                Your request to join <span id="modalOrgName" class="font-extrabold text-pup-maroon dark:text-pup-gold">[Organization Name]</span> has been successfully submitted.
+            </p>
+
+            <!-- Waiting Notice Box (Pure English) -->
+            <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3.5 mb-6 text-left flex items-start gap-3">
+                <i class="ph-fill ph-hourglass-medium text-amber-600 dark:text-amber-400 text-xl flex-shrink-0 mt-0.5"></i>
+                <div class="text-xs text-amber-800 dark:text-amber-300 leading-normal">
+                    <strong class="block mb-0.5">Please wait for confirmation:</strong>
+                    The student organizers of <span id="modalOrgAcronymNotice" class="font-bold">this organization</span> will review and verify your membership before you can access their portal and dashboard.
+                </div>
+            </div>
+
+            <!-- Return Button (Gold in Dark Mode) -->
+            <a href="/" class="w-full inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-extrabold text-sm text-white dark:text-black bg-gradient-to-r from-pup-maroon to-pup-maroonLight dark:from-pup-gold dark:to-pup-goldDark hover:from-pup-maroonDark hover:to-pup-maroon dark:hover:from-pup-goldLight dark:hover:to-pup-gold shadow-md hover:shadow-glow-maroon dark:hover:shadow-glow-gold transition-all active:scale-95">
+                <i class="ph-bold ph-sign-out"></i>
+                <span>Return to Login Portal</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- INTERACTIVE JAVASCRIPT                                       -->
+    <!-- ============================================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // -------------------------------------------------------------
+            // 1. THEME MANAGEMENT (Prefers Device Mode by default)
+            // -------------------------------------------------------------
+            const htmlEl = document.documentElement;
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            const themeIcon = document.getElementById('themeIcon');
+
+            function applyTheme(isDark) {
+                if (isDark) {
+                    htmlEl.classList.add('dark');
+                    htmlEl.classList.remove('light');
+                    themeIcon.className = 'ph-fill ph-sun text-lg sm:text-xl text-pup-gold';
+                } else {
+                    htmlEl.classList.remove('dark');
+                    htmlEl.classList.add('light');
+                    themeIcon.className = 'ph-fill ph-moon text-lg sm:text-xl text-gray-600';
+                }
+            }
+
+            const savedTheme = localStorage.getItem('cams_theme');
+            if (savedTheme) {
+                applyTheme(savedTheme === 'dark');
+            } else {
+                const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                applyTheme(systemPrefersDark);
+            }
+
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                    if (!localStorage.getItem('cams_theme')) {
+                        applyTheme(e.matches);
+                    }
+                });
+            }
+
+            themeToggleBtn.addEventListener('click', () => {
+                const isCurrentlyDark = htmlEl.classList.contains('dark');
+                const nextDark = !isCurrentlyDark;
+                applyTheme(nextDark);
+                localStorage.setItem('cams_theme', nextDark ? 'dark' : 'light');
+            });
+
+            // -------------------------------------------------------------
+            // 2. STEP 1: ASKING MODAL FLOW
+            // -------------------------------------------------------------
+            const askingModalOverlay = document.getElementById('askingModalOverlay');
+            const askingModalCard = document.getElementById('askingModalCard');
+            const btnAskingYes = document.getElementById('btnAskingYes');
+            const btnAskingNo = document.getElementById('btnAskingNo');
+            const mainView = document.getElementById('mainView');
+
+            btnAskingYes.addEventListener('click', () => {
+                askingModalCard.style.transition = 'all 0.3s ease-out';
+                askingModalCard.style.opacity = '0';
+                askingModalCard.style.transform = 'scale(0.95) translateY(-10px)';
+                
+                askingModalOverlay.style.transition = 'opacity 0.35s ease-out';
+                askingModalOverlay.style.opacity = '0';
+
+                setTimeout(() => {
+                    askingModalOverlay.classList.add('hidden');
+                    mainView.classList.remove('opacity-0', 'pointer-events-none');
+                    mainView.classList.add('fade-in');
+                }, 300);
+            });
+
+            btnAskingNo.addEventListener('click', () => {
+                askingModalCard.innerHTML = `
+                    <div class="py-4">
+                        <i class="ph-duotone ph-arrow-u-up-left text-4xl text-pup-maroon dark:text-pup-gold mb-3 animate-pulse"></i>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">Returning to Login Portal...</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            You may reopen this link from your Welcome Email at any time if you wish to join an organization later.
+                        </p>
+                    </div>
+                `;
+                setTimeout(() => {
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else {
+                        window.location.href = '/';
+                    }
+                }, 900);
+            });
+
+            // -------------------------------------------------------------
+            // 3. STEP 2: ORG SELECTION (INDIVIDUAL CARD EXPANSION)
+            // -------------------------------------------------------------
+            const orgCards = document.querySelectorAll('.org-card');
+            const selectedOrgLabel = document.getElementById('selectedOrgLabel');
+            const btnConfirmSelection = document.getElementById('btnConfirmSelection');
+            const selectionCounter = document.getElementById('selectionCounter');
+
+            let selectedOrg = null;
+
+            orgCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const orgCode = card.dataset.orgCode;
+                    const orgName = card.dataset.orgName;
+
+                    if (selectedOrg && selectedOrg.code === orgCode) {
+                        return;
+                    }
+
+                    selectedOrg = { code: orgCode, name: orgName };
+
+                    // Reset all other cards so only the selected one expands
+                    orgCards.forEach(c => {
+                        c.classList.remove('border-pup-gold', 'dark:border-pup-gold', 'bg-pup-gold/5', 'dark:bg-pup-gold/10', 'shadow-glow-gold');
+                        c.classList.add('border-gray-100', 'dark:border-gray-800');
+                        
+                        const pill = c.querySelector('.selected-pill');
+                        pill.classList.remove('opacity-100', 'scale-100');
+                        pill.classList.add('opacity-0', 'scale-50');
+
+                        const details = c.querySelector('.org-details');
+                        details.style.maxHeight = '0px';
+                        details.style.opacity = '0';
+                    });
+
+                    // Highlight and expand ONLY the clicked card
+                    card.classList.remove('border-gray-100', 'dark:border-gray-800');
+                    card.classList.add('border-pup-gold', 'dark:border-pup-gold', 'bg-pup-gold/5', 'dark:bg-pup-gold/10', 'shadow-glow-gold');
+
+                    const activePill = card.querySelector('.selected-pill');
+                    activePill.classList.remove('opacity-0', 'scale-50');
+                    activePill.classList.add('opacity-100', 'scale-100');
+
+                    const activeDetails = card.querySelector('.org-details');
+                    activeDetails.style.maxHeight = '100px';
+                    activeDetails.style.opacity = '1';
+
+                    // Update Bottom Dock Label
+                    selectedOrgLabel.innerHTML = `
+                        <span class="inline-flex items-center gap-1.5 text-pup-maroon dark:text-pup-gold font-extrabold">
+                            <i class="ph-fill ph-check-circle"></i> ${orgCode} &mdash; ${orgName}
+                        </span>
+                    `;
+
+                    // Enable Confirm Button with Maroon (Light) and Gold (Dark)
+                    btnConfirmSelection.removeAttribute('disabled');
+                    btnConfirmSelection.className = "w-full sm:w-auto px-6 py-3.5 rounded-xl font-extrabold text-sm text-white dark:text-black bg-gradient-to-r from-pup-maroon to-pup-maroonLight dark:from-pup-gold dark:to-pup-goldDark hover:from-pup-maroonDark hover:to-pup-maroon dark:hover:from-pup-goldLight dark:hover:to-pup-gold shadow-md hover:shadow-glow-maroon dark:hover:shadow-glow-gold transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer";
+                    selectionCounter.textContent = `Selected: ${orgCode}`;
+                    selectionCounter.className = "text-xs font-bold text-pup-maroon dark:text-pup-gold";
+                });
+            });
+
+            // -------------------------------------------------------------
+            // 4. STEP 3: SUBMIT TO BACKEND & POST-CONFIRMATION MODAL
+            // -------------------------------------------------------------
+            const thankYouModalOverlay = document.getElementById('thankYouModalOverlay');
+            const modalOrgName = document.getElementById('modalOrgName');
+            const modalOrgAcronymNotice = document.getElementById('modalOrgAcronymNotice');
+
+            // Helper to get CSRF token
+            function getCsrfToken() {
+                const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+                return cookie ? cookie.split('=')[1] : '{{ csrf_token }}';
+            }
+
+            btnConfirmSelection.addEventListener('click', async () => {
+                if (!selectedOrg) return;
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const manualInput = document.getElementById('manualStudentId');
+                const manualId = manualInput ? manualInput.value.trim() : '';
+                const studentId = manualId || urlParams.get('student_id') || '{{ student_id|default:"" }}';
+
+                if (!studentId) {
+                    alert("Please provide your Student ID Number above so we can verify your account.");
+                    if (manualInput) manualInput.focus();
+                    return;
+                }
+
+                const originalBtnContent = btnConfirmSelection.innerHTML;
+                btnConfirmSelection.setAttribute('disabled', 'true');
+                btnConfirmSelection.innerHTML = `
+                    <i class="ph-bold ph-spinner ph-spin text-base"></i>
+                    <span>Submitting Request...</span>
+                `;
+
+                const formData = new FormData();
+                formData.append('org_code', selectedOrg.code);
+                formData.append('student_id', studentId);
+
+                try {
+                    const response = await fetch('/api/submit-org-selection/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.status === 'success' || data.status === 'info') {
+                        modalOrgName.textContent = `${selectedOrg.code} (${selectedOrg.name})`;
+                        modalOrgAcronymNotice.textContent = selectedOrg.code;
+
+                        thankYouModalOverlay.classList.remove('hidden');
+                        thankYouModalOverlay.classList.add('fade-in');
+                    } else {
+                        alert(data.message || 'Unable to submit membership request. Please try again.');
+                    }
+                } catch (err) {
+                    alert('Network error while submitting request. Please try again.');
+                } finally {
+                    btnConfirmSelection.removeAttribute('disabled');
+                    btnConfirmSelection.innerHTML = originalBtnContent;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
