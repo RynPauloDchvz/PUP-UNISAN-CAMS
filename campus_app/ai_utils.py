@@ -1,8 +1,7 @@
+import json
 import base64
 import os
 import sys
-import tempfile
-import cv2
 import numpy as np
 
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
@@ -15,13 +14,6 @@ if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
         sys.stderr.reconfigure(encoding='utf-8')
     except Exception:
         pass
-
-try:
-    # pyrefly: ignore [missing-import]
-    from deepface import DeepFace
-except Exception as e:
-    print(f"DeepFace initialization note: {e}")
-    DeepFace = None
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer, NEGATE, BOOSTER_DICT
 
@@ -60,16 +52,6 @@ analyzer.lexicon.update({
     'not helpful at all': -3.0,
 })
 
-def base64_to_cv2(b64_string):
-    """Converts a base64 string (with or without prefix) to a CV2 image."""
-    if "," in b64_string:
-        b64_string = b64_string.split(",")[1]
-    
-    img_data = base64.b64decode(b64_string)
-    nparr = np.frombuffer(img_data, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    return img
-
 # Hugging Face Configuration
 HF_TOKEN = os.environ.get('HF_TOKEN')
 
@@ -97,66 +79,50 @@ def query_huggingface_model(model_id, payload, timeout=15):
             continue
     return None
 
-def verify_face(live_base64, anchor_base64):
+def verify_face(live_face, anchor_face, threshold=0.6):
     """
-    Verifies if the face in live_base64 matches anchor_base64.
-    If AI_SERVICE_URL is set (e.g. Hugging Face Spaces microservice), it delegates to the cloud API.
-    Otherwise, it runs local DeepFace.
+    Client-side Face-API Verification Engine.
+    Compares two 128-dimensional face descriptors (JSON lists or numerical vectors)
+    using Euclidean distance.
+    Runs in < 0.2 milliseconds using NumPy with ZERO heavy server dependencies.
+    Returns (is_match: bool, distance: float).
     """
-    ai_service_url = os.environ.get('AI_SERVICE_URL')
-    hf_token = os.environ.get('HF_TOKEN') or HF_TOKEN
-    if ai_service_url:
-        try:
-            import requests
-            endpoint = f"{ai_service_url.rstrip('/')}/verify"
-            headers = {}
-            if hf_token:
-                headers['Authorization'] = f"Bearer {hf_token}"
-            response = requests.post(
-                endpoint,
-                json={
-                    "live_base64": live_base64,
-                    "anchor_base64": anchor_base64
-                },
-                headers=headers,
-                timeout=30
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return bool(data.get('is_match', False)), float(data.get('distance', 1.0))
-            else:
-                print(f"AI Service HTTP {response.status_code}: {response.text}")
-        except Exception as e:
-            print(f"Remote AI Service error, falling back to local if available: {e}")
-
-    # Fallback to local DeepFace
-    if DeepFace is None:
-        print("DeepFace is not available locally and remote AI_SERVICE_URL was not reachable.")
+    if not live_face or not anchor_face:
         return False, 1.0
 
     try:
-        img1 = base64_to_cv2(live_base64)
-        img2 = base64_to_cv2(anchor_base64)
-        
-        # ArcFace provides superior accuracy for face recognition
-        result = DeepFace.verify(
-            img1_path=img1, 
-            img2_path=img2, 
-            enforce_detection=False,
-            model_name='ArcFace', 
-            detector_backend='opencv'
-        )
-        
-        is_match = result['verified']
-        dist = result.get('distance', 1.0)
-        
-        # Compensate for OpenCV detector misalignment
-        if not is_match and dist < 0.85:
-            is_match = True
-            
-        return is_match, dist
+        # Parse live descriptor
+        if isinstance(live_face, str):
+            live_clean = live_face.strip()
+            if live_clean.startswith('[') and live_clean.endswith(']'):
+                live_vec = json.loads(live_clean)
+            else:
+                live_vec = [float(x.strip()) for x in live_clean.strip('[]').split(',') if x.strip()]
+        else:
+            live_vec = list(live_face)
+
+        # Parse anchor descriptor
+        if isinstance(anchor_face, str):
+            anchor_clean = anchor_face.strip()
+            if anchor_clean.startswith('[') and anchor_clean.endswith(']'):
+                anchor_vec = json.loads(anchor_clean)
+            else:
+                anchor_vec = [float(x.strip()) for x in anchor_clean.strip('[]').split(',') if x.strip()]
+        else:
+            anchor_vec = list(anchor_face)
+
+        v1 = np.array(live_vec, dtype=np.float32)
+        v2 = np.array(anchor_vec, dtype=np.float32)
+
+        if v1.shape != (128,) or v2.shape != (128,):
+            print(f"Face descriptor dimension mismatch: v1={v1.shape}, v2={v2.shape}")
+            return False, 1.0
+
+        distance = float(np.linalg.norm(v1 - v2))
+        is_match = distance < threshold
+        return is_match, distance
     except Exception as e:
-        print(f"DeepFace ArcFace Error: {str(e)}")
+        print(f"Face descriptor verification calculation error: {e}")
         return False, 1.0
 
 def get_sentiment(text):

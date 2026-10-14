@@ -6,7 +6,12 @@
 <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="{% static 'js/face-api.min.js' %}"></script>
+<script>
+    if (typeof faceapi === 'undefined') {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
+    }
+</script>
 <style>
     #modalLeafletMap { z-index: 0; }
     .leaflet-popup-content-wrapper { border-radius: 12px; font-family: inherit; }
@@ -546,8 +551,28 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
     }
 
     async function loadUpdateModels() {
-        await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
-        modelsLoaded = true;
+        const MODEL_PATH = "{% static 'models' %}";
+        const CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        try {
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_PATH),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_PATH),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_PATH)
+            ]);
+            modelsLoaded = true;
+        } catch(e) {
+            console.warn("Loading models from local static failed, falling back to CDN:", e);
+            try {
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(CDN_FALLBACK),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(CDN_FALLBACK),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(CDN_FALLBACK)
+                ]);
+                modelsLoaded = true;
+            } catch(err) {
+                console.error("FaceAPI models could not be loaded:", err);
+            }
+        }
     }
 
     async function startFaceUpdateScanner() {
@@ -628,8 +653,27 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
                 canvas.getContext('2d').drawImage(video, 0, 0);
                 const capturedImage = canvas.toDataURL('image/jpeg', 0.9);
 
+                let detection = null;
+                try {
+                    detection = await faceapi
+                        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                        .withFaceLandmarks()
+                        .withFaceDescriptor();
+                } catch (err) {
+                    console.warn("Face biometric extraction error:", err);
+                }
+
+                if (!detection || !detection.descriptor) {
+                    alert("Face not clearly detected. Please face the camera directly in good lighting.");
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="ph-bold ph-fingerprint"></i> Confirm New Identity`;
+                    return;
+                }
+
+                const descriptorArray = Array.from(detection.descriptor);
                 const fd = new FormData();
-                fd.append('face_encoding', capturedImage);
+                fd.append('face_encoding', JSON.stringify(descriptorArray));
+                fd.append('face_image', capturedImage);
                 
                 try {
                     const resp = await fetch("{% url 'update_student_face' %}", {

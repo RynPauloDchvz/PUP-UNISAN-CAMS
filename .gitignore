@@ -18,3 +18,7 @@ staticfiles/
 paper_process.txt
 system_security_checklist.txt
 GEMINI.md
+
+# Playwright Testing & Test Results
+system_test.py
+test_results/

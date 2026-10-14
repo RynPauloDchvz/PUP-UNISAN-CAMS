@@ -20,6 +20,5 @@ django-cloudinary-storage>=0.3.0
 cloudinary>=1.41.0
 requests>=2.31.0
 numpy>=1.26.4
-opencv-python-headless>=4.8.0
 huggingface_hub>=0.20.0
 pandas>=2.0.0

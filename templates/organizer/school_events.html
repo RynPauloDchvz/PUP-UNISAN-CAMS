@@ -4,7 +4,12 @@
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="{% static 'js/face-api.min.js' %}"></script>
+<script>
+    if (typeof faceapi === 'undefined') {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
+    }
+</script>
 <style>
     .countdown-timer { font-variant-numeric: tabular-nums; }
     .status-ongoing { background-color: #059669; }
@@ -555,13 +560,39 @@
         document.getElementById('btnUpdateFace').addEventListener('click', () => { questionModal.style.display = 'none'; startRegistrationScanner(); });
 
         async function loadModels() {
-            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
-            modelsLoaded = true;
+            if (typeof faceapi === 'undefined' || !faceapi.nets) {
+                console.warn("faceapi library is not loaded yet.");
+                return;
+            }
+            const MODEL_PATH = "{% static 'models' %}";
+            const CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+            try {
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_PATH),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_PATH),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_PATH)
+                ]);
+                modelsLoaded = true;
+            } catch (err) {
+                console.warn("Local static load warning, falling back to CDN:", err);
+                try {
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(CDN_FALLBACK),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(CDN_FALLBACK),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(CDN_FALLBACK)
+                    ]);
+                    modelsLoaded = true;
+                } catch(e) {
+                    console.error("FaceAPI model load error:", e);
+                }
+            }
         }
 
-        loadModels().then(() => {
-            if (ORGANIZER_DATA.face_encoding) console.log("Organizer Biometrics loaded.");
-        });
+        if (typeof faceapi !== 'undefined') {
+            loadModels().then(() => {
+                if (ORGANIZER_DATA.face_encoding) console.log("Organizer Biometrics loaded.");
+            }).catch(e => console.warn(e));
+        }
 
         async function startRegistrationScanner() {
             registrationModal.style.display = 'flex';
@@ -610,15 +641,33 @@
                         canvas.getContext('2d', { willReadFrequently: true }).drawImage(v, 0, 0);
                         const capturedImage = canvas.toDataURL('image/jpeg', 0.9);
 
+                        let detection = null;
+                        try {
+                            detection = await faceapi
+                                .detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                                .withFaceLandmarks()
+                                .withFaceDescriptor();
+                        } catch(err) {
+                            console.warn("Registration detection error:", err);
+                        }
+
+                        if (!detection || !detection.descriptor) {
+                            alert("Face not clearly detected. Please face the camera directly in good lighting.");
+                            btn.disabled = false; btn.innerText = "Register Identity";
+                            return;
+                        }
+
+                        const descriptorArray = Array.from(detection.descriptor);
                         const fd = new FormData(); 
-                        fd.append('face_encoding', capturedImage);
+                        fd.append('face_encoding', JSON.stringify(descriptorArray));
+                        fd.append('face_image', capturedImage);
                         
                         const csrf = document.cookie.split('; ').find(r => r.startsWith('csrftoken=')).split('=')[1];
                         try {
                             const res = await fetch('/organizer/register-face/', { method: 'POST', headers: { 'X-CSRFToken': csrf }, body: fd });
                             const data = await res.json();
                             if (data.status === 'success') {
-                                ORGANIZER_DATA.face_encoding = capturedImage;
+                                ORGANIZER_DATA.face_encoding = JSON.stringify(descriptorArray);
                                 alert("Success!"); registrationModal.style.display = 'none'; stopScanner(); startParticipationScanner();
                             } else { alert(data.message); btn.disabled = false; btn.innerText = "Register Identity"; }
                         } catch (e) { alert("Registration failed: " + e.message); btn.disabled = false; }
@@ -755,10 +804,29 @@
                     canvas.getContext('2d', { willReadFrequently: true }).drawImage(v, 0, 0, canvas.width, canvas.height);
                     const faceImage = canvas.toDataURL('image/jpeg', 0.8);
                     
+                    let detection = null;
+                    try {
+                        detection = await faceapi
+                            .detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                            .withFaceLandmarks()
+                            .withFaceDescriptor();
+                    } catch (err) {
+                        console.warn("Attendance detection error:", err);
+                    }
+
+                    if (!detection || !detection.descriptor) {
+                        alert("Face not clearly detected. Please align your face inside the frame.");
+                        isSubmitting = false; 
+                        btnSubmitScan.innerHTML = originalText;
+                        btnSubmitScan.classList.remove('opacity-80', 'cursor-not-allowed');
+                        return;
+                    }
+
+                    const descriptorArray = Array.from(detection.descriptor);
                     const fd = new FormData();
                     fd.append('event_id', currentEvent.id);
+                    fd.append('face_descriptor', JSON.stringify(descriptorArray));
                     fd.append('face_image', faceImage);
-                    fd.append('face_matched', isFaceVerified);
                     fd.append('is_valid_location', isLocationVerified);
                     fd.append('latitude', userLat || '');
                     fd.append('longitude', userLng || '');

@@ -8,7 +8,12 @@
     
     <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}?v=2">
     
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="{% static 'js/face-api.min.js' %}"></script>
+    <script>
+        if (typeof faceapi === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
+        }
+    </script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -645,7 +650,7 @@
                     registerStep: 1,
                     accountType: '', // 'academic' or 'non-academic'
                     profilePreview: null, coverPreview: null,
-                    capturedFace: null, faceCaptured: false,
+                    capturedFace: null, capturedFaceDescriptor: null, faceCaptured: false,
                     isCameraActive: false, videoStream: null,
                     isSubmitting: false, isSendingOtp: false, 
                     registerOtp: ['', '', '', '', '', ''],
@@ -810,8 +815,28 @@
                         this.isCameraActive = false; 
                         
                         if (!this.modelsLoaded) {
-                            await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
-                            this.modelsLoaded = true;
+                            const MODEL_PATH = "{% static 'models' %}";
+                            const CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+                            try {
+                                await Promise.all([
+                                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_PATH),
+                                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_PATH),
+                                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_PATH)
+                                ]);
+                                this.modelsLoaded = true;
+                            } catch(e) {
+                                console.warn("Local static load failed, falling back to CDN:", e);
+                                try {
+                                    await Promise.all([
+                                        faceapi.nets.tinyFaceDetector.loadFromUri(CDN_FALLBACK),
+                                        faceapi.nets.faceLandmark68Net.loadFromUri(CDN_FALLBACK),
+                                        faceapi.nets.faceRecognitionNet.loadFromUri(CDN_FALLBACK)
+                                    ]);
+                                    this.modelsLoaded = true;
+                                } catch(err) {
+                                    console.error("FaceAPI models could not be loaded:", err);
+                                }
+                            }
                         }
 
                         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -893,7 +918,7 @@
                     }, 300); // Polling frequency
                 },
 
-                captureFace() {
+                async captureFace() {
                     // 🟢 FINAL GUARD: Re-check quality before capturing 🟢
                     if (!this.qualityStatus.isReady || this.qualityStatus.obstructed || this.qualityStatus.noFaceDetail) {
                         this.showToast("Biometric alignment failed. Please fix scanner issues.", "error");
@@ -904,10 +929,27 @@
                     const canvas = document.createElement('canvas');
                     canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                     canvas.getContext('2d').drawImage(video, 0, 0);
+
+                    let detection = null;
+                    try {
+                        detection = await faceapi
+                            .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                            .withFaceLandmarks()
+                            .withFaceDescriptor();
+                    } catch (err) {
+                        console.warn("Face descriptor extraction error:", err);
+                    }
+
+                    if (!detection || !detection.descriptor) {
+                        this.showToast("Face not clearly detected. Please ensure good lighting.", "error");
+                        return;
+                    }
+
+                    this.capturedFaceDescriptor = JSON.stringify(Array.from(detection.descriptor));
                     this.capturedFace = canvas.toDataURL('image/jpeg');
                     this.faceCaptured = true; this.stopCamera();
                 },
-                retakeFace() { this.faceCaptured = false; this.capturedFace = null; this.startCamera(); },
+                retakeFace() { this.faceCaptured = false; this.capturedFace = null; this.capturedFaceDescriptor = null; this.startCamera(); },
                 startCountdown() {
                     this.countdown = 60;
                     if(this.timerInterval) clearInterval(this.timerInterval);
@@ -995,7 +1037,8 @@
                     
                     formData.append('organization', assignedOrg); 
                     formData.append('program', finalProgram);
-                    formData.append('facial_registration_data', this.capturedFace); 
+                    formData.append('facial_registration_data', this.capturedFaceDescriptor || this.capturedFace); 
+                    formData.append('face_image', this.capturedFace); 
                     
                     if (this.formData.profile_file) formData.append('profile_picture', this.formData.profile_file);
                     if (this.formData.cover_file) formData.append('cover_photo', this.formData.cover_file);

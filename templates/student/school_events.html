@@ -3,7 +3,12 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="{% static 'js/face-api.min.js' %}"></script>
+<script>
+    if (typeof faceapi === 'undefined') {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
+    }
+</script>
 <style>
     .countdown-timer { font-variant-numeric: tabular-nums; }
     .event-card-img { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -475,7 +480,22 @@
             isLocationVerified = false;
 
             if (!modelsLoaded) {
-                await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+                const MODEL_PATH = "{% static 'models' %}";
+                const CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+                try {
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_PATH),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_PATH),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_PATH)
+                    ]);
+                } catch(e) {
+                    console.warn("Loading models from local static failed, falling back to CDN:", e);
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(CDN_FALLBACK),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(CDN_FALLBACK),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(CDN_FALLBACK)
+                    ]);
+                }
                 modelsLoaded = true;
             }
 
@@ -606,8 +626,29 @@
             const canvas = document.createElement('canvas'); const video = document.getElementById('videoFeed');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d', { willReadFrequently: true }).drawImage(video, 0, 0);
+
+            let detection = null;
+            try {
+                detection = await faceapi
+                    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+            } catch (err) {
+                console.warn("Descriptor extraction error:", err);
+            }
+
+            if (!detection || !detection.descriptor) {
+                alert("Face not clearly detected. Please ensure good lighting and face the camera directly.");
+                isSubmitting = false;
+                checkAllVerified();
+                return;
+            }
+
+            const descriptorArray = Array.from(detection.descriptor);
             const fd = new FormData();
-            fd.append('event_id', currentEvent.id); fd.append('face_image', canvas.toDataURL('image/jpeg', 0.8));
+            fd.append('event_id', currentEvent.id);
+            fd.append('face_descriptor', JSON.stringify(descriptorArray));
+            fd.append('face_image', canvas.toDataURL('image/jpeg', 0.8));
             fd.append('latitude', userLat || ''); fd.append('longitude', userLng || '');
             fd.append('is_valid_location', isLocationVerified);
             const csrf = document.cookie.split('; ').find(r => r.startsWith('csrftoken=')).split('=')[1];

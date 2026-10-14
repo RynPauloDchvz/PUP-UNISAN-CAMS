@@ -480,7 +480,11 @@ def student_register(request):
             if profile_picture: defaults_data['profile_picture'] = profile_picture
             if cover_photo: defaults_data['cover_photo'] = cover_photo
 
-            Student.objects.update_or_create(student_number=student_number, defaults=defaults_data)
+            face_image = request.POST.get('face_image')
+            student_obj, _ = Student.objects.update_or_create(student_number=student_number, defaults=defaults_data)
+            if not profile_picture and face_image and str(face_image).startswith('data:image'):
+                save_base64_as_image_field(face_image, student_obj.profile_picture, f"student_{student_number}")
+                student_obj.save()
 
             if 'register_otp' in request.session:
                 del request.session['register_otp']
@@ -721,14 +725,15 @@ def get_student_notifications(student):
 
     for att in recent_attended:
         if str(att.event.id) not in evaluated_ids:
+            event_dt = datetime.combine(att.event.event_date, datetime.min.time()) if att.event.event_date else datetime.now()
             notifications.append({
                 'id': f"eval_rem_{att.event.id}",
                 'type': 'evaluation',
                 'title': f"Feedback Required: {att.event.event_title}",
                 'message': f"How was '{att.event.event_title}'? Please share your feedback in the Evaluation Hub to help us improve!",
                 'sender': 'System',
-                'date': att.event.event_date.strftime('%b %d, %Y'),
-                'timestamp': att.event.event_date.timestamp() + 86400, # Set to day after event
+                'date': att.event.event_date.strftime('%b %d, %Y') if att.event.event_date else '',
+                'timestamp': event_dt.timestamp() + 86400, # Set to day after event
                 'status': 'Pending'
             })
 
@@ -777,14 +782,17 @@ def update_student_face(request):
         try:
             student = Student.objects.get(user=request.user)
             face_data = request.POST.get('face_encoding')
+            face_image = request.POST.get('face_image')
             if not face_data:
-                return JsonResponse({'status': 'error', 'message': 'No facial data received.'})
+                return JsonResponse({'status': 'error', 'message': 'No facial biometric data received.'})
             
             student.face_encoding = face_data
+            if face_image and str(face_image).startswith('data:image'):
+                save_base64_as_image_field(face_image, student.profile_picture, f"student_{student.student_number}")
             student.save()
             
             log_audit_event(request, 'UPDATE', target_model='Student', target_id=str(student.id), status='Success', changes={'face_encoding': 'Updated'})
-            return JsonResponse({'status': 'success', 'message': 'Face identity updated successfully!'})
+            return JsonResponse({'status': 'success', 'message': 'Face biometric identity updated successfully!'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
@@ -1483,7 +1491,9 @@ def force_change_finalize(request):
         if 'failed_fc_otp_attempts' in request.session:
             del request.session['failed_fc_otp_attempts']
             
-        if not face_image:
+        face_encoding = request.POST.get('face_encoding')
+        
+        if not face_image and not face_encoding:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
             
         user = request.user
@@ -1496,8 +1506,9 @@ def force_change_finalize(request):
         org_profile = OrgProfile.objects.filter(user=user).first()
         if org_profile:
             org_profile.force_password_change = False
-            org_profile.face_encoding = face_image
-            save_base64_as_image_field(face_image, org_profile.profile_picture, f"org_{org_profile.organization}")
+            org_profile.face_encoding = face_encoding if face_encoding else face_image
+            if face_image and str(face_image).startswith('data:image'):
+                save_base64_as_image_field(face_image, org_profile.profile_picture, f"org_{org_profile.organization}")
             org_profile.save()
         
         if 'force_change_otp' in request.session:
@@ -3211,7 +3222,8 @@ def record_attendance(request):
                 return JsonResponse({'status': 'error', 'message': 'Account not authorized for attendance.'})
 
             event_id = request.POST.get('event_id')
-            live_face_b64 = request.POST.get('face_image') # Receives live capture from frontend
+            live_face_b64 = request.POST.get('face_image') # Receives live capture image from frontend for audit
+            live_face_descriptor = request.POST.get('face_descriptor') or request.POST.get('face_encoding') # 128-d vector
             is_valid_location = request.POST.get('is_valid_location') == 'true'
             lat = request.POST.get('latitude')
             lng = request.POST.get('longitude')
@@ -3289,19 +3301,20 @@ def record_attendance(request):
                     if now < timeout_start:
                         return JsonResponse({'status': 'error', 'message': 'Time Out not yet available.'})
 
-                # 🟢 SERVER-SIDE DEEPFACE VERIFICATION FOR TIME OUT 🟢
+                # 🟢 CLIENT-SIDE FACE-API VERIFICATION FOR TIME OUT 🟢
                 face_matched = False
-                anchor_b64 = student.face_encoding if student else (organizer.face_encoding if organizer else None)
+                anchor_encoding = student.face_encoding if student else (organizer.face_encoding if organizer else None)
                 
-                if live_face_b64 and anchor_b64:
-                    if anchor_b64.strip().startswith('['):
-                        return JsonResponse({'status': 'error', 'message': 'Please update your biometrics in your Profile first!'})
-                    
-                    face_matched, distance = verify_face(live_face_b64, anchor_b64)
-                    if not face_matched:
-                        return JsonResponse({'status': 'error', 'message': 'Biometric identity mismatch! Face not recognized.'})
-                else:
-                    return JsonResponse({'status': 'error', 'message': 'Missing biometric data for verification.'})
+                if not anchor_encoding:
+                    return JsonResponse({'status': 'error', 'message': 'Missing biometric profile. Please register your face first.'})
+                if not anchor_encoding.strip().startswith('['):
+                    return JsonResponse({'status': 'error', 'message': 'Please update your biometrics in your Profile first to activate instant face verification.'})
+                if not live_face_descriptor:
+                    return JsonResponse({'status': 'error', 'message': 'Face descriptor missing. Please center your face in the camera frame.'})
+                
+                face_matched, distance = verify_face(live_face_descriptor, anchor_encoding)
+                if not face_matched:
+                    return JsonResponse({'status': 'error', 'message': 'Biometric identity mismatch! Face not recognized.'})
 
                 # Update for Time Out
                 attendance.time_out = now
@@ -3343,20 +3356,20 @@ def record_attendance(request):
             if now > expiry_dt:
                 return JsonResponse({'status': 'error', 'message': 'Authorization window has expired for this activity.'})
 
-            # 🟢 SERVER-SIDE DEEPFACE VERIFICATION 🟢
+            # 🟢 CLIENT-SIDE FACE-API VERIFICATION FOR TIME IN 🟢
             face_matched = False
-            anchor_b64 = student.face_encoding if student else (organizer.face_encoding if organizer else None)
+            anchor_encoding = student.face_encoding if student else (organizer.face_encoding if organizer else None)
             
-            if live_face_b64 and anchor_b64:
-                # If anchor is a legacy JSON array string (from previous bugs), reject it gracefully
-                if anchor_b64.strip().startswith('['):
-                    return JsonResponse({'status': 'error', 'message': 'Please update your biometrics in your Profile first!'})
-                
-                face_matched, distance = verify_face(live_face_b64, anchor_b64)
-                if not face_matched:
-                    return JsonResponse({'status': 'error', 'message': 'Biometric identity mismatch! Face not recognized.'})
-            else:
-                return JsonResponse({'status': 'error', 'message': 'Missing biometric data for verification.'})
+            if not anchor_encoding:
+                return JsonResponse({'status': 'error', 'message': 'Missing biometric profile. Please register your face first.'})
+            if not anchor_encoding.strip().startswith('['):
+                return JsonResponse({'status': 'error', 'message': 'Please update your biometrics in your Profile first to activate instant face verification.'})
+            if not live_face_descriptor:
+                return JsonResponse({'status': 'error', 'message': 'Face descriptor missing. Please center your face in the camera frame.'})
+            
+            face_matched, distance = verify_face(live_face_descriptor, anchor_encoding)
+            if not face_matched:
+                return JsonResponse({'status': 'error', 'message': 'Biometric identity mismatch! Face not recognized.'})
 
             attendance = Attendance.objects.create(
                 student=student,
@@ -3406,14 +3419,17 @@ def register_organizer_face(request):
             org_profile = OrgProfile.objects.get(user=request.user)
             
             face_data = request.POST.get('face_encoding')
+            face_image = request.POST.get('face_image')
             if not face_data:
-                return JsonResponse({'status': 'error', 'message': 'No facial data received.'})
+                return JsonResponse({'status': 'error', 'message': 'No facial biometric data received.'})
             
             org_profile.face_encoding = face_data
+            if face_image and str(face_image).startswith('data:image'):
+                save_base64_as_image_field(face_image, org_profile.profile_picture, f"org_{org_profile.organization}")
             org_profile.save()
             
             log_audit_event(request, 'UPDATE', target_model='OrgProfile', target_id=str(org_profile.id), status='Success', changes={'face_encoding': 'Updated'})
-            return JsonResponse({'status': 'success', 'message': 'Face identity updated successfully!'})
+            return JsonResponse({'status': 'success', 'message': 'Face biometric identity updated successfully!'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
@@ -4920,7 +4936,9 @@ def student_force_change_finalize(request):
         if 'failed_sfc_otp_attempts' in request.session:
             del request.session['failed_sfc_otp_attempts']
             
-        if not face_image:
+        face_encoding = request.POST.get('face_encoding')
+        
+        if not face_image and not face_encoding:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
             
         user = request.user
@@ -4933,8 +4951,9 @@ def student_force_change_finalize(request):
         student = Student.objects.filter(user=user).first()
         if student:
             student.force_password_change = False
-            student.face_encoding = face_image
-            save_base64_as_image_field(face_image, student.profile_picture, f"student_{student.student_number}")
+            student.face_encoding = face_encoding if face_encoding else face_image
+            if face_image and str(face_image).startswith('data:image'):
+                save_base64_as_image_field(face_image, student.profile_picture, f"student_{student.student_number}")
             student.save()
         
         if 'student_force_change_otp' in request.session:
@@ -5211,7 +5230,9 @@ def adviser_force_change_finalize(request):
         if 'failed_afc_otp_attempts' in request.session:
             del request.session['failed_afc_otp_attempts']
             
-        if not face_image:
+        face_encoding = request.POST.get('face_encoding')
+        
+        if not face_image and not face_encoding:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
             
         user = request.user
@@ -5223,8 +5244,9 @@ def adviser_force_change_finalize(request):
         
         adv_profile, _ = AdviserProfile.objects.get_or_create(user=user)
         adv_profile.force_password_change = False
-        adv_profile.face_encoding = face_image
-        save_base64_as_image_field(face_image, adv_profile.profile_picture, f"adviser_{user.username}")
+        adv_profile.face_encoding = face_encoding if face_encoding else face_image
+        if face_image and str(face_image).startswith('data:image'):
+            save_base64_as_image_field(face_image, adv_profile.profile_picture, f"adviser_{user.username}")
         adv_profile.save()
         
         if 'adviser_force_change_otp' in request.session:
