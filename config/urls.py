@@ -56,6 +56,12 @@ urlpatterns = [
     path('api/update-user-location/', views.update_user_location, name='update_user_location'),
 
     # ==========================================
+    # SEO URLS (GOOGLE SEARCH CONSOLE / CRAWLERS)
+    # ==========================================
+    path('robots.txt', views.robots_txt_view, name='robots_txt'),
+    path('sitemap.xml', views.sitemap_xml_view, name='sitemap_xml'),
+
+    # ==========================================
     # MAIN PORTAL (INDEX)
     # ==========================================
     path('', views.index, name='index'),

@@ -5476,6 +5476,47 @@ def switch_active_org_api(request):
         return JsonResponse({"status": "error", "message": "You are not a member of this organization."})
     return JsonResponse({"status": "error", "message": "Invalid request method."})
 
+# ==========================================
+# 🟢 SEO ENDPOINTS (ROBOTS.TXT & SITEMAP.XML) 🟢
+# ==========================================
+def robots_txt_view(request):
+    """
+    SEO: Instructs Googlebot and other web crawlers on which paths to index.
+    Allows root landing page and static files, blocks internal authenticated dashboards.
+    """
+    domain = request.build_absolute_uri('/')[:-1]
+    content = f"""User-agent: *
+Allow: /
+Allow: /static/
+Disallow: /admin/
+Disallow: /adviser/
+Disallow: /organizer/
+Disallow: /student/
+Disallow: /api/
+Disallow: /django-admin/
 
+Sitemap: {domain}/sitemap.xml
+"""
+    return HttpResponse(content.strip(), content_type="text/plain; charset=utf-8")
 
-
+def sitemap_xml_view(request):
+    """
+    SEO: XML Sitemap submitted to Google Search Console to guarantee fast indexing.
+    """
+    domain = request.build_absolute_uri('/')[:-1]
+    content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{domain}/</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>{domain}/forgot-password/</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>"""
+    return HttpResponse(content.strip(), content_type="application/xml; charset=utf-8")

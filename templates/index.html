@@ -4,7 +4,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PUP UQ Cams</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- 🟢 PRIMARY SEO META TAGS 🟢 -->
+    <title>PUP Unisan CAMS | Campus Activity Management System</title>
+    <meta name="title" content="PUP Unisan CAMS | Campus Activity Management System">
+    <meta name="description" content="PUP Unisan CAMS (Campus Activity Management System) is the official student organization and event portal of Polytechnic University of the Philippines - Unisan Campus, Quezon. Manage proposals, attendance tracking, and evaluations.">
+    <meta name="keywords" content="pup unisan cams, unisan cams, PUP Unisan, PUP Unisan CAMS, PUP Unisan Quezon, PUP Campus Activity Management System, PUP CAMS, PUP Unisan Portal, PUP Unisan student activities, PUP Unisan attendance">
+    <meta name="author" content="Polytechnic University of the Philippines - Unisan Campus">
+    <meta name="publisher" content="PUP Unisan CAMS">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <link rel="canonical" href="https://pup-unisan-cams.onrender.com/">
+
+    <!-- 🟢 GOOGLE SEARCH CONSOLE VERIFICATION (Palitan kapag nakuha ang code mula sa GSC) 🟢 -->
+    <!-- <meta name="google-site-verification" content="ILAGAY_ANG_IYONG_GOOGLE_VERIFICATION_CODE_DITO" /> -->
+
+    <!-- 🟢 OPEN GRAPH / FACEBOOK / MESSENGER / DISCORD 🟢 -->
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_PH">
+    <meta property="og:url" content="https://pup-unisan-cams.onrender.com/">
+    <meta property="og:title" content="PUP Unisan CAMS | Campus Activity Management System">
+    <meta property="og:description" content="Official Campus Activity Management System (CAMS) of Polytechnic University of the Philippines - Unisan Campus. Discover events, submit proposals, track attendance, and manage student organizations.">
+    <meta property="og:image" content="https://pup-unisan-cams.onrender.com{% static 'images/PUP1.jpg' %}">
+    <meta property="og:image:alt" content="PUP Unisan Campus Activity Management System">
+    <meta property="og:site_name" content="PUP Unisan CAMS">
+
+    <!-- 🟢 TWITTER CARDS 🟢 -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://pup-unisan-cams.onrender.com/">
+    <meta name="twitter:title" content="PUP Unisan CAMS | Campus Activity Management System">
+    <meta name="twitter:description" content="Official Campus Activity Management System (CAMS) of Polytechnic University of the Philippines - Unisan Campus.">
+    <meta name="twitter:image" content="https://pup-unisan-cams.onrender.com{% static 'images/PUP1.jpg' %}">
+
+    <!-- 🟢 SCHEMA.ORG JSON-LD STRUCTURED DATA (Para sa Google Rich Results at Indexing) 🟢 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://pup-unisan-cams.onrender.com/#website",
+          "url": "https://pup-unisan-cams.onrender.com/",
+          "name": "PUP Unisan CAMS",
+          "alternateName": [
+            "pup unisan cams",
+            "unisan cams",
+            "PUP Unisan Campus Activity Management System",
+            "PUP-UQ CAMS",
+            "PUP CAMS"
+          ],
+          "description": "Official Campus Activity Management System for Polytechnic University of the Philippines - Unisan Campus, Quezon.",
+          "inLanguage": "en-PH"
+        },
+        {
+          "@type": "EducationalOrganization",
+          "@id": "https://pup-unisan-cams.onrender.com/#organization",
+          "name": "Polytechnic University of the Philippines - Unisan Campus",
+          "alternateName": "PUP Unisan",
+          "url": "https://pup-unisan-cams.onrender.com/",
+          "logo": "https://pup-unisan-cams.onrender.com{% static 'images/PUPLogo.png' %}",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Unisan",
+            "addressRegion": "Quezon",
+            "addressCountry": "PH"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "PUP Unisan CAMS",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "PHP"
+          }
+        }
+      ]
+    }
+    </script>
     
     <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}?v=2">
     
@@ -200,10 +280,13 @@
             <div class="absolute inset-0 bg-gradient-to-t from-pup-maroon via-pup-maroon/80 to-transparent dark:from-[#111]/95 dark:via-[#111]/60 dark:to-transparent"></div>
             
             <div class="relative z-10 text-white pb-10 transition-transform duration-1000" :class="{'translate-y-20 opacity-0': isModalActive}">
-                <img src="{% static 'images/PUPLogo.png' %}" alt="PUP Logo" class="w-24 h-24 mb-6 drop-shadow-lg">
-                <h3 class="text-pup-gold text-sm font-bold tracking-widest uppercase mb-2 drop-shadow-md">PUP Unisan Quezon</h3>
+                <img src="{% static 'images/PUPLogo.png' %}" alt="PUP Logo - Polytechnic University of the Philippines Unisan Campus" class="w-24 h-24 mb-6 drop-shadow-lg">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/30 backdrop-blur-md border border-white/20 text-pup-gold text-xs font-black tracking-widest uppercase mb-3">
+                    <i class="ph-bold ph-seal-check text-pup-gold"></i> PUP UNISAN CAMS
+                </div>
+                <h3 class="text-white/90 text-sm font-bold tracking-widest uppercase mb-2 drop-shadow-md">Polytechnic University of the Philippines &bull; Unisan Campus</h3>
                 <h1 class="text-5xl xl:text-6xl font-black mb-3 tracking-tight drop-shadow-md leading-tight">Campus Activities<br>Management System</h1>
-                <p class="text-white/80 font-medium text-lg max-w-md drop-shadow-md">Your centralized portal for discovering events, managing attendance, and organizing campus activities.</p>
+                <p class="text-white/80 font-medium text-lg max-w-md drop-shadow-md">The centralized activity and student organization portal of PUP Unisan Campus. Discover events, manage attendance, and streamline approvals.</p>
             </div>
         </div>
 
@@ -216,9 +299,10 @@
             <div class="w-full max-w-md my-auto transition-all duration-500 relative z-10">
                 
                 <!-- PUP LOGO FOR MOBILE ONLY -->
-                <div class="lg:hidden flex flex-col items-center mb-8">
-                    <img src="{% static 'images/PUPLogo.png' %}" alt="PUP Logo" class="w-20 h-20 mb-3">
+                <div class="lg:hidden flex flex-col items-center mb-8 text-center">
+                    <img src="{% static 'images/PUPLogo.png' %}" alt="PUP Logo - PUP Unisan Campus" class="w-20 h-20 mb-3">
                     <h1 class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">PUP UNISAN CAMS</h1>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1">Campus Activity Management System &bull; PUP Unisan</p>
                 </div>
 
                 <!-- ============================================== -->
