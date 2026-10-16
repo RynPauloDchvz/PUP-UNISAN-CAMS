@@ -1112,6 +1112,12 @@ def student_school_events(request):
     attendance_qs = Attendance.objects.filter(student=student)
     attendance_map = {str(att.event_id): att for att in attendance_qs}
 
+    evaluated_ids = set(str(eid) for eid in AuditLog.objects.filter(
+        actor=request.user, 
+        action='EVALUATION', 
+        status='Success'
+    ).values_list('target_id', flat=True) if eid)
+
     def clean_desc(desc):
         if not desc: return 'Join us for this exciting campus activity managed by university organizations.'
         if "Desc:" in desc:
@@ -1128,6 +1134,8 @@ def student_school_events(request):
 
         att_record = attendance_map.get(str(e.id))
         att_scope = getattr(e, 'attendance_scope', 'CAMPUS_ONLY')
+        has_time_out = att_record.time_out is not None if att_record else False
+        eval_expiry = (att_record.time_out + timedelta(hours=1)).isoformat() if att_record and att_record.time_out else None
 
         events_data.append({
             'id': e.id,
@@ -1149,7 +1157,11 @@ def student_school_events(request):
             'target_lat': float(e.target_latitude) if e.target_latitude else 13.84615,
             'target_lng': float(e.target_longitude) if e.target_longitude else 121.96955,
             'already_attended': att_record is not None,
-            'has_timed_out': att_record.time_out is not None if att_record else False,
+            'has_timed_out': has_time_out,
+            'time_in_iso': att_record.time_in.isoformat() if att_record else None,
+            'time_out_iso': att_record.time_out.isoformat() if att_record and att_record.time_out else None,
+            'eval_expiry_iso': eval_expiry,
+            'already_evaluated': str(e.id) in evaluated_ids,
         })
     
     student_data = {
@@ -1278,7 +1290,24 @@ def student_evaluation(request):
         else: img_url = '/static/images/PUPLogo.png'
 
         att_record = attendance_map.get(str(e.id))
-        is_eligible = att_record is not None and att_record.time_out is not None
+        has_time_out = att_record is not None and att_record.time_out is not None
+        eval_expiry = (att_record.time_out + timedelta(hours=1)).isoformat() if has_time_out else None
+        time_out_iso = att_record.time_out.isoformat() if has_time_out else None
+        
+        is_expired = False
+        if has_time_out:
+            is_expired = timezone.now() > (att_record.time_out + timedelta(hours=1))
+
+        is_eligible = has_time_out and not is_expired
+
+        att_status = 'No Time In'
+        if att_record:
+            if not att_record.time_out:
+                att_status = 'Pending Time Out'
+            elif is_expired:
+                att_status = 'Window Closed'
+            else:
+                att_status = 'Ready'
 
         events_data.append({
             'id': e.id,
@@ -1297,7 +1326,11 @@ def student_evaluation(request):
             'org': e.org_id,
             'already_evaluated': str(e.id) in evaluated_ids,
             'is_eligible': is_eligible,
-            'att_status': 'No Time In' if not att_record else ('Pending Time Out' if not att_record.time_out else 'Ready')
+            'has_timed_out': has_time_out,
+            'time_out_iso': time_out_iso,
+            'eval_expiry_iso': eval_expiry,
+            'is_expired': is_expired,
+            'att_status': att_status
         })
 
     history_logs = AuditLog.objects.filter(actor=request.user, action='EVALUATION').order_by('-timestamp')
@@ -1792,6 +1825,8 @@ def organizer_school_events(request):
             'target_lng': float(e.target_longitude) if e.target_longitude else 121.96955,
             'already_attended': att_record is not None,
             'has_timed_out': att_record.time_out is not None if att_record else False,
+            'time_in_iso': att_record.time_in.isoformat() if att_record else None,
+            'time_out_iso': att_record.time_out.isoformat() if att_record and att_record.time_out else None,
         })
 
     organizer_data = {
@@ -1954,7 +1989,6 @@ def submit_event_proposal(request):
             if is_flag_raising:
                 target_audience = 'ALL'
                 allowed_orgs = 'ALL'
-                has_evaluation = False
 
             if event_id:
                 # 🟢 RESCHEDULE / EDIT EXISTING EVENT 🟢
@@ -3377,96 +3411,121 @@ def record_attendance(request):
 
             now = timezone.now()
             start_dt = timezone.make_aware(datetime.combine(event.event_date, event.start_time))
-            end_dt = None
-            if event.end_time:
-                end_dt = timezone.make_aware(datetime.combine(event.event_date, event.end_time))
+            end_dt = timezone.make_aware(datetime.combine(event.event_date, event.end_time)) if event.end_time else (start_dt + timedelta(hours=4))
 
-            # 🟢 TIME OUT LOGIC 🟢
+            # 🟢 1. TIME IN WINDOW (Start Time up to Start Time + 1 Hour) 🟢
+            time_in_close = start_dt + timedelta(hours=1)
+
+            # 🟢 2. TIME OUT WINDOW (15 mins before End Time up to End Time + 1 Hour, total 1h 15m) 🟢
+            timeout_start = end_dt - timedelta(minutes=15)
+            timeout_expiry = end_dt + timedelta(hours=1)
+
+            # Determine whether this is a TIME OUT attempt
+            is_timeout_attempt = False
             if attendance:
-                if attendance.time_out:
+                # If they already timed in, this scanner action is Time Out
+                is_timeout_attempt = True
+            elif now >= timeout_start:
+                # If they missed Time In, but scan during the Time Out window, allow Late Time Out
+                is_timeout_attempt = True
+
+            # 🟢 HANDLE TIME OUT 🟢
+            if is_timeout_attempt:
+                if attendance and attendance.time_out:
                     return JsonResponse({'status': 'error', 'message': 'Attendance (Time Out) already recorded for this event.'})
                 
-                # Validation for Time Out (Starting from 15 minutes before end_time)
-                if end_dt:
-                    timeout_start = end_dt - timedelta(minutes=15)
-                    timeout_expiry = end_dt + timedelta(hours=3) # Allow time out up to 3 hours after end_time
-                    
-                    if now < timeout_start:
-                        return JsonResponse({'status': 'error', 'message': f'Time Out window hasn\'t opened yet. Available at {timeout_start.strftime("%I:%M %p")}.'})
-                    if now > timeout_expiry:
-                        return JsonResponse({'status': 'error', 'message': 'Time Out window has closed for this event.'})
-                else:
-                    # Fallback if no end_time
-                    timeout_start = start_dt + timedelta(hours=2)
-                    if now < timeout_start:
-                        return JsonResponse({'status': 'error', 'message': 'Time Out not yet available.'})
+                if now < timeout_start:
+                    return JsonResponse({'status': 'error', 'message': f'Time Out window hasn\'t opened yet. Available starting at {timeout_start.strftime("%I:%M %p")}.'})
+                if now > timeout_expiry:
+                    return JsonResponse({'status': 'error', 'message': 'Time Out window has closed for this event.'})
 
-                # 🟢 CLIENT-SIDE FACE-API VERIFICATION FOR TIME OUT 🟢
+                # Client-Side Face-API Verification
                 face_matched = False
                 anchor_encoding = student.face_encoding if student else (organizer.face_encoding if organizer else None)
-                
                 if not anchor_encoding:
                     return JsonResponse({'status': 'error', 'message': 'Missing biometric profile. Please register your face first.'})
                 if not anchor_encoding.strip().startswith('['):
                     return JsonResponse({'status': 'error', 'message': 'Please update your biometrics in your Profile first to activate instant face verification.'})
                 if not live_face_descriptor:
                     return JsonResponse({'status': 'error', 'message': 'Face descriptor missing. Please center your face in the camera frame.'})
-                
+
                 face_matched, distance = verify_face(live_face_descriptor, anchor_encoding)
                 if not face_matched:
                     return JsonResponse({'status': 'error', 'message': 'Biometric identity mismatch! Face not recognized.'})
 
-                # Update for Time Out
-                attendance.time_out = now
-                attendance.latitude_out = lat
-                attendance.longitude_out = lng
-                attendance.is_valid_location_out = is_valid_location
-                attendance.location_zone = location_name # Save zone on timeout
-                
-                # 🟢 SAVE CAPTURE IMAGE OUT 🟢
-                if live_face_b64:
-                    try:
-                        format, imgstr = live_face_b64.split(';base64,')
-                        ext = format.split('/')[-1]
-                        data = ContentFile(base64.b64decode(imgstr), name=f'capture_out_{attendance.id}.{ext}')
-                        attendance.capture_image_out = data
-                    except Exception as e:
-                        print(f"Error saving capture image out: {e}")
+                if attendance:
+                    attendance.time_out = now
+                    attendance.latitude_out = lat
+                    attendance.longitude_out = lng
+                    attendance.is_valid_location_out = is_valid_location
+                    attendance.location_zone = location_name
+                    if live_face_b64:
+                        try:
+                            format, imgstr = live_face_b64.split(';base64,')
+                            ext = format.split('/')[-1]
+                            data = ContentFile(base64.b64decode(imgstr), name=f'capture_out_{attendance.id}.{ext}')
+                            attendance.capture_image_out = data
+                        except Exception as e:
+                            print(f"Error saving capture image out: {e}")
+                    attendance.save()
 
-                attendance.save()
+                    log_audit_event(request, 'ATTENDANCE', target_model='Event', target_id=str(event.id), status='Success', changes={
+                        'type': 'Time Out',
+                        'event': event.event_title,
+                        'user': student.full_name if student else organizer.user.username,
+                        'location_zone': location_name,
+                        'location_valid': is_valid_location
+                    })
+                    return JsonResponse({'status': 'success', 'message': f'Mission Complete: Time Out verified at {location_name}. You now have 1 hour to submit your evaluation.'})
+                else:
+                    # Late student who missed Time In
+                    attendance = Attendance.objects.create(
+                        student=student,
+                        organizer=organizer,
+                        event=event,
+                        face_matched=face_matched,
+                        is_valid_location=False, # Flagged as incomplete
+                        time_out=now,
+                        latitude_out=lat,
+                        longitude_out=lng,
+                        is_valid_location_out=is_valid_location,
+                        location_zone=f"{location_name} [Missed Time In]"
+                    )
+                    if live_face_b64:
+                        try:
+                            format, imgstr = live_face_b64.split(';base64,')
+                            ext = format.split('/')[-1]
+                            data = ContentFile(base64.b64decode(imgstr), name=f'capture_out_{attendance.id}.{ext}')
+                            attendance.capture_image_out = data
+                            attendance.save()
+                        except Exception as e:
+                            print(f"Error saving capture image out: {e}")
 
-                log_audit_event(request, 'ATTENDANCE', target_model='Event', target_id=str(event.id), status='Success', changes={
-                    'type': 'Time Out',
-                    'event': event.event_title,
-                    'user': student.full_name if student else organizer.user.username,
-                    'location_zone': location_name,
-                    'location_valid': is_valid_location
-                })
+                    log_audit_event(request, 'ATTENDANCE', target_model='Event', target_id=str(event.id), status='Warning', changes={
+                        'type': 'Time Out (Missed Time In)',
+                        'event': event.event_title,
+                        'user': student.full_name if student else organizer.user.username,
+                        'location_zone': location_name,
+                        'location_valid': False
+                    })
+                    return JsonResponse({'status': 'success', 'message': f'Time Out recorded at {location_name}. Note: Missed Time In window. You may proceed to submit your evaluation within 1 hour.'})
 
-                return JsonResponse({'status': 'success', 'message': f'Mission Complete: Time Out verified at {location_name}. Participation synchronized.'})
-
-            # 🟢 TIME IN LOGIC 🟢
-            if end_dt:
-                expiry_dt = end_dt + timedelta(hours=1)
-            else:
-                expiry_dt = start_dt + timedelta(hours=4)
-
+            # 🟢 HANDLE TIME IN 🟢
             if now < start_dt:
-                return JsonResponse({'status': 'error', 'message': f'Authorization window hasn\'t opened yet. Access available at {event.start_time.strftime("%I:%M %p")}.'})
-            if now > expiry_dt:
-                return JsonResponse({'status': 'error', 'message': 'Authorization window has expired for this activity.'})
+                return JsonResponse({'status': 'error', 'message': f'Authorization window hasn\'t opened yet. Access available starting at {event.start_time.strftime("%I:%M %p")}.'})
+            if now > time_in_close:
+                return JsonResponse({'status': 'error', 'message': f'Time In window has expired. Time In was open from {event.start_time.strftime("%I:%M %p")} until {time_in_close.strftime("%I:%M %p")}.'})
 
-            # 🟢 CLIENT-SIDE FACE-API VERIFICATION FOR TIME IN 🟢
+            # Client-Side Face-API Verification for Time In
             face_matched = False
             anchor_encoding = student.face_encoding if student else (organizer.face_encoding if organizer else None)
-            
             if not anchor_encoding:
                 return JsonResponse({'status': 'error', 'message': 'Missing biometric profile. Please register your face first.'})
             if not anchor_encoding.strip().startswith('['):
                 return JsonResponse({'status': 'error', 'message': 'Please update your biometrics in your Profile first to activate instant face verification.'})
             if not live_face_descriptor:
                 return JsonResponse({'status': 'error', 'message': 'Face descriptor missing. Please center your face in the camera frame.'})
-            
+
             face_matched, distance = verify_face(live_face_descriptor, anchor_encoding)
             if not face_matched:
                 return JsonResponse({'status': 'error', 'message': 'Biometric identity mismatch! Face not recognized.'})
@@ -3479,7 +3538,7 @@ def record_attendance(request):
                 is_valid_location=is_valid_location,
                 latitude=lat,
                 longitude=lng,
-                location_zone=location_name # Save zone on timein
+                location_zone=location_name
             )
 
             # 🟢 SAVE CAPTURE IMAGE 🟢
@@ -3561,22 +3620,11 @@ def submit_evaluation(request):
             if not attendance or not attendance.time_out:
                 return JsonResponse({'status': 'error', 'message': 'You must Time Out from the event before submitting an evaluation.'})
 
-            # 🟢 ENFORCE EVALUATION WINDOW (End Time - 1 Hour to 24 Hours after)
+            # 🟢 ENFORCE DYNAMIC 1-HOUR EVALUATION WINDOW (Starting from student's Time Out) 🟢
             now = timezone.now()
-            if event.end_time:
-                end_dt = timezone.make_aware(datetime.combine(event.event_date, event.end_time))
-                open_dt = end_dt - timedelta(hours=1)
-                expiry_dt = end_dt + timedelta(hours=1) # The user said 1 hour grace for attendance, likely same for eval
-            else:
-                # Fallback if no end time (4 hours after start)
-                start_dt = timezone.make_aware(datetime.combine(event.event_date, event.start_time))
-                open_dt = start_dt + timedelta(hours=2)
-                expiry_dt = start_dt + timedelta(hours=5)
-
-            if now < open_dt:
-                return JsonResponse({'status': 'error', 'message': 'Evaluation portal is not yet open.'})
-            if now > expiry_dt:
-                return JsonResponse({'status': 'error', 'message': 'Evaluation window has closed.'})
+            eval_expiry = attendance.time_out + timedelta(hours=1)
+            if now > eval_expiry:
+                return JsonResponse({'status': 'error', 'message': 'Evaluation window has expired. You had 1 hour after Time Out to evaluate.'})
 
             # 🟢 PREVENT DUPLICATE EVALUATION
             already_evaluated = AuditLog.objects.filter(

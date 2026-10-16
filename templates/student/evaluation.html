@@ -245,13 +245,11 @@
                 const matchesSearch = e.title.toLowerCase().includes(query.toLowerCase());
                 if (!matchesSearch) return false;
 
-                const end = e.end_time_iso ? new Date(`${e.date}T${e.end_time_iso}`) : null;
-                if (!end) return false;
-                const evalCloseTime = new Date(end.getTime() + (60 * 60 * 1000)); 
+                const evalCloseTime = e.eval_expiry_iso ? new Date(e.eval_expiry_iso) : null;
                 const isToday = e.date === now.toISOString().split('T')[0];
-                const inWindow = now <= evalCloseTime;
+                const inWindow = evalCloseTime && now <= evalCloseTime;
                 
-                return e.already_evaluated || inWindow || isToday;
+                return e.already_evaluated || inWindow || isToday || !e.has_timed_out;
             });
 
             if (activeEvents.length === 0) {
@@ -264,12 +262,9 @@
                 const card = document.createElement('div');
                 card.className = "evaluation-card bg-white dark:bg-pup-darkcard rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden border border-gray-100 dark:border-gray-800 group shadow-sm hover:shadow-xl transition-all flex flex-row sm:flex-col cursor-pointer";
                 
-                const end = e.end_time_iso ? new Date(`${e.date}T${e.end_time_iso}`) : null;
-                const evalOpenTime = end ? new Date(end.getTime() - (60 * 60 * 1000)) : null;
-                const evalCloseTime = end ? new Date(end.getTime() + (60 * 60 * 1000)) : null;
-
-                const isOpen = end && now >= evalOpenTime && now <= evalCloseTime;
-                const isUpcoming = end && now < evalOpenTime;
+                const evalCloseTime = e.eval_expiry_iso ? new Date(e.eval_expiry_iso) : null;
+                const isOpen = e.has_timed_out && evalCloseTime && now <= evalCloseTime && !e.already_evaluated;
+                const isExpired = e.has_timed_out && evalCloseTime && now > evalCloseTime && !e.already_evaluated;
                 
                 let btnHtml = "";
                 let statusLabel = "";
@@ -279,26 +274,27 @@
                     statusLabel = `<i class="ph-fill ph-check-circle"></i> COMPLETED`;
                     statusClass = "bg-green-600 border-green-500 shadow-lg shadow-green-500/30";
                     btnHtml = ""; 
-                } else if (!e.is_eligible) {
-                    statusLabel = `<i class="ph-bold ph-lock-key"></i> RESTRICTED`;
+                } else if (!e.has_timed_out) {
+                    statusLabel = `<i class="ph-bold ph-lock-key"></i> TIME OUT REQUIRED`;
                     btnHtml = `<button disabled class="btn-eval mt-auto w-full py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-400 font-black text-[7px] sm:text-[10px] uppercase tracking-[0.2em] flex flex-col items-center justify-center gap-0.5 sm:gap-1">
                         <span class="flex items-center gap-2"><i class="ph-bold ph-lock-key"></i> ${e.att_status}</span>
-                        <span class="text-[6px] sm:text-[7px] opacity-60">TIME OUT REQUIRED</span>
-                      </button>`;
-                } else if (isUpcoming) {
-                    const diff = evalOpenTime - now;
-                    statusLabel = `<i class="ph-bold ph-hourglass"></i> OPENS IN ${formatTimeDiffFull(diff)}`;
-                    btnHtml = `<button disabled class="btn-eval mt-auto w-full py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-400 font-black text-[7px] sm:text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                        <i class="ph-bold ph-lock-key"></i> ${formatClockTime(evalOpenTime)}
+                        <span class="text-[6px] sm:text-[7px] opacity-60">TIME OUT REQUIRED FIRST</span>
                       </button>`;
                 } else if (isOpen) {
                     const diff = evalCloseTime - now;
                     statusLabel = `<i class="ph-fill ph-broadcast animate-pulse"></i> ACTIVE • ${formatTimeDiffFull(diff)}`;
+                    statusClass = "bg-green-600/90 border-green-500 animate-pulse shadow-lg shadow-green-600/30";
                     btnHtml = `<button class="btn-eval mt-auto w-full py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black text-[7px] sm:text-[10px] uppercase tracking-[0.2em] shadow-xl hover:opacity-90 active:scale-95 transition-all">
                         Initialize Sync
                       </button>`;
-                } else {
+                } else if (isExpired) {
                     statusLabel = `<i class="ph-bold ph-clock-counter-clockwise"></i> EXPIRED`;
+                    statusClass = "bg-red-700/80 border-red-500/40";
+                    btnHtml = `<button disabled class="btn-eval mt-auto w-full py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-400 font-black text-[7px] sm:text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-x-circle text-red-500 text-xs sm:text-lg"></i> Closed (1 Hour Elapsed)
+                      </button>`;
+                } else {
+                    statusLabel = `<i class="ph-bold ph-lock-key"></i> RESTRICTED`;
                     btnHtml = `<button disabled class="btn-eval mt-auto w-full py-4 sm:py-5 rounded-xl sm:rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-400 font-black text-[7px] sm:text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
                         <i class="ph-bold ph-x-circle text-red-500 text-xs sm:text-lg"></i> Closed
                       </button>`;
@@ -349,10 +345,13 @@
         }
 
         function formatTimeDiffFull(ms) {
+            if (ms <= 0) return '00:00:00';
             const s = Math.floor(ms / 1000);
-            const h = Math.floor(s / 3600);
+            const d = Math.floor(s / 86400);
+            const h = Math.floor((s % 86400) / 3600);
             const m = Math.floor((s % 3600) / 60);
             const sec = s % 60;
+            if (d > 0) return `${d}d ${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`;
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
         }
 
@@ -363,11 +362,8 @@
         window.openSessionModal = (e, jsEvent) => {
             currentSession = e;
             const now = new Date();
-            const end = e.end_time_iso ? new Date(`${e.date}T${e.end_time_iso}`) : null;
-            const evalOpenTime = end ? new Date(end.getTime() - (60 * 60 * 1000)) : null;
-            const evalCloseTime = end ? new Date(end.getTime() + (60 * 60 * 1000)) : null;
-
-            const isOpen = end && now >= evalOpenTime && now <= evalCloseTime;
+            const evalCloseTime = e.eval_expiry_iso ? new Date(e.eval_expiry_iso) : null;
+            const isOpen = e.has_timed_out && evalCloseTime && now <= evalCloseTime && !e.already_evaluated;
             
             document.getElementById('modalS_Img').src = e.image;
             document.getElementById('modalS_Title').innerText = e.title;
@@ -377,7 +373,7 @@
             
             const btnContainer = document.getElementById('evalBtnContainer');
 
-            if (e.already_evaluated || !e.is_eligible || !isOpen) {
+            if (!isOpen) {
                 btnContainer.classList.add('hidden');
             } else {
                 btnContainer.classList.remove('hidden');

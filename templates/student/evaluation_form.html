@@ -27,90 +27,158 @@
         <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
         <div class="relative z-10 p-6 sm:p-10 w-full max-w-4xl mx-auto">
             <a href="{% url 'student_evaluation' %}" class="absolute top-4 left-4 sm:top-6 sm:left-6 text-white hover:text-pup-gold transition-colors flex items-center gap-2 text-sm font-bold bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
-                <i class="ph-bold ph-arrow-left text-lg"></i> Back
+                <i class="ph-bold ph-arrow-left text-lg"></i> Back to Hub
             </a>
             <div class="bg-pup-gold inline-block text-black font-black text-[0.65rem] px-3 py-1 rounded-full uppercase mb-2 mt-8">Institutional Activity</div>
-            <h2 class="text-3xl sm:text-5xl font-black text-white leading-tight" v-text="currentTitle"></h2>    
-            <p class="text-gray-300 text-sm mt-1">Official Evaluation Form</p>
+            <h2 class="text-3xl sm:text-5xl font-black text-white leading-tight uppercase tracking-tight" v-text="currentTitle"></h2>    
+            <p class="text-gray-300 text-xs sm:text-sm mt-1 font-medium">Standard School Event Evaluation Form</p>
         </div>
     </div>
 
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        <div class="bg-white dark:bg-[#0a0a0a] rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-800 p-6 sm:p-10">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full" id="evaluationCardWrapper">
+        <div class="bg-white dark:bg-[#0a0a0a] rounded-[2.5rem] sm:rounded-[3rem] shadow-sm border border-gray-100 dark:border-gray-800 p-6 sm:p-10">
             
-            <div class="border-b border-gray-100 dark:border-gray-800 pb-6 mb-8 text-center">
-                <h3 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Standard Universal Evaluation</h3>
-                <p class="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mt-1">Performance synchronization portal</p>    
+            <!-- Form Title -->
+            <div class="border-b border-gray-100 dark:border-gray-800 pb-6 mb-6 text-center">
+                <h3 class="text-xl sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">STANDARD SCHOOL EVENT EVALUATION FORM</h3>
+                <p class="text-[9px] sm:text-[10px] text-gray-400 font-black uppercase tracking-[0.3em] mt-1">Multi-Category Performance Synchronization</p>    
             </div>
 
-            <!-- Questions Container (Vue Managed) -->
-            <div class="flex flex-col gap-8 mb-12">
-                <div v-for="(section, sIdx) in evaluationData" :key="sIdx">
-                    <div class="mb-6">
-                        <h3 class="text-sm font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.2em] border-l-4 border-pup-maroon dark:border-pup-gold pl-4 flex items-center gap-3">
-                            [[ section.category ]]
-                        </h3>
-                    </div>
+            <!-- Stepper Progress Tracker -->
+            <div class="mb-8">
+                <!-- Mobile Stepper Pill & Progress Bar -->
+                <div class="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+                    <span class="text-pup-maroon dark:text-pup-gold font-bold">
+                        [[ currentStep < 5 ? 'Category ' + (currentStep + 1) + ' of 5' : 'Final Step: Feedback' ]]
+                    </span>
+                    <span>Step [[ currentStep + 1 ]] / 6</span>
+                </div>
+                <div class="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-pup-maroon dark:bg-pup-gold transition-all duration-500" 
+                         :style="{ width: (((currentStep + 1) / 6) * 100) + '%' }"></div>
+                </div>
 
-                    <div class="space-y-4">
-                        <div v-for="(q, qIdx) in section.questions" :key="qIdx" 
-                             class="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-all hover:shadow-md">
-                            <p class="text-sm font-bold text-gray-700 dark:text-gray-300 sm:w-2/3 leading-relaxed">
-                                <span class="text-pup-maroon dark:text-pup-gold mr-2 font-black">[[ getGlobalIndex(sIdx, qIdx) ]].</span> [[ q ]]
-                            </p>
-                            <div class="flex items-center justify-between sm:justify-end gap-6 sm:w-1/3">
-                                <div class="flex items-center gap-1.5">
-                                    <i v-for="star in 5" :key="star" 
-                                       @click="setRating(sIdx, qIdx, star)"
-                                       :class="['ph-fill ph-star text-2xl cursor-pointer star-btn transition-all', 
-                                                section.ratings[qIdx] >= star ? 'star-active scale-110' : 'text-gray-200 dark:text-gray-800']">
-                                    </i>
-                                </div>
-                                <div class="text-3xl grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all cursor-default" :id="'emoji-' + sIdx + '-' + qIdx" v-text="emojis[section.ratings[qIdx]]">
-                                </div>
+                <!-- Desktop Step Tabs (Clickable for Completed Steps) -->
+                <div class="hidden sm:grid grid-cols-6 gap-2 mt-4">
+                    <button type="button" 
+                            v-for="(label, idx) in stepLabels" 
+                            :key="idx"
+                            @click="goToStep(idx)"
+                            :disabled="idx > maxVisitedStep"
+                            :class="[
+                                'py-2 px-2 rounded-xl text-[9px] font-black uppercase tracking-tight text-center transition-all border flex items-center justify-center gap-1 truncate',
+                                currentStep === idx 
+                                    ? 'bg-pup-maroon text-white dark:bg-pup-gold dark:text-black border-transparent shadow-sm' 
+                                    : (idx < currentStep || isCategoryComplete(idx)
+                                        ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800/40 cursor-pointer' 
+                                        : 'bg-gray-50 dark:bg-white/5 text-gray-400 dark:text-gray-600 border-transparent cursor-not-allowed')
+                            ]">
+                        <i v-if="idx < 5 && isCategoryComplete(idx)" class="ph-fill ph-check-circle text-xs shrink-0"></i>
+                        <span class="truncate">[[ label ]]</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 🟢 STEP VIEW: CATEGORIES I to V (Rating Statements) 🟢 -->
+            <div v-if="currentStep < 5" class="transition-opacity duration-300">
+                <!-- Current Category Header -->
+                <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-gray-800">
+                    <h3 class="text-base sm:text-lg font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.15em] flex items-center gap-2">
+                        <span class="w-2.5 h-6 bg-pup-maroon dark:bg-pup-gold rounded-full inline-block"></span>
+                        [[ evaluationData[currentStep].category ]]
+                    </h3>
+                    <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                        [[ getCategoryRatedCount(currentStep) ]] of 5 Rated
+                    </span>
+                </div>
+
+                <!-- 5 Questions in Active Category -->
+                <div class="space-y-4 mb-8">
+                    <div v-for="(q, qIdx) in evaluationData[currentStep].questions" :key="qIdx" 
+                         class="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 transition-all hover:shadow-md">
+                        <p class="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 sm:w-2/3 leading-relaxed">
+                            <span class="text-pup-maroon dark:text-pup-gold mr-2 font-black">[[ (currentStep * 5) + qIdx + 1 ]].</span>
+                            [[ q ]]
+                        </p>
+                        <div class="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 sm:w-1/3 shrink-0">
+                            <div class="flex items-center gap-1.5">
+                                <i v-for="star in 5" :key="star" 
+                                   @click="setRating(currentStep, qIdx, star)"
+                                   :class="['ph-fill ph-star text-2xl cursor-pointer star-btn transition-all', 
+                                            evaluationData[currentStep].ratings[qIdx] >= star ? 'star-active scale-110' : 'text-gray-200 dark:text-gray-700']">
+                                </i>
+                            </div>
+                            <div class="text-2xl sm:text-3xl transition-all select-none" 
+                                 :id="'emoji-' + currentStep + '-' + qIdx" 
+                                 v-text="emojis[evaluationData[currentStep].ratings[qIdx]]">
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Open-Ended Feedback Section -->
-            <div class="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800 rounded-[3rem] p-6 sm:p-10 mb-10 shadow-sm">
-                <h3 class="text-sm font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
-                    <i class="ph-fill ph-chat-centered-dots text-2xl"></i> Open-Ended Feedback
-                </h3>
-                
-                <div class="space-y-8">
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 mb-3 tracking-widest">1. What do you consider your most significant learning from the program?</label>
-                        <textarea v-model="feedback1" rows="3" placeholder="Type your realization here..." class="w-full bg-white dark:bg-[#050505] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold resize-none shadow-inner transition-all"></textarea>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 mb-3 tracking-widest">2. How will your learning impact your work or studies?</label>
-                        <textarea v-model="feedback2" rows="3" placeholder="Describe the impact on your academic journey..." class="w-full bg-white dark:bg-[#050505] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold resize-none shadow-inner transition-all"></textarea>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 mb-3 tracking-widest">3. Do you have any suggestions or comments to improve similar activities?</label>
-                        <textarea v-model="feedback3" rows="3" placeholder="How can we make this better next time?" class="w-full bg-white dark:bg-[#050505] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold resize-none shadow-inner transition-all"></textarea>
-                    </div>
+            <!-- 🟢 STEP VIEW: CATEGORY VI (Open-Ended Feedback) 🟢 -->
+            <div v-else-if="currentStep === 5" class="transition-opacity duration-300">
+                <div class="mb-6 flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-800">
+                    <span class="w-2.5 h-6 bg-pup-maroon dark:bg-pup-gold rounded-full inline-block"></span>
+                    <h3 class="text-base sm:text-lg font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.15em]">
+                        VI. Open-Ended Feedback
+                    </h3>
                 </div>
 
-                <p class="text-[9px] text-gray-400 mt-8 flex items-center gap-2 font-black uppercase tracking-widest">
-                    <i class="ph-fill ph-robot text-pup-maroon dark:text-pup-gold text-lg"></i> Responses are cross-referenced via NLP Sentiment Analysis.
-                </p>
+                <div class="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 sm:p-8 mb-8 shadow-sm">
+                    <label class="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 mb-4 leading-relaxed">
+                        Please share any feedback, comments, or suggestions on how we can improve our future activities and events.
+                    </label>
+                    
+                    <textarea v-model="feedbackComment" 
+                              rows="6" 
+                              placeholder="Type your feedback, comments, or suggestions here..." 
+                              class="w-full bg-white dark:bg-[#050505] border border-gray-200 dark:border-gray-800 rounded-2xl p-5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold resize-none shadow-inner transition-all leading-relaxed"></textarea>
+                    
+                    <p class="text-[9px] text-gray-400 mt-4 flex items-center gap-2 font-black uppercase tracking-widest">
+                        <i class="ph-fill ph-robot text-pup-maroon dark:text-pup-gold text-lg"></i>
+                        Responses will be analyzed via NLP Sentiment Analysis (VADER Engine).
+                    </p>
+                </div>
             </div>
 
-            <!-- Submit Button -->
-            <button @click="submitEvaluation" :disabled="isSubmitting" class="w-full bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black py-5 px-8 rounded-2xl text-[11px] flex items-center justify-center gap-3 hover:opacity-90 active:scale-95 transition-all shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-[0.4em]">
-                <template v-if="isSubmitting">
-                    <i class="ph-bold ph-spinner animate-spin text-xl"></i> ANALYZING SENTIMENT...
-                </template>
-                <template v-else>
-                    <i class="ph-bold ph-paper-plane-tilt text-xl"></i> Finalize Evaluation Sync
-                </template>
-            </button>
+            <!-- 🟢 STEP NAVIGATION BUTTONS 🟢 -->
+            <div class="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <!-- Back Button (Available from Step 2 / index 1 onwards) -->
+                <button v-if="currentStep > 0" 
+                        type="button"
+                        @click="prevStep" 
+                        class="flex-1 sm:flex-initial py-4 px-6 sm:px-8 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm">
+                    <i class="ph-bold ph-arrow-left text-sm"></i>
+                    <span>Back</span>
+                </button>
+
+                <!-- Next Button (For Steps 0 to 4) -->
+                <button v-if="currentStep < 5" 
+                        type="button"
+                        @click="nextStep" 
+                        class="flex-[2] sm:flex-1 py-4 sm:py-5 px-6 sm:px-8 rounded-2xl bg-pup-maroon text-white dark:bg-pup-gold dark:text-black hover:opacity-90 active:scale-95 font-black text-[10px] sm:text-xs uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-2 shadow-xl ml-auto">
+                    <span>[[ currentStep === 4 ? 'Proceed to Feedback' : 'Next Category' ]]</span>
+                    <i class="ph-bold ph-arrow-right text-sm"></i>
+                </button>
+
+                <!-- Final Submit Button (Only on Step 5 / Category VI) -->
+                <button v-if="currentStep === 5" 
+                        type="button"
+                        @click="submitEvaluation" 
+                        :disabled="isSubmitting" 
+                        class="flex-[2] sm:flex-1 py-4 sm:py-5 px-6 sm:px-8 rounded-2xl bg-pup-maroon text-white dark:bg-pup-gold dark:text-black hover:opacity-90 active:scale-95 font-black text-[10px] sm:text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2 shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed ml-auto">
+                    <template v-if="isSubmitting">
+                        <i class="ph-bold ph-spinner animate-spin text-lg"></i>
+                        <span>ANALYZING SENTIMENT...</span>
+                    </template>
+                    <template v-else>
+                        <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
+                        <span>Finalize Evaluation Sync</span>
+                    </template>
+                </button>
+            </div>
 
         </div>
     </div>
@@ -118,14 +186,14 @@
     <!-- SUCCESS MODAL -->
     <div v-if="showSuccessModal" class="fixed inset-0 z-[5000] flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/90 backdrop-blur-md"></div>
-        <div class="relative bg-white dark:bg-pup-darkcard rounded-[3rem] p-10 sm:p-14 max-w-md w-full text-center shadow-2xl border border-gray-100 dark:border-gray-800 animate-success-in">
-            <div class="w-28 h-28 bg-green-50 dark:bg-green-900/20 text-green-500 dark:text-green-400 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-sm border border-green-100 dark:border-green-900/30">
-                <i class="ph-fill ph-check-circle text-7xl"></i>
+        <div class="relative bg-white dark:bg-pup-darkcard rounded-[3rem] p-8 sm:p-14 max-w-md w-full text-center shadow-2xl border border-gray-100 dark:border-gray-800 animate-success-in">
+            <div class="w-24 h-24 sm:w-28 sm:h-28 bg-green-50 dark:bg-green-900/20 text-green-500 dark:text-green-400 rounded-[2rem] flex items-center justify-center mx-auto mb-6 sm:mb-8 shadow-sm border border-green-100 dark:border-green-900/30">
+                <i class="ph-fill ph-check-circle text-6xl sm:text-7xl"></i>
             </div>
-            <h2 class="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-3 leading-none">Sync Successful!</h2>
-            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-[0.2em] mb-10">Your feedback has been analyzed and recorded in the Institutional Ledger.</p>
-            <button @click="redirectToLedger" class="w-full py-5 bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black rounded-2xl uppercase tracking-[0.3em] shadow-2xl hover:opacity-90 active:scale-95 transition-all text-[11px]">
-                Return to Ledger
+            <h2 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-3 leading-none">Sync Successful!</h2>
+            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-[0.2em] mb-8 sm:mb-10">Your feedback has been analyzed and recorded in the Institutional Ledger.</p>
+            <button @click="redirectToLedger" class="w-full py-4 sm:py-5 bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black rounded-2xl uppercase tracking-[0.3em] shadow-2xl hover:opacity-90 active:scale-95 transition-all text-[11px]">
+                Return to Evaluation Hub
             </button>
         </div>
     </div>
@@ -137,18 +205,19 @@
     // 🟢 INTEGRATE INTO STUDENT BASE VUE APP 🟢
     window.VUE_APP_DATA = {
         currentId: sessionStorage.getItem('eval_event_id'),
-        currentTitle: sessionStorage.getItem('eval_event_title') || "General Event Evaluation",
-        currentImg: sessionStorage.getItem('eval_event_img') || "{% static 'images/background.jpg' %}",
-        feedback1: '',
-        feedback2: '',
-        feedback3: '',
+        currentTitle: sessionStorage.getItem('eval_event_title') || sessionStorage.getItem('currentEvalTitle') || "General Event Evaluation",
+        currentImg: sessionStorage.getItem('eval_event_img') || sessionStorage.getItem('currentEvalImg') || "{% static 'images/background.jpg' %}",
+        currentStep: 0,
+        maxVisitedStep: 0,
+        feedbackComment: '',
         isSubmitting: false,
         showSuccessModal: false,
         finalRating: 0,
         emojis: ['😐', '😡', '😟', '😐', '🙂', '🤩'],
+        stepLabels: ['I. Mgmt', 'II. Goals', 'III. Provisions', 'IV. Team', 'V. Logistics', 'VI. Feedback'],
         evaluationData: [
             {
-                category: "Program Management & Organization",
+                category: "I. Program Management & Organization",
                 questions: [
                     "The activity/program was delivered as planned.",
                     "The activity/program was managed efficiently.",
@@ -159,43 +228,43 @@
                 ratings: [0, 0, 0, 0, 0]
             },
             {
-                category: "Attainment of Objectives",
+                category: "II. Attainment of Objectives",
                 questions: [
-                    "The program objectives were clearly presented at the beginning.",
+                    "The purpose or goal of the event was clear to the attendees.",
                     "The stated program objectives were successfully attained.",
                     "The topics or activities were highly relevant to the attendees.",
                     "The activity met my personal or academic expectations.",
-                    "The main takeaways or key points were clearly highlighted."
+                    "The event successfully delivered its intended value and significance to the attendees."
                 ],
                 ratings: [0, 0, 0, 0, 0]
             },
             {
-                category: "Provision of Support Materials",
+                category: "III. Resources & Event Provisions",
                 questions: [
-                    "The support materials provided were appropriate to my needs.",
-                    "The resources and information shared were adequate.",
-                    "The materials were given on time or readily accessible.",
-                    "The visual aids, handouts, or presentation slides were clear.",
-                    "The content of the materials helped me understand the event better."
+                    "The resources, equipment, or materials provided for the event were appropriate and sufficient.",
+                    "The necessary information and guidelines for the event were clearly communicated beforehand.",
+                    "The resources/materials needed by the attendees were accessible and provided on time.",
+                    "The visual, audio, or physical setups effectively supported the activities.",
+                    "The overall provisions contributed to a better experience of the event."
                 ],
                 ratings: [0, 0, 0, 0, 0]
             },
             {
-                category: "Program/Activity Management Team",
+                category: "IV. Program/Activity Management Team",
                 questions: [
                     "The facilitators/organizers were present when needed.",
                     "The facilitators/organizers were courteous and approachable.",
                     "The facilitators/organizers were efficient in their roles.",
                     "The team was responsive to the needs and questions of attendees.",
-                    "The speakers or lead facilitators demonstrated clear mastery of their assigned topics."
+                    "The event heads, speakers, or facilitators performed their roles effectively and with expertise."
                 ],
                 ratings: [0, 0, 0, 0, 0]
             },
             {
-                category: "Venue & Platform Logistics",
+                category: "V. Venue & Platform Logistics",
                 questions: [
                     "The venue/platform had sufficient space or capacity for all attendees.",
-                    "The audio and visual equipment (or stream quality) functioned properly.",
+                    "The technical equipment (audio, visual, or stream quality) functioned properly.",
                     "The environment was conducive and free from unnecessary distractions.",
                     "The overall setup (ventilation, lighting, or online interface) was comfortable.",
                     "The venue/platform was highly accessible and easy to navigate."
@@ -206,14 +275,13 @@
     };
 
     window.VUE_APP_METHODS = {
-        getGlobalIndex(sIdx, qIdx) {
-            let count = 0;
-            if (this.evaluationData) {
-                for(let i=0; i<sIdx; i++) {
-                    count += this.evaluationData[i].questions.length;
-                }
-            }
-            return count + qIdx + 1;
+        getCategoryRatedCount(catIdx) {
+            if (!this.evaluationData || !this.evaluationData[catIdx]) return 0;
+            return this.evaluationData[catIdx].ratings.filter(r => r > 0).length;
+        },
+        isCategoryComplete(catIdx) {
+            if (catIdx >= 5) return this.feedbackComment && this.feedbackComment.trim().length > 0;
+            return this.getCategoryRatedCount(catIdx) === 5;
         },
         setRating(sIdx, qIdx, val) {
             this.evaluationData[sIdx].ratings[qIdx] = val;
@@ -222,23 +290,72 @@
             const elId = `emoji-${sIdx}-${qIdx}`;
             this.$nextTick(() => {
                 const el = document.getElementById(elId);
-                if(el) {
-                    el.classList.add('animate-bounce', 'grayscale-0', 'opacity-100');
-                    el.classList.remove('grayscale', 'opacity-40');
-                    setTimeout(() => el.classList.remove('animate-bounce'), 500);
+                if (el) {
+                    el.classList.add('animate-bounce', 'scale-125');
+                    setTimeout(() => el.classList.remove('animate-bounce', 'scale-125'), 400);
+                }
+            });
+        },
+        nextStep() {
+            if (this.currentStep < 5) {
+                const unratedCount = 5 - this.getCategoryRatedCount(this.currentStep);
+                if (unratedCount > 0) {
+                    alert(`Please provide a rating for all 5 statements in ${this.evaluationData[this.currentStep].category} before proceeding.`);
+                    return;
+                }
+                this.currentStep++;
+                if (this.currentStep > this.maxVisitedStep) {
+                    this.maxVisitedStep = this.currentStep;
+                }
+                this.scrollToFormTop();
+            }
+        },
+        prevStep() {
+            if (this.currentStep > 0) {
+                this.currentStep--;
+                this.scrollToFormTop();
+            }
+        },
+        goToStep(idx) {
+            if (idx <= this.maxVisitedStep) {
+                this.currentStep = idx;
+                this.scrollToFormTop();
+            }
+        },
+        scrollToFormTop() {
+            this.$nextTick(() => {
+                const wrapper = document.getElementById('evaluationCardWrapper');
+                if (wrapper) {
+                    const topPos = wrapper.getBoundingClientRect().top + window.pageYOffset - 80;
+                    window.scrollTo({ top: topPos, behavior: 'smooth' });
                 }
             });
         },
         async submitEvaluation() {
-            // Check if all questions are answered
-            let allAnswered = true;
+            // Check that all 25 questions across categories 1 to 5 are rated
+            for (let i = 0; i < 5; i++) {
+                if (this.getCategoryRatedCount(i) < 5) {
+                    alert(`Please complete the ratings for Category ${i + 1} (${this.evaluationData[i].category}) before submitting.`);
+                    this.currentStep = i;
+                    this.scrollToFormTop();
+                    return;
+                }
+            }
+
+            // Check that open-ended feedback is provided
+            if (!this.feedbackComment || this.feedbackComment.trim() === '') {
+                alert("Please share your feedback, comments, or suggestions before submitting.");
+                return;
+            }
+
+            this.isSubmitting = true;
+
             let totalScore = 0;
             let categoryScores = [];
 
             this.evaluationData.forEach(section => {
                 let sectionSum = 0;
                 section.ratings.forEach(r => {
-                    if(r === 0) allAnswered = false;
                     sectionSum += r;
                     totalScore += r;
                 });
@@ -249,31 +366,15 @@
                 });
             });
 
-            if(!allAnswered) {
-                alert("Please provide a rating for ALL 25 questions before submitting.");
-                return;
-            }
-
-            if(!this.feedback1 || !this.feedback2 || !this.feedback3) {
-                alert("Please answer all open-ended feedback questions.");
-                return;
-            }
-
-            this.isSubmitting = true;
-
             const finalAvg = (totalScore / 25);
             this.finalRating = finalAvg;
-
-            // Combine open-ended feedback
-            const combinedFeedback = `Learning: ${this.feedback1}\nImpact: ${this.feedback2}\nSuggestions: ${this.feedback3}`;
 
             const formData = new FormData();
             formData.append('event_id', this.currentId);
             formData.append('event_title', this.currentTitle);
             formData.append('rating', finalAvg.toFixed(1));
-            formData.append('comments', combinedFeedback);
-            
-            // Send additional analytical data
+            formData.append('comments', this.feedbackComment.trim());
+            formData.append('feedback', this.feedbackComment.trim());
             formData.append('detailed_scores', JSON.stringify(categoryScores));
             formData.append('total_raw_score', totalScore);
 
@@ -299,11 +400,6 @@
                 alert("Institutional Sync Error: Connection failed. Make sure you are logged in.");
                 this.isSubmitting = false;
             }
-        },
-        getStarClass(i, rating) {
-            if(i <= Math.floor(rating)) return 'ph-fill ph-star';
-            if(i === Math.ceil(rating) && rating % 1 !== 0) return 'ph-fill ph-star-half';
-            return 'ph ph-star text-gray-200 dark:text-gray-800';
         },
         redirectToLedger() {
             window.location.href = "{% url 'student_evaluation' %}";

@@ -286,9 +286,13 @@
                     <div class="w-24 h-24 sm:h-40 sm:w-full shrink-0 relative bg-gray-100 dark:bg-gray-800 flex items-center justify-center border-r sm:border-r-0 sm:border-b border-gray-100 dark:border-gray-800 overflow-hidden">
                         <img src="${e.image}" class="event-card-img w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" onerror="this.src=DEFAULT_IMG; this.classList.remove('object-cover'); this.classList.add('object-contain', 'p-4 sm:p-6');">
                     </div>
-                    <div class="absolute top-2 left-2 z-10">
-                        <span class="text-white text-[7px] px-2 py-1 rounded-full font-black uppercase tracking-widest shadow-2xl countdown-small status-upcoming flex items-center gap-0.5 max-w-full whitespace-nowrap overflow-hidden" data-event-id="${e.id}">
-                            <i class="ph-bold ph-clock shrink-0"></i><span class="truncate">--:--:--</span>
+                    <!-- 🟢 DUAL STATUS BADGES (TIME IN & TIME OUT) 🟢 -->
+                    <div class="absolute top-2 left-2 z-10 flex flex-col gap-1 max-w-[90%] pointer-events-none">
+                        <span class="badge-time-in text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md" data-event-id="${e.id}">
+                            <i class="ph-bold ph-sign-in shrink-0"></i><span class="truncate">IN • --:--:--</span>
+                        </span>
+                        <span class="badge-time-out text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md" data-event-id="${e.id}">
+                            <i class="ph-bold ph-sign-out shrink-0"></i><span class="truncate">OUT • --:--:--</span>
                         </span>
                     </div>
                     <div class="p-3 sm:p-4 flex flex-col w-full min-w-0 flex-grow">
@@ -297,7 +301,7 @@
                         <div class="flex items-center justify-between pt-2 sm:pt-3 border-t border-gray-50 dark:border-gray-800 mt-auto">
                             <p class="text-[7px] sm:text-[8px] text-gray-400 flex items-center gap-1 font-bold uppercase tracking-widest truncate"><i class="ph-fill ph-map-pin text-pup-maroon dark:text-pup-gold"></i> <span class="truncate">${e.venue}</span></p>
                             <div class="flex items-center gap-2">
-                                ${e.already_attended ? '<i class="ph-fill ph-check-circle text-green-500 text-sm sm:text-base"></i>' : '<i class="ph-bold ph-caret-right text-gray-300 group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-all group-hover:translate-x-1 text-sm sm:text-base"></i>'}
+                                ${e.has_timed_out ? '<i class="ph-fill ph-check-circle text-green-500 text-sm sm:text-base" title="Attendance Completed"></i>' : (e.already_attended ? '<i class="ph-bold ph-clock-countdown text-amber-500 text-sm sm:text-base" title="Time In Recorded"></i>' : '<i class="ph-bold ph-caret-right text-gray-300 group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-all group-hover:translate-x-1 text-sm sm:text-base"></i>')}
                             </div>
                         </div>
                     </div>
@@ -310,98 +314,143 @@
 
         function updateAllCountdowns() {
             const now = new Date();
-            document.querySelectorAll('.countdown-small').forEach(el => {
+
+            // 1. UPDATE TIME IN BADGES (Start time + 1 hour grace)
+            document.querySelectorAll('.badge-time-in').forEach(el => {
                 const e = EVENTS_DATA.find(evt => evt.id == el.dataset.eventId);
                 if (!e) return;
                 const start = new Date(`${e.date}T${e.start_time_iso}`);
-                let expiry = e.end_time_iso ? new Date(`${e.date}T${e.end_time_iso}`) : new Date(start.getTime() + (4 * 3600000));
-                expiry = new Date(expiry.getTime() + (60 * 60000)); // Buffer 1hr
+                const timeInClose = new Date(start.getTime() + (60 * 60 * 1000));
 
-                const diffStart = start - now;
-                const diffExpiry = expiry - now;
-
-                if (e.has_timed_out) {
-                    el.innerHTML = `<i class="ph-fill ph-check-circle shrink-0"></i><span class="truncate">COMPLETED</span>`;
-                    el.className = "text-white text-[7px] sm:text-[9px] px-2 py-1 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest shadow-2xl countdown-small status-completed whitespace-nowrap flex items-center gap-0.5 sm:gap-1 max-w-full overflow-hidden";
-                } else if (e.already_attended) {
-                    const endISO = e.end_time_iso ? `${e.date}T${e.end_time_iso}` : null;
-                    const endDt = endISO ? new Date(endISO) : null;
-                    const timeoutStart = endDt ? new Date(endDt.getTime() - (15 * 60000)) : null;
-                    const timeoutExpiry = endDt ? new Date(endDt.getTime() + (3 * 3600000)) : null;
-
-                    if (timeoutStart && now < timeoutStart) {
-                        const diffOutStart = timeoutStart - now;
-                        el.innerHTML = `<i class="ph-bold ph-hourglass shrink-0"></i><span class="truncate">WAITING • ${formatTimeDiff(diffOutStart)}</span>`;
-                        el.className = "text-white text-[7px] sm:text-[9px] px-2 py-1 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest shadow-2xl countdown-small status-upcoming whitespace-nowrap flex items-center gap-0.5 sm:gap-1 max-w-full overflow-hidden";
-                    } else if (timeoutExpiry && now < timeoutExpiry) {
-                        const diffOutExpiry = timeoutExpiry - now;
-                        el.innerHTML = `<i class="ph-fill ph-broadcast animate-pulse shrink-0"></i><span class="truncate">TIME OUT • ${formatTimeDiff(diffOutExpiry)}</span>`;
-                        el.className = "text-white text-[7px] sm:text-[9px] px-2 py-1 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest shadow-2xl countdown-small status-ongoing animate-pulse whitespace-nowrap flex items-center gap-0.5 sm:gap-1 max-w-full overflow-hidden";
-                    } else {
-                        el.innerHTML = `<i class="ph-bold ph-lock shrink-0"></i><span class="truncate">OUT EXPIRED</span>`;
-                        el.className = "text-white text-[7px] sm:text-[9px] px-2 py-1 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest shadow-2xl countdown-small status-ended whitespace-nowrap flex items-center gap-0.5 sm:gap-1 max-w-full overflow-hidden";
-                    }
-                } else if (diffStart > 0) {
-                    el.innerHTML = `<i class="ph-bold ph-hourglass shrink-0"></i><span class="truncate">${formatTimeDiff(diffStart)}</span>`;
-                    el.className = "text-white text-[7px] sm:text-[9px] px-2 py-1 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest shadow-2xl countdown-small status-upcoming whitespace-nowrap flex items-center gap-0.5 sm:gap-1 max-w-full overflow-hidden";
-                } else if (diffExpiry > 0) {
-                    el.innerHTML = `<i class="ph-fill ph-broadcast animate-pulse shrink-0"></i><span class="truncate">ACTIVE • ${formatTimeDiff(diffExpiry)}</span>`;
-                    el.className = "text-white text-[7px] sm:text-[9px] px-2 py-1 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest shadow-2xl countdown-small status-ongoing animate-pulse whitespace-nowrap flex items-center gap-0.5 sm:gap-1 max-w-full overflow-hidden";
+                if (e.already_attended) {
+                    el.innerHTML = `<i class="ph-fill ph-check-circle shrink-0"></i><span class="truncate">TIME IN SUCCESS</span>`;
+                    el.className = "badge-time-in text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg bg-green-600/90 border border-green-400/40 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else if (now < start) {
+                    const diffStart = start - now;
+                    el.innerHTML = `<i class="ph-bold ph-clock shrink-0"></i><span class="truncate">TIME IN • IN ${formatTimeDiff(diffStart)}</span>`;
+                    el.className = "badge-time-in text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg bg-black/60 border border-white/20 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else if (now <= timeInClose) {
+                    const diffClose = timeInClose - now;
+                    el.innerHTML = `<i class="ph-fill ph-broadcast animate-pulse text-green-300 shrink-0"></i><span class="truncate">TIME IN OPEN • ${formatTimeDiff(diffClose)}</span>`;
+                    el.className = "badge-time-in text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg bg-green-700/90 border border-green-400/50 animate-pulse flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
                 } else {
-                    el.innerHTML = `<i class="ph-bold ph-lock shrink-0"></i><span class="truncate">CLOSED</span>`;
-                    el.className = "text-white text-[7px] sm:text-[9px] px-2 py-1 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest shadow-2xl countdown-small status-ended whitespace-nowrap flex items-center gap-0.5 sm:gap-1 max-w-full overflow-hidden";
+                    el.innerHTML = `<i class="ph-bold ph-x-circle text-red-300 shrink-0"></i><span class="truncate">TIME IN EXPIRED</span>`;
+                    el.className = "badge-time-in text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg bg-red-700/80 border border-red-400/40 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
                 }
             });
 
+            // 2. UPDATE TIME OUT BADGES (15 mins before end time up to 1 hour after end time)
+            document.querySelectorAll('.badge-time-out').forEach(el => {
+                const e = EVENTS_DATA.find(evt => evt.id == el.dataset.eventId);
+                if (!e) return;
+                const start = new Date(`${e.date}T${e.start_time_iso}`);
+                const end = e.end_time_iso ? new Date(`${e.date}T${e.end_time_iso}`) : new Date(start.getTime() + (4 * 3600000));
+                const timeoutStart = new Date(end.getTime() - (15 * 60 * 1000));
+                const timeoutExpiry = new Date(end.getTime() + (60 * 60 * 1000));
+
+                if (e.has_timed_out) {
+                    el.innerHTML = `<i class="ph-fill ph-check-circle shrink-0"></i><span class="truncate">TIME OUT SUCCESS</span>`;
+                    el.className = "badge-time-out text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg bg-green-600/90 border border-green-400/40 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else if (now < timeoutStart) {
+                    const diffOutStart = timeoutStart - now;
+                    el.innerHTML = `<i class="ph-bold ph-hourglass shrink-0"></i><span class="truncate">TIME OUT • IN ${formatTimeDiff(diffOutStart)}</span>`;
+                    el.className = "badge-time-out text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg bg-black/60 border border-white/20 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else if (now <= timeoutExpiry) {
+                    const diffOutExpiry = timeoutExpiry - now;
+                    el.innerHTML = `<i class="ph-fill ph-broadcast animate-pulse text-green-300 shrink-0"></i><span class="truncate">TIME OUT OPEN • ${formatTimeDiff(diffOutExpiry)}</span>`;
+                    el.className = "badge-time-out text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg bg-emerald-700/90 border border-emerald-400/50 animate-pulse flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else {
+                    el.innerHTML = `<i class="ph-bold ph-lock text-red-300 shrink-0"></i><span class="truncate">TIME OUT CLOSED</span>`;
+                    el.className = "badge-time-out text-white text-[7px] sm:text-[9px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-lg bg-red-700/80 border border-red-400/40 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                }
+            });
+
+            // 3. UPDATE PARTICIPATION MODAL
             if (currentEvent) {
                 const start = new Date(`${currentEvent.date}T${currentEvent.start_time_iso}`);
-                let expiry = currentEvent.end_time_iso ? new Date(`${currentEvent.date}T${currentEvent.end_time_iso}`) : new Date(start.getTime() + (4 * 3600000));
-                expiry = new Date(expiry.getTime() + (60 * 60000));
-                
-                const diffStart = start - now;
-                const diffExpiry = expiry - now;
+                const timeInClose = new Date(start.getTime() + (60 * 60 * 1000));
+                const end = currentEvent.end_time_iso ? new Date(`${currentEvent.date}T${currentEvent.end_time_iso}`) : new Date(start.getTime() + (4 * 3600000));
+                const timeoutStart = new Date(end.getTime() - (15 * 60 * 1000));
+                const timeoutExpiry = new Date(end.getTime() + (60 * 60 * 1000));
 
                 const modalCD = document.getElementById('modalCountdown');
                 const label = document.getElementById('countdownLabel');
                 const pBtn = document.getElementById('btnParticipateNow');
-                
-                if (currentEvent.has_timed_out) {
-                    label.innerText = "AUTHORIZATION STATUS"; modalCD.innerText = "ACTIVITY COMPLETE";
-                    pBtn.disabled = true; pBtn.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Record Finalized`;
-                } else if (currentEvent.already_attended) {
-                    // 🟢 SMART BUTTON: TIME OUT 🟢
-                    const endISO = currentEvent.end_time_iso ? `${currentEvent.date}T${currentEvent.end_time_iso}` : null;
-                    const endDt = endISO ? new Date(endISO) : null;
-                    const timeoutStart = endDt ? new Date(endDt.getTime() - (15 * 60000)) : null;
-                    const timeoutExpiry = endDt ? new Date(endDt.getTime() + (3 * 3600000)) : null;
 
-                    if (timeoutStart && now < timeoutStart) {
-                        label.innerText = "NEXT STEP"; modalCD.innerText = `WAITING FOR TIME OUT • ${formatTimeDiff(timeoutStart - now)}`;
-                        pBtn.disabled = true; pBtn.innerHTML = `<i class="ph-bold ph-timer text-xl"></i> UNLOCKS AT ${currentEvent.end_time}`;
-                    } else if (timeoutExpiry && now < timeoutExpiry) {
-                        label.innerText = "AUTHORIZATION STATUS"; modalCD.innerText = `READY FOR TIME OUT • ${formatTimeDiff(timeoutExpiry - now)}`;
-                        pBtn.disabled = false; pBtn.innerHTML = `<i class="ph-bold ph-sign-out text-xl"></i> Initialize Time Out`;
+                if (currentEvent.has_timed_out) {
+                    label.innerText = "ATTENDANCE STATUS";
+                    modalCD.innerText = "ATTENDANCE COMPLETE";
+                    pBtn.disabled = true;
+                    pBtn.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Record Finalized`;
+                } else if (now >= timeoutStart && now <= timeoutExpiry) {
+                    // TIME OUT ACTIVE (for students who timed in or late students)
+                    const diffOutExpiry = timeoutExpiry - now;
+                    label.innerText = "TIME OUT PORTAL OPEN";
+                    modalCD.innerText = `CLOSES IN ${formatTimeDiff(diffOutExpiry)}`;
+                    pBtn.disabled = false;
+                    pBtn.innerHTML = `<i class="ph-bold ph-sign-out text-xl"></i> Initialize Time Out`;
+                } else if (now >= start && now <= timeInClose) {
+                    // TIME IN ACTIVE
+                    if (currentEvent.already_attended) {
+                        const diffToOut = timeoutStart - now;
+                        label.innerText = "TIME IN RECORDED";
+                        modalCD.innerText = `TIME OUT IN ${formatTimeDiff(diffToOut)}`;
+                        pBtn.disabled = true;
+                        pBtn.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Time In Verified`;
                     } else {
-                        label.innerText = "AUTHORIZATION STATUS"; modalCD.innerText = "TIME OUT EXPIRED";
-                        pBtn.disabled = true; pBtn.innerHTML = `<i class="ph-bold ph-lock-key text-xl"></i> Time Out Window Closed`;
+                        const diffInClose = timeInClose - now;
+                        label.innerText = "TIME IN PORTAL OPEN";
+                        modalCD.innerText = `CLOSES IN ${formatTimeDiff(diffInClose)}`;
+                        pBtn.disabled = false;
+                        pBtn.innerHTML = `<i class="ph-bold ph-scan text-xl"></i> Initialize Biometric Scanner`;
                     }
-                } else if (diffStart > 0) {
-                    label.innerText = "AUTHORIZING IN"; modalCD.innerText = formatTimeDiff(diffStart);
-                    pBtn.disabled = true; pBtn.innerHTML = `<i class="ph-bold ph-lock-key text-xl"></i> UNLOCKS AT ${currentEvent.time}`;
-                } else if (diffExpiry > 0) {
-                    // 🟢 SMART BUTTON: TIME IN 🟢
-                    label.innerText = "AUTHORIZATION STATUS"; modalCD.innerText = `SYNC PORTAL OPEN • ${formatTimeDiff(diffExpiry)}`;
-                    pBtn.disabled = false; pBtn.innerHTML = `<i class="ph-bold ph-scan text-xl"></i> Initialize Biometric Scanner`;
+                } else if (now < start) {
+                    // BEFORE EVENT STARTS
+                    const diffStart = start - now;
+                    label.innerText = "AUTHORIZING IN";
+                    modalCD.innerText = formatTimeDiff(diffStart);
+                    pBtn.disabled = true;
+                    pBtn.innerHTML = `<i class="ph-bold ph-lock-key text-xl"></i> UNLOCKS AT ${currentEvent.time}`;
+                } else if (now > timeInClose && now < timeoutStart) {
+                    // IN BETWEEN TIME IN AND TIME OUT
+                    const diffToOut = timeoutStart - now;
+                    if (currentEvent.already_attended) {
+                        label.innerText = "TIME IN RECORDED";
+                        modalCD.innerText = `TIME OUT IN ${formatTimeDiff(diffToOut)}`;
+                        pBtn.disabled = true;
+                        pBtn.innerHTML = `<i class="ph-bold ph-timer text-xl"></i> TIME OUT AT ${formatClockTime(timeoutStart)}`;
+                    } else {
+                        label.innerText = "TIME IN EXPIRED";
+                        modalCD.innerText = `TIME OUT IN ${formatTimeDiff(diffToOut)}`;
+                        pBtn.disabled = true;
+                        pBtn.innerHTML = `<i class="ph-bold ph-timer text-xl"></i> TIME OUT AT ${formatClockTime(timeoutStart)}`;
+                    }
                 } else {
-                    label.innerText = "AUTHORIZATION STATUS"; modalCD.innerText = "ACCESS EXPIRED";
-                    pBtn.disabled = true; pBtn.innerHTML = `<i class="ph-bold ph-lock-key text-xl"></i> Access Closed`;
+                    // CONCLUDED
+                    label.innerText = "ACTIVITY STATUS";
+                    modalCD.innerText = "PORTAL CLOSED";
+                    pBtn.disabled = true;
+                    pBtn.innerHTML = `<i class="ph-bold ph-lock-key text-xl"></i> Activity Concluded`;
                 }
             }
         }
 
         function formatTimeDiff(ms) {
-            const h = Math.floor(ms / 3600000); const m = Math.floor((ms % 3600000) / 60000); const s = Math.floor((ms % 60000) / 1000);
+            if (ms <= 0) return '00:00:00';
+            const totalSecs = Math.floor(ms / 1000);
+            const d = Math.floor(totalSecs / 86400);
+            const h = Math.floor((totalSecs % 86400) / 3600);
+            const m = Math.floor((totalSecs % 3600) / 60);
+            const s = totalSecs % 60;
+            if (d > 0) {
+                return `${d}d ${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`;
+            }
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function formatClockTime(d) {
+            if (!d) return '--:--';
+            return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
         }
 
         setInterval(updateAllCountdowns, 1000);
