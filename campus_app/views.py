@@ -5760,23 +5760,9 @@ def custom_404_view(request, exception=None):
 
 def org_selection_view(request):
     """
-    Renders the non-academic organization selection page for students.
-    Can be accessed via welcome email link (with ?student_id=...) or directly.
+    Deprecated: Redirects to home/login page as organization assignment is now handled directly by student organizations.
     """
-    student_id = request.GET.get('student_id', '').strip()
-    student_obj = None
-    if request.user.is_authenticated and Student.objects.filter(user=request.user).exists():
-        student_obj = Student.objects.get(user=request.user)
-        student_id = student_obj.student_number
-    elif student_id:
-        student_obj = Student.objects.filter(student_number__iexact=student_id).first()
-        if not student_obj and student_id.isdigit():
-            student_obj = Student.objects.filter(id=student_id).first()
-        
-    return render(request, 'org_selection.html', {
-        'student_id': student_id,
-        'student': student_obj
-    })
+    return redirect('/')
 
 def submit_org_selection_api(request):
     """

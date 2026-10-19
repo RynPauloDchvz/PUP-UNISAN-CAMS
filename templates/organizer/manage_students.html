@@ -120,35 +120,20 @@
     </div>
 
     <div class="mb-6 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center sm:justify-end font-sans relative z-30">
-        <!-- 🟢 1ST ROW ON MOBILE: SEARCHBAR + SQUARE ADD BUTTON (ON DESKTOP: SEARCHBAR) 🟢 -->
-        <div class="flex items-center gap-2 sm:gap-0 w-full sm:w-80 md:w-96 shrink-0">
-            <div class="relative flex-1 w-full">
+        <!-- 🟢 1ST ROW ON MOBILE: SEARCHBAR (ON DESKTOP: SEARCHBAR) 🟢 -->
+        <div class="w-full sm:w-80 md:w-96 shrink-0">
+            <div class="relative w-full">
                 <i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"></i>
                 <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search student name or number..." class="w-full bg-white dark:bg-pup-darkcard border border-gray-200 dark:border-gray-800 shadow-sm text-sm rounded-xl h-[46px] pl-11 pr-4 focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold text-gray-900 dark:text-white transition-colors">
             </div>
-            
-            <!-- Mobile-only Square Add Student Button -->
-            <button type="button" onclick="openCreateStudentModal()" class="sm:hidden w-[46px] h-[46px] shrink-0 flex items-center justify-center rounded-xl bg-pup-maroon text-white dark:bg-pup-gold dark:text-black shadow-sm hover:opacity-90 transition-opacity" title="Create Student Account">
-                <i class="ph-bold ph-user-plus text-xl"></i>
-            </button>
         </div>
         
-        <!-- 🟢 2ND ROW ON MOBILE: PENDING + YEAR LEVEL (ON DESKTOP: CREATE + PENDING + YEAR) 🟢 -->
+        <!-- 🟢 2ND ROW ON MOBILE: CREATE STUDENT + DROPDOWN (ON DESKTOP: CREATE + DROPDOWN BESIDE SEARCHBAR) 🟢 -->
         <div class="flex flex-row items-center w-full sm:w-auto gap-3 sm:gap-4 shrink-0 z-40">
-            <!-- Desktop Create Student Button (Right of Searchbar, beside Pending Approvals) -->
-            <button type="button" onclick="openCreateStudentModal()" class="hidden sm:flex items-center justify-center gap-2 bg-pup-maroon text-white dark:bg-pup-gold dark:text-black hover:opacity-90 px-4 h-[46px] rounded-xl font-bold text-sm transition-opacity shadow-sm border border-transparent whitespace-nowrap" title="Create Student Account">
+            <!-- Create Student Account Button -->
+            <button type="button" onclick="openCreateStudentModal()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-pup-maroon text-white dark:bg-pup-gold dark:text-black hover:opacity-90 px-4 h-[46px] rounded-xl font-bold text-sm transition-opacity shadow-sm border border-transparent whitespace-nowrap" title="Create Student Account">
                 <i class="ph-bold ph-user-plus text-lg"></i>
                 <span>Create Student</span>
-            </button>
-
-            <!-- Pending Approvals Button -->
-            <button type="button" onclick="openPendingModal()" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-pup-maroon text-white dark:bg-pup-gold dark:text-black hover:opacity-90 px-4 h-[46px] rounded-xl font-bold text-sm transition-opacity shadow-sm relative border border-transparent whitespace-nowrap">
-                <i class="ph-bold ph-users text-lg"></i>
-                <span class="hidden sm:inline">Pending Approvals</span>
-                <span class="sm:hidden">Pending</span>
-                {% if pending_students|length > 0 %}
-                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md">{{ pending_students|length }}</span>
-                {% endif %}
             </button>
 
             <input type="hidden" id="yearFilter" value="All">
@@ -239,92 +224,7 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- PENDING APPROVALS MODAL -->
-<!-- ========================================== -->
-<div id="pendingModal" class="hidden fixed inset-0 z-[4500] flex items-center justify-center p-4 font-sans">
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closePendingModal()"></div>
-    
-    <div class="relative bg-white dark:bg-[#151515] rounded-[2.5rem] shadow-2xl w-full max-w-4xl mx-auto flex flex-col max-h-[90vh] border border-gray-200 dark:border-gray-800 z-10 overflow-hidden">
-        
-        <!-- Header -->
-        <div class="bg-gray-50 dark:bg-[#111] p-5 sm:p-6 flex justify-between items-center border-b border-gray-200 dark:border-gray-800 shrink-0">
-            <h3 class="font-black text-gray-900 dark:text-white uppercase tracking-wide flex items-center gap-2 text-lg sm:text-xl">
-                <i class="ph-bold ph-users text-2xl text-yellow-500"></i> Pending Approvals
-            </h3>
-            <button type="button" onclick="closePendingModal()" class="text-gray-500 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center bg-gray-200 dark:bg-gray-800 rounded-full">
-                <i class="ph-bold ph-x text-lg"></i>
-            </button>
-        </div>
 
-        <!-- Table Content (Scrollable) -->
-        <div class="overflow-y-auto hide-scrollbar flex-grow bg-white dark:bg-[#151515]">
-            <!-- Desktop Header -->
-            <div class="hidden sm:grid grid-cols-12 gap-4 p-4 bg-gray-50 dark:bg-[#111] border-b border-gray-200 dark:border-gray-800 text-xs font-bold text-gray-500 uppercase tracking-wider sticky top-0 z-20 shadow-sm">
-                <div class="col-span-5">Student Information</div>
-                <div class="col-span-3">Student Number</div>
-                <div class="col-span-2 text-center">Year Level</div>
-                <div class="col-span-2 text-center">Action</div>
-            </div>
-
-            <div class="divide-y divide-gray-100 dark:divide-gray-800">
-                {% for student in pending_students %}
-                <div class="pending-student-item flex flex-row items-start sm:items-center sm:grid sm:grid-cols-12 gap-3 sm:gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
-                     data-id="{{ student.id }}"
-                     data-name="{{ student.full_name }}"
-                     data-search="{{ student.full_name|lower }} {{ student.student_number|lower }}"
-                     data-number="{{ student.student_number }}"
-                     data-year="{{ student.year_level }}"
-                     data-birth="{% if student.birthdate %}{{ student.birthdate|date:'M d, Y' }}{% else %}Not Set{% endif %}"
-                     data-avatar="{% if student.profile_picture %}{{ student.profile_picture.url }}{% else %}{% static 'images/student.jpg' %}{% endif %}"
-                     data-cover="{% if student.cover_photo %}{{ student.cover_photo.url }}{% else %}{% static 'images/background.jpg' %}{% endif %}"
-                     data-org="{{ student.organization }}"
-                     data-status="pending"
-                     onclick="handleRowClick(this)">
-                    
-                    <!-- IDENTITY: Avatar + Name + Email -->
-                    <div class="flex items-center gap-3 flex-1 sm:col-span-5 min-w-0">
-                        <img src="{% if student.profile_picture %}{{ student.profile_picture.url }}{% else %}{% static 'images/student.jpg' %}{% endif %}" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover shrink-0 border border-gray-200 dark:border-gray-700">
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                <p class="font-bold text-gray-900 dark:text-white leading-tight truncate text-sm sm:text-base">{{ student.full_name }}</p>
-                                {% if student.organization|upper != org_acronym|upper %}
-                                <span class="inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
-                                    Affiliation ({{ student.organization }})
-                                </span>
-                                {% endif %}
-                            </div>
-                            <p class="text-[10px] sm:text-xs text-gray-500 truncate mt-0.5">{{ student.email_address }}</p>
-                        </div>
-                    </div>
-
-                    <!-- DESKTOP ONLY: Grid Columns -->
-                    <div class="hidden sm:block sm:col-span-3 text-sm font-bold text-pup-maroon dark:text-pup-gold">{{ student.student_number }}</div>
-                    <div class="hidden sm:block sm:col-span-2 text-center text-sm text-gray-600 dark:text-gray-400">{{ student.year_level }}</div>
-                    <div class="hidden sm:block sm:col-span-2 text-center">
-                        <span class="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold shadow-sm">Review</span>
-                    </div>
-
-                    <!-- MOBILE ONLY: Vertical Stack (Badge, Number, Year) -->
-                    <div class="flex flex-col items-end gap-1 sm:hidden shrink-0 mt-0.5">
-                        <span class="inline-block px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-[9px] font-black uppercase tracking-tighter">Review</span>
-                        <div class="text-[10px] font-black text-pup-maroon dark:text-pup-gold leading-none mt-1">{{ student.student_number }}</div>
-                        <div class="text-[9px] font-bold text-gray-500 uppercase leading-none mt-0.5">{{ student.year_level }}</div>
-                    </div>
-                </div>
-                {% empty %}
-                    <div class="text-center py-16">
-                        <div class="w-20 h-20 bg-gray-50 dark:bg-[#111] rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-                            <i class="ph-bold ph-users text-4xl text-gray-300 dark:text-gray-700"></i>
-                        </div>
-                        <h3 class="font-black text-xl text-gray-900 dark:text-white uppercase tracking-tight">No pending requests</h3>
-                        <p class="text-sm text-gray-500 mt-2">There are no new registrations for {{ org_acronym }}.</p>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- ========================================== -->
 <!-- STYLIZED STUDENT MODAL (REFINED DESIGN) -->
@@ -397,61 +297,7 @@
             </div>
         </div>
 
-        <!-- Action Area (Conditional for Pending Students) -->
-        <div id="modalActionArea" class="p-6 bg-gray-50 dark:bg-[#0a0a0a] border-t border-gray-200 dark:border-gray-800 flex gap-3 shrink-0">
-            <button type="button" onclick="triggerReject()" class="flex-1 py-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm uppercase tracking-widest">
-                Reject
-            </button>
-            <button type="button" onclick="triggerApprove()" class="flex-1 py-4 rounded-2xl bg-pup-maroon dark:bg-pup-gold text-white dark:text-black font-black hover:opacity-90 transition-opacity text-sm shadow-md uppercase tracking-widest">
-                Verify Member
-            </button>
-        </div>
-    </div>
-</div>
 
-<!-- Confirmation Modal -->
-<div id="confirmModal" class="hidden fixed inset-0 z-[6000] flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="hideConfirm()"></div>
-    <div class="relative bg-white dark:bg-[#151515] rounded-[2.5rem] shadow-2xl w-full max-w-xs mx-auto text-center p-10 z-10 border border-gray-200 dark:border-gray-800">
-        <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <i class="ph-fill ph-user-circle-plus text-4xl text-green-600 dark:text-green-500"></i>
-        </div>
-        <h2 class="text-xl font-black text-gray-900 dark:text-white leading-tight mb-2 uppercase tracking-tighter">Confirm Member?</h2>
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">This will grant access to organization events.</p>
-        
-        <form action="{% url 'approve_individual_student' %}" method="POST" class="flex flex-col gap-3">
-            {% csrf_token %}
-            <input type="hidden" name="student_id" id="confirmStudentId">
-            <button type="submit" class="w-full py-4 rounded-2xl bg-green-600 text-white font-black uppercase tracking-widest text-xs shadow-md">Confirm</button>
-            <button type="button" onclick="hideConfirm()" class="w-full py-4 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-black uppercase tracking-widest text-xs">Cancel</button>
-        </form>
-    </div>
-</div>
-
-<!-- Rejection Modal -->
-<div id="rejectModal" class="hidden fixed inset-0 z-[6000] flex items-center justify-center p-4 font-sans">
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="hideReject()"></div>
-    <div class="relative bg-white dark:bg-[#151515] rounded-[2.5rem] shadow-2xl w-full max-w-sm mx-auto p-8 z-10 border border-gray-200 dark:border-gray-800">
-        <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
-            <i class="ph-fill ph-user-circle-minus text-3xl text-red-600 dark:text-red-500"></i>
-        </div>
-        <h2 class="text-xl font-black text-gray-900 dark:text-white leading-tight mb-2 uppercase tracking-tighter">Reject Registration</h2>
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">Provide feedback. This will email the student and remove their record so they can register again.</p>
-        
-        <form action="{% url 'reject_individual_student' %}" method="POST" class="flex flex-col gap-4">
-            {% csrf_token %}
-            <input type="hidden" name="student_id" id="rejectStudentId">
-            <div>
-                <label class="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Rejection Reason (Feedback)</label>
-                <textarea name="reject_reason" rows="3" required placeholder="e.g. You selected the wrong program. Please register again..." class="w-full bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-gray-800 rounded-2xl p-4 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-red-500 transition-colors resize-none"></textarea>
-            </div>
-            <div class="flex gap-2 mt-2">
-                <button type="button" onclick="hideReject()" class="w-1/3 py-4 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-black uppercase tracking-widest text-xs">Cancel</button>
-                <button type="submit" class="flex-grow py-4 rounded-2xl bg-red-600 text-white font-black uppercase tracking-widest text-xs shadow-md hover:bg-red-700 transition-colors">Confirm Reject</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <!-- ========================================== -->
 <!-- 🟢 CREATE STUDENT MODAL (MANUAL & BULK) 🟢 -->
@@ -751,13 +597,6 @@
         document.getElementById('modalOrgText').innerText = org || '{{ org_acronym }}';
 
         // Action Buttons logic (Only for Pending)
-        const actionArea = document.getElementById('modalActionArea');
-        if(status === 'approved') {
-            actionArea.classList.add('hidden');
-        } else {
-            actionArea.classList.remove('hidden');
-        }
-
         // Show Modal with Animation
         const modal = document.getElementById('studentDetailModal');
         const box = document.getElementById('modalContainer');
@@ -783,42 +622,8 @@
         setTimeout(() => {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-            
-            const pendingModal = document.getElementById('pendingModal');
-            if(!pendingModal || pendingModal.classList.contains('hidden')) {
-                document.body.style.overflow = '';
-            }
-        }, 300);
-    }
-
-    function openPendingModal() {
-        document.getElementById('pendingModal').classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closePendingModal() {
-        document.getElementById('pendingModal').classList.add('hidden');
-        if(document.getElementById('studentDetailModal').classList.contains('hidden')) {
             document.body.style.overflow = '';
-        }
-    }
-
-    function triggerApprove() {
-        document.getElementById('confirmStudentId').value = currentId;
-        document.getElementById('confirmModal').classList.remove('hidden');
-    }
-
-    function hideConfirm() {
-        document.getElementById('confirmModal').classList.add('hidden');
-    }
-
-    function triggerReject() {
-        document.getElementById('rejectStudentId').value = currentId;
-        document.getElementById('rejectModal').classList.remove('hidden');
-    }
-
-    function hideReject() {
-        document.getElementById('rejectModal').classList.add('hidden');
+        }, 300);
     }
 
     function escapeHtml(str) {
@@ -883,8 +688,7 @@
     function closeCreateStudentModal() {
         const modal = document.getElementById('createStudentModal');
         if (modal) modal.classList.add('hidden');
-        if (document.getElementById('studentDetailModal').classList.contains('hidden') &&
-            document.getElementById('pendingModal').classList.contains('hidden')) {
+        if (!document.getElementById('studentDetailModal') || document.getElementById('studentDetailModal').classList.contains('hidden')) {
             document.body.style.overflow = '';
         }
     }
