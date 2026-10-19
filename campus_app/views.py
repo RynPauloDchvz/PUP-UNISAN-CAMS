@@ -27,7 +27,8 @@ from .models import OrgProfile, Student, Attendance, Event, LoginLockout, AuditL
 from .utils import log_audit_event, get_client_ip
 from .middleware import get_current_request
 from .ai_utils import verify_face, get_sentiment, get_rating_sentiment, check_duplicate_face, parse_face_descriptor
-from django.core.cache import cache
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.clickjacking import xframe_options_exempt, xframe_options_sameorigin
 
 # ==========================================
 # 🟢 4 STRICT RBAC GUARDS (PAM-BLOCK SA MALING URL ACCESS) 🟢
@@ -5895,3 +5896,250 @@ def sitemap_xml_view(request):
   </url>
 </urlset>"""
     return HttpResponse(content.strip(), content_type="application/xml; charset=utf-8")
+
+def get_chat_user_context(request):
+    """
+    Extracts automatic user context (Year Level, Organization, Role, Name, Student Number)
+    for the AI Assistant and Issue Reporter.
+    """
+    user = request.user
+    info = {
+        'is_authenticated': False,
+        'name': 'Guest User',
+        'role': 'Student',
+        'year_level': '1st Year',
+        'organization': 'General',
+        'student_number': 'N/A',
+        'email': 'N/A'
+    }
+
+    if user and user.is_authenticated:
+        info['is_authenticated'] = True
+        if hasattr(user, 'student') and user.student:
+            s = user.student
+            info['name'] = s.full_name or user.username
+            info['role'] = s.role or 'Student'
+            info['year_level'] = s.year_level or '1st Year'
+            info['organization'] = s.organization or 'General'
+            info['student_number'] = s.student_number or 'N/A'
+            info['email'] = s.email_address or user.email or 'N/A'
+        elif hasattr(user, 'orgprofile') and user.orgprofile:
+            org = user.orgprofile
+            info['name'] = user.get_full_name() or user.username
+            info['role'] = 'Organizer'
+            info['year_level'] = org.year_level or 'Student Leader'
+            info['organization'] = org.organization or 'General'
+            info['student_number'] = user.username
+            info['email'] = user.email or 'N/A'
+        elif user.is_superuser:
+            info['name'] = 'Administrator'
+            info['role'] = 'Admin'
+            info['year_level'] = 'Faculty / Staff'
+            info['organization'] = 'Administration'
+            info['student_number'] = 'Admin'
+            info['email'] = user.email or 'N/A'
+        elif user.is_staff:
+            info['name'] = user.get_full_name() or user.username
+            info['role'] = 'Adviser'
+            info['year_level'] = 'Faculty / Staff'
+            org_name = 'Adviser'
+            if '_' in user.username.lower():
+                org_name = user.username.split('_')[0].upper()
+            info['organization'] = org_name
+            info['student_number'] = 'Adviser'
+            info['email'] = user.email or 'N/A'
+        else:
+            info['name'] = user.username
+            info['role'] = 'User'
+            info['year_level'] = 'Student'
+            info['organization'] = 'General'
+            info['student_number'] = user.username
+            info['email'] = user.email or 'N/A'
+
+    return info
+
+@xframe_options_exempt
+def chat_test_view(request):
+    """
+    Renders the CAMS AI Assistant guide test page.
+    Automatically passes detected user information.
+    """
+    detected_user = get_chat_user_context(request)
+    is_embedded = request.GET.get('embedded') == '1'
+    return render(request, 'chat_test.html', {
+        'detected_user': detected_user,
+        'detected_user_json': json.dumps(detected_user),
+        'is_embedded': is_embedded
+    })
+
+
+@csrf_exempt
+def report_system_issue_api(request):
+    """
+    Receives issue and bug reports submitted via CAMS Assistant.
+    Sends notification email directly to rynwlkr903@gmail.com with clean, easy-to-read layout.
+    """
+    if request.method == 'POST':
+        user_ctx = get_chat_user_context(request)
+
+        # Allow override from POST if provided, otherwise use auto-detected profile
+        year_level = request.POST.get('year_level', '').strip() or user_ctx['year_level']
+        org_name = request.POST.get('org_name', '').strip() or user_ctx['organization']
+        reporter_name = request.POST.get('reporter_name', '').strip() or user_ctx['name']
+        reporter_role = request.POST.get('reporter_role', '').strip() or user_ctx['role']
+        student_number = user_ctx.get('student_number', 'N/A')
+        user_email = user_ctx.get('email', 'N/A')
+        issue_description = request.POST.get('issue_description', '').strip()
+
+        if not issue_description:
+            return JsonResponse({'status': 'error', 'message': 'Please provide details of the issue.'})
+
+        now_str = timezone.now().strftime('%B %d, %Y - %I:%M %p')
+        client_ip = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
+        
+        # 🟢 1. I-RECORD SA DATABASE (AUDIT LOGS) PARA SA PERMANENT AUDIT TRAIL 🟢
+        try:
+            AuditLog.objects.create(
+                actor=request.user if request.user.is_authenticated else None,
+                action='SYSTEM_ERROR',
+                target_model='SystemIssueReport',
+                target_id=f"{year_level} | {org_name}",
+                status='Warning',
+                ip_address=client_ip,
+                user_agent=user_agent,
+                changes={
+                    'category': 'USER_REPORTED_ISSUE',
+                    'reporter_name': reporter_name,
+                    'reporter_role': reporter_role,
+                    'student_number': student_number,
+                    'year_level': year_level,
+                    'organization': org_name,
+                    'issue_description': issue_description,
+                    'reported_at': now_str
+                }
+            )
+        except Exception as log_err:
+            print(f"[AUDIT LOG ISSUE REPORT ERROR]: {log_err}")
+
+        # 🟢 2. EMAIL LAYOUT & DISPATCH TO rynwlkr903@gmail.com 🟢
+        recipient_email = 'rynwlkr903@gmail.com'
+        system_sender = getattr(settings, 'EMAIL_HOST_USER', 'pupuqcams2526@gmail.com')
+        subject = f"[PUP UNISAN CAMS] System Issue Report - {org_name} ({year_level})"
+
+        plain_text_body = f"""PUP UNISAN CAMS - SYSTEM ISSUE & BUG REPORT
+======================================================================
+Submitted At : {now_str}
+Reporter Name: {reporter_name}
+Role         : {reporter_role}
+Year Level   : {year_level}
+Organization : {org_name}
+Student No.  : {student_number}
+Account Email: {user_email}
+IP Address   : {client_ip}
+Device/Agent : {user_agent}
+
+REPORTED PROBLEM / ISSUE DETAILS:
+----------------------------------------------------------------------
+{issue_description}
+======================================================================
+Sent automatically via PUP UNISAN CAMS AI Assistant Issue Reporter.
+"""
+
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }}
+    .container {{ max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }}
+    .header {{ background: linear-gradient(135deg, #800000 0%, #5a0000 100%); padding: 24px 30px; color: #ffffff; border-bottom: 3px solid #D4AF37; }}
+    .header h1 {{ margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff; }}
+    .header p {{ margin: 6px 0 0 0; font-size: 13px; color: #fde68a; font-weight: 500; }}
+    .content {{ padding: 28px 30px; }}
+    .badge {{ display: inline-block; background-color: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 18px; }}
+    .info-table {{ width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13.5px; background: #f8fafc; border-radius: 8px; overflow: hidden; }}
+    .info-table td {{ padding: 10px 14px; border-bottom: 1px solid #e2e8f0; }}
+    .info-table td.label {{ width: 35%; font-weight: 600; color: #64748b; }}
+    .info-table td.val {{ font-weight: 700; color: #0f172a; }}
+    .section-title {{ font-size: 14px; font-weight: 800; color: #800000; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0; }}
+    .issue-box {{ background-color: #fff7ed; border-left: 4px solid #ea580c; padding: 18px 20px; border-radius: 6px; font-size: 15px; line-height: 1.6; color: #431407; white-space: pre-wrap; word-break: break-word; }}
+    .footer {{ background: #f8fafc; padding: 16px 30px; font-size: 12px; color: #64748b; text-align: center; border-top: 1px solid #e2e8f0; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>PUP UNISAN CAMS</h1>
+      <p>System Issue & Bug Report from AI Assistant</p>
+    </div>
+    <div class="content">
+      <span class="badge">Requires Technical Attention</span>
+      <h2 style="font-size: 16px; margin: 0 0 16px 0; color: #0f172a; font-weight: 700;">Bagong Ulat ng Problema sa Sistema</h2>
+      
+      <table class="info-table">
+        <tr>
+          <td class="label">Petsa at Oras:</td>
+          <td class="val">{now_str}</td>
+        </tr>
+        <tr>
+          <td class="label">Pangalan:</td>
+          <td class="val">{reporter_name}</td>
+        </tr>
+        <tr>
+          <td class="label">Role sa System:</td>
+          <td class="val">{reporter_role}</td>
+        </tr>
+        <tr>
+          <td class="label">Year Level:</td>
+          <td class="val">{year_level}</td>
+        </tr>
+        <tr>
+          <td class="label">Organization:</td>
+          <td class="val">{org_name}</td>
+        </tr>
+        <tr>
+          <td class="label">Student / User ID:</td>
+          <td class="val">{student_number}</td>
+        </tr>
+        <tr>
+          <td class="label">Account Email:</td>
+          <td class="val">{user_email}</td>
+        </tr>
+        <tr>
+          <td class="label">Client IP Address:</td>
+          <td class="val">{client_ip}</td>
+        </tr>
+        <tr>
+          <td class="label">Device / Browser:</td>
+          <td class="val" style="font-size: 12px; color: #475569;">{user_agent}</td>
+        </tr>
+      </table>
+
+      <div class="section-title">Inireklamong Problema / Error Description</div>
+      <div class="issue-box">{issue_description}</div>
+    </div>
+    <div class="footer">
+      PUP Unisan Campus Activity Management System • Technical Helpdesk Automated Dispatch
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+        try:
+            email_msg = EmailMultiAlternatives(
+                subject=subject,
+                body=plain_text_body,
+                from_email=f'"PUP UNISAN CAMS Issue Reporter" <{system_sender}>',
+                to=[recipient_email]
+            )
+            email_msg.attach_alternative(html_body, "text/html")
+            email_msg.send(fail_silently=False)
+            return JsonResponse({'status': 'success', 'message': 'Issue reported successfully.'})
+        except Exception as e:
+            print(f"[ISSUE REPORT EMAIL ERROR]: {e}")
+            return JsonResponse({'status': 'success', 'message': 'Issue report recorded in database.'})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})

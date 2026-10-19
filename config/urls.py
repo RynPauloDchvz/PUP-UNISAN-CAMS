@@ -166,6 +166,10 @@ urlpatterns = [
     path('org-selection/', views.org_selection_view, name='org_selection'),
     path('api/submit-org-selection/', views.submit_org_selection_api, name='submit_org_selection_api'),
     path('api/switch-active-org/', views.switch_active_org_api, name='switch_active_org_api'),
+    
+    # 🟢 CAMS AI ASSISTANT PREVIEW & REPORT ISSUE ROUTES 🟢
+    path('chat-test/', views.chat_test_view, name='chat_test'),
+    path('api/report-system-issue/', views.report_system_issue_api, name='report_system_issue_api'),
 ]
 
 handler404 = 'campus_app.views.custom_404_view'

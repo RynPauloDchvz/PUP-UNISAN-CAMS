@@ -1,0 +1,655 @@
+{% load static %}
+<!-- 🟢 PUP UNISAN CAMS AI ASSISTANT DRAGGABLE FLOATING WIDGET 🟢 -->
+<div id="cams-ai-widget-root">
+    <!-- Floating Draggable Launcher Button -->
+    <div id="cams-ai-launcher" title="I-drag para ilipat • I-click para buksan" aria-label="Open CAMS AI Assistant">
+        <span class="cams-launcher-icon">🤖</span>
+        <span class="cams-launcher-pulse"></span>
+    </div>
+
+    <!-- Floating Draggable Chat Window / Modal -->
+    <div id="cams-ai-window" class="cams-ai-hidden" role="dialog" aria-modal="true" aria-label="CAMS AI Assistant">
+        <!-- Draggable Window Header -->
+        <div class="cams-ai-header" id="cams-ai-header" title="I-drag ang header na ito upang ilipat ang window">
+            <div class="cams-header-info">
+                <span class="cams-header-avatar">🤖</span>
+                <div class="cams-header-titles">
+                    <span class="cams-header-name">PUP UNISAN CAMS AI</span>
+                    <span class="cams-header-status"><span class="cams-online-dot"></span> Online Guide & Helpdesk</span>
+                </div>
+            </div>
+            <div class="cams-header-actions">
+                <!-- 🟢 FIXED REPORT ISSUE BUTTON ON THE WIDGET HEADER OVERLAY 🟢 -->
+                <button type="button" onclick="triggerReportIssueInWidget()" class="cams-widget-report-btn" title="Mag-report ng issue o problema sa sistema">
+                    Report Issue
+                </button>
+                <!-- 🟢 TOGGLE FULLSCREEN OVERLAY BUTTON (NO NEW TAB, PRESERVES CHAT) 🟢 -->
+                <button type="button" onclick="toggleCamsAiFullscreen()" class="cams-action-btn cams-fullscreen-btn" id="cams-fullscreen-btn" title="Palakihin / I-fullscreen ang Chat" aria-label="Toggle Fullscreen">
+                    <svg class="cams-icon-maximize" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                    </svg>
+                    <svg class="cams-icon-restore" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                        <path d="M4 14h6m0 0v6m0-6L3 21m17-11h-6m0 0V4m0 6l7-7"/>
+                    </svg>
+                </button>
+                <!-- 🟢 THE ONLY CLOSE BUTTON (AT THE TOP) 🟢 -->
+                <button type="button" onclick="closeCamsAiWidget()" class="cams-action-btn cams-close-btn" title="Isara ang Assistant" aria-label="Close Chat">
+                    ✕
+                </button>
+            </div>
+        </div>
+        <div class="cams-ai-body">
+            <iframe id="cams-ai-iframe" src="{% url 'chat_test' %}?embedded=1" title="PUP UNISAN CAMS AI Chat"></iframe>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* =======================================================
+       PUP UNISAN CAMS DRAGGABLE FLOATING AI WIDGET
+       Flexible, Movable, Non-Intrusive, No Duplicate Close
+       ======================================================= */
+    #cams-ai-widget-root {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 99998;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        touch-action: none;
+        user-select: none;
+    }
+
+    /* Draggable Launcher Button */
+    #cams-ai-launcher {
+        position: relative;
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #800000 0%, #5a0000 100%);
+        border: 2.5px solid #D4AF37;
+        color: #ffffff;
+        box-shadow: 0 4px 20px rgba(128, 0, 0, 0.45);
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        outline: none;
+        padding: 0;
+        z-index: 100000;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #cams-ai-launcher:active {
+        cursor: grabbing;
+        transform: scale(0.96);
+    }
+
+    #cams-ai-launcher:hover {
+        box-shadow: 0 6px 25px rgba(128, 0, 0, 0.65);
+    }
+
+    .cams-launcher-icon {
+        font-size: 26px;
+        line-height: 1;
+        pointer-events: none;
+    }
+
+    /* Gentle Pulse Ring on Idle */
+    .cams-launcher-pulse {
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        right: -4px;
+        bottom: -4px;
+        border-radius: 50%;
+        border: 2px solid #D4AF37;
+        opacity: 0.6;
+        animation: camsPulseRing 2.6s infinite ease-out;
+        pointer-events: none;
+    }
+
+    #cams-ai-widget-root.is-open .cams-launcher-pulse {
+        display: none;
+    }
+
+    @keyframes camsPulseRing {
+        0% { transform: scale(0.95); opacity: 0.8; }
+        60% { transform: scale(1.35); opacity: 0; }
+        100% { transform: scale(1.35); opacity: 0; }
+    }
+
+    /* Draggable Chat Window */
+    #cams-ai-window {
+        position: fixed;
+        bottom: 90px;
+        right: 24px;
+        width: 430px;
+        height: 610px;
+        max-width: calc(100vw - 32px);
+        max-height: calc(100vh - 110px);
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 16px 45px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.05);
+        border: 2px solid #D4AF37;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 99999;
+        transform-origin: bottom right;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    }
+
+    #cams-ai-window.cams-ai-hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.85) translateY(20px);
+        visibility: hidden;
+    }
+
+    /* 🟢 FULLSCREEN OVERLAY MODE (NO PAGE RELOAD, CONVERSATION PRESERVED) 🟢 */
+    #cams-ai-window.is-fullscreen {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        z-index: 999999 !important;
+        transform: none !important;
+    }
+
+    #cams-ai-window.is-fullscreen .cams-ai-header {
+        cursor: default !important;
+        border-radius: 0 !important;
+        padding: 14px 24px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    #cams-ai-window.is-fullscreen .cams-header-name {
+        font-size: 15px;
+    }
+
+    #cams-ai-window.is-fullscreen .cams-header-status {
+        font-size: 11.5px;
+    }
+
+    /* Draggable Window Header */
+    .cams-ai-header {
+        background: linear-gradient(135deg, #800000 0%, #5a0000 100%);
+        color: #ffffff;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 2px solid #D4AF37;
+        flex-shrink: 0;
+        cursor: grab;
+        user-select: none;
+    }
+
+    .cams-ai-header:active {
+        cursor: grabbing;
+    }
+
+    .cams-header-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        pointer-events: none;
+    }
+
+    .cams-header-avatar {
+        width: 32px;
+        height: 32px;
+        background: #ffffff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        border: 1.5px solid #D4AF37;
+        flex-shrink: 0;
+    }
+
+    .cams-header-titles {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cams-header-name {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: 0.3px;
+        line-height: 1.2;
+    }
+
+    .cams-header-status {
+        font-size: 10.5px;
+        color: #fde68a;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 1px;
+    }
+
+    .cams-online-dot {
+        width: 6px;
+        height: 6px;
+        background-color: #22c55e;
+        border-radius: 50%;
+        box-shadow: 0 0 6px #22c55e;
+    }
+
+    .cams-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* 🟢 COMPACT RED REPORT ISSUE PILL BUTTON (HEADER OVERLAY) 🟢 */
+    .cams-widget-report-btn {
+        background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        color: #ffffff;
+        padding: 5px 12px;
+        border-radius: 16px;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+        transition: all 0.15s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        outline: none;
+        user-select: none;
+    }
+
+    .cams-widget-report-btn:hover {
+        background: #ef4444;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(220, 38, 38, 0.5);
+    }
+
+    .cams-widget-report-btn:active {
+        transform: scale(0.96);
+    }
+
+    .cams-action-btn {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: bold;
+        transition: all 0.15s ease;
+    }
+
+    .cams-action-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.08);
+    }
+
+    .cams-close-btn:hover {
+        background: #ef4444;
+        border-color: #ef4444;
+    }
+
+    /* Window Body / Iframe */
+    .cams-ai-body {
+        flex: 1;
+        width: 100%;
+        height: calc(100% - 50px);
+        background: #f8fafc;
+        overflow: hidden;
+    }
+
+    .cams-ai-body iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+    }
+
+    /* Mobile Responsive Optimizations */
+    @media (max-width: 640px) {
+        #cams-ai-launcher {
+            width: 48px;
+            height: 48px;
+        }
+
+        .cams-launcher-icon {
+            font-size: 22px;
+        }
+
+        #cams-ai-window {
+            bottom: 12px !important;
+            right: 12px !important;
+            left: 12px !important;
+            top: auto !important;
+            width: auto !important;
+            max-width: none !important;
+            height: calc(100vh - 24px) !important;
+            max-height: none !important;
+            border-radius: 18px !important;
+        }
+    }
+</style>
+
+<script>
+    // 🟢 GLOBAL TOGGLE & CLOSE FUNCTIONS 🟢
+    function toggleCamsAiWidget() {
+        const root = document.getElementById('cams-ai-widget-root');
+        const win = document.getElementById('cams-ai-window');
+        if (!win || !root) return;
+
+        const isHidden = win.classList.contains('cams-ai-hidden');
+        if (isHidden) {
+            // Position smartly near launcher if user hasn't dragged window
+            if (!win.dataset.userPositioned && window.innerWidth > 640) {
+                const rootRect = root.getBoundingClientRect();
+                const winWidth = 430;
+                const winHeight = Math.min(610, window.innerHeight - 100);
+
+                let targetLeft = rootRect.right - winWidth;
+                let targetTop = rootRect.top - winHeight - 12;
+
+                if (targetLeft < 10) targetLeft = 10;
+                if (targetTop < 10) targetTop = rootRect.bottom + 12;
+
+                win.style.left = targetLeft + 'px';
+                win.style.top = targetTop + 'px';
+                win.style.right = 'auto';
+                win.style.bottom = 'auto';
+            }
+
+            win.classList.remove('cams-ai-hidden');
+            root.classList.add('is-open');
+        } else {
+            win.classList.add('cams-ai-hidden');
+            root.classList.remove('is-open');
+        }
+    }
+
+    function closeCamsAiWidget() {
+        const root = document.getElementById('cams-ai-widget-root');
+        const win = document.getElementById('cams-ai-window');
+        if (!win || !root) return;
+
+        win.classList.add('cams-ai-hidden');
+        root.classList.remove('is-open');
+
+        // Reset fullscreen state if closed so next open starts in normal window
+        if (win.classList.contains('is-fullscreen')) {
+            win.classList.remove('is-fullscreen');
+            updateFullscreenIcons(false);
+        }
+    }
+
+    // 🟢 TOGGLE FULLSCREEN OVERLAY (PRESERVES CHAT STATE, NO NEW TAB) 🟢
+    function toggleCamsAiFullscreen() {
+        const win = document.getElementById('cams-ai-window');
+        if (!win) return;
+
+        const isCurrentlyFullscreen = win.classList.contains('is-fullscreen');
+        if (isCurrentlyFullscreen) {
+            win.classList.remove('is-fullscreen');
+            updateFullscreenIcons(false);
+        } else {
+            win.classList.add('is-fullscreen');
+            updateFullscreenIcons(true);
+        }
+    }
+
+    function updateFullscreenIcons(isFullscreen) {
+        const btn = document.getElementById('cams-fullscreen-btn');
+        if (!btn) return;
+
+        const maxIcon = btn.querySelector('.cams-icon-maximize');
+        const restoreIcon = btn.querySelector('.cams-icon-restore');
+
+        if (isFullscreen) {
+            if (maxIcon) maxIcon.style.display = 'none';
+            if (restoreIcon) restoreIcon.style.display = 'block';
+            btn.title = "Ibalik sa Normal na Window";
+            btn.setAttribute('aria-label', "Restore Window");
+        } else {
+            if (maxIcon) maxIcon.style.display = 'block';
+            if (restoreIcon) restoreIcon.style.display = 'none';
+            btn.title = "Palakihin / I-fullscreen ang Chat";
+            btn.setAttribute('aria-label', "Maximize Window");
+        }
+    }
+
+    // 🟢 TRIGGER REPORT ISSUE INSIDE IFRAME FROM WIDGET OVERLAY 🟢
+    function triggerReportIssueInWidget() {
+        const win = document.getElementById('cams-ai-window');
+        const root = document.getElementById('cams-ai-widget-root');
+        // If window is closed, open it first
+        if (win && win.classList.contains('cams-ai-hidden')) {
+            toggleCamsAiWidget();
+        }
+
+        const iframe = document.getElementById('cams-ai-iframe');
+        if (!iframe) return;
+
+        try {
+            if (iframe.contentWindow && typeof iframe.contentWindow.startReportIssueFlow === 'function') {
+                iframe.contentWindow.startReportIssueFlow();
+                return;
+            }
+        } catch (e) {
+            console.warn("Direct iframe call failed, using postMessage fallback:", e);
+        }
+
+        if (iframe.contentWindow) {
+            iframe.contentWindow.postMessage('START_REPORT_ISSUE', '*');
+        }
+    }
+
+    // Close on Escape key (exits fullscreen first if active)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const win = document.getElementById('cams-ai-window');
+            if (win && !win.classList.contains('cams-ai-hidden')) {
+                if (win.classList.contains('is-fullscreen')) {
+                    toggleCamsAiFullscreen();
+                } else {
+                    closeCamsAiWidget();
+                }
+            }
+        }
+    });
+
+    // ========================================================
+    // 🟢 DRAGGABLE LAUNCHER LOGIC (Assistive Touch Style) 🟢
+    // ========================================================
+    (function initLauncherDrag() {
+        const launcher = document.getElementById('cams-ai-launcher');
+        const root = document.getElementById('cams-ai-widget-root');
+        if (!launcher || !root) return;
+
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let startLeft = 0, startTop = 0;
+        let hasMoved = false;
+
+        function onStart(e) {
+            if (e.button && e.button !== 0) return;
+            isDragging = true;
+            hasMoved = false;
+
+            const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+            startX = clientX;
+            startY = clientY;
+
+            const rect = root.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onEnd);
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('touchend', onEnd);
+        }
+
+        function onMove(e) {
+            if (!isDragging) return;
+            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+                hasMoved = true;
+                if (e.cancelable) e.preventDefault();
+            }
+
+            if (hasMoved) {
+                let newLeft = startLeft + dx;
+                let newTop = startTop + dy;
+
+                const maxLeft = window.innerWidth - root.offsetWidth - 6;
+                const maxTop = window.innerHeight - root.offsetHeight - 6;
+
+                newLeft = Math.max(6, Math.min(newLeft, maxLeft));
+                newTop = Math.max(6, Math.min(newTop, maxTop));
+
+                root.style.left = newLeft + 'px';
+                root.style.top = newTop + 'px';
+                root.style.bottom = 'auto';
+                root.style.right = 'auto';
+            }
+        }
+
+        function onEnd() {
+            if (!isDragging) return;
+            isDragging = false;
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onEnd);
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('touchend', onEnd);
+        }
+
+        launcher.addEventListener('mousedown', onStart);
+        launcher.addEventListener('touchstart', onStart, { passive: true });
+
+        launcher.addEventListener('click', function(e) {
+            if (hasMoved) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            toggleCamsAiWidget();
+        });
+    })();
+
+    // ========================================================
+    // 🟢 DRAGGABLE WINDOW LOGIC (Drag via Header) 🟢
+    // ========================================================
+    (function initWindowDrag() {
+        const header = document.getElementById('cams-ai-header');
+        const win = document.getElementById('cams-ai-window');
+        if (!header || !win) return;
+
+        let isDraggingWin = false;
+        let winStartX = 0, winStartY = 0;
+        let winStartLeft = 0, winStartTop = 0;
+
+        function onWinStart(e) {
+            if (e.target.closest('.cams-action-btn') || e.target.closest('a') || e.target.closest('button')) return;
+            if (e.button && e.button !== 0) return;
+            if (window.innerWidth <= 640) return; // Fullscreen on mobile
+            if (win.classList.contains('is-fullscreen')) return; // Disable drag in fullscreen overlay
+
+            isDraggingWin = true;
+            header.style.cursor = 'grabbing';
+
+            const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+            winStartX = clientX;
+            winStartY = clientY;
+
+            const rect = win.getBoundingClientRect();
+            winStartLeft = rect.left;
+            winStartTop = rect.top;
+
+            // Make sure iframe doesn't swallow mouse events during drag
+            const iframe = document.getElementById('cams-ai-iframe');
+            if (iframe) iframe.style.pointerEvents = 'none';
+
+            document.addEventListener('mousemove', onWinMove);
+            document.addEventListener('mouseup', onWinEnd);
+            document.addEventListener('touchmove', onWinMove, { passive: false });
+            document.addEventListener('touchend', onWinEnd);
+        }
+
+        function onWinMove(e) {
+            if (!isDraggingWin) return;
+            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+            if (e.cancelable) e.preventDefault();
+
+            const dx = clientX - winStartX;
+            const dy = clientY - winStartY;
+
+            let newLeft = winStartLeft + dx;
+            let newTop = winStartTop + dy;
+
+            const maxLeft = window.innerWidth - win.offsetWidth - 6;
+            const maxTop = window.innerHeight - win.offsetHeight - 6;
+
+            newLeft = Math.max(6, Math.min(newLeft, maxLeft));
+            newTop = Math.max(6, Math.min(newTop, maxTop));
+
+            win.style.left = newLeft + 'px';
+            win.style.top = newTop + 'px';
+            win.style.right = 'auto';
+            win.style.bottom = 'auto';
+            win.dataset.userPositioned = 'true';
+        }
+
+        function onWinEnd() {
+            if (!isDraggingWin) return;
+            isDraggingWin = false;
+            header.style.cursor = 'grab';
+
+            const iframe = document.getElementById('cams-ai-iframe');
+            if (iframe) iframe.style.pointerEvents = 'auto';
+
+            document.removeEventListener('mousemove', onWinMove);
+            document.removeEventListener('mouseup', onWinEnd);
+            document.removeEventListener('touchmove', onWinMove);
+            document.removeEventListener('touchend', onWinEnd);
+        }
+
+        header.addEventListener('mousedown', onWinStart);
+        header.addEventListener('touchstart', onWinStart, { passive: true });
+    })();
+</script>

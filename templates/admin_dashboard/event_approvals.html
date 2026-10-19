@@ -1610,9 +1610,13 @@
 {{ events_json|json_script:"events-data" }}
 {{ history_json|json_script:"history-data" }}
 {% endblock %}
-
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="{% static 'js/vue3.global.prod.js' %}"></script>
+<script>
+    if (typeof Vue === 'undefined') {
+        document.write('<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"><\/script>');
+    }
+</script>
 <script>
     const { createApp, ref, computed, onMounted, nextTick } = Vue;
     createApp({
