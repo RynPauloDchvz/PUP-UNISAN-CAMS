@@ -146,6 +146,9 @@ urlpatterns = [
     path('adviser/force-change-password', views.adviser_force_change_password_view, name='adviser_force_change_password'),
     path('adviser/api/force-change-send-otp/', views.adviser_force_change_send_otp, name='adviser_force_change_send_otp'),
     path('adviser/api/force-change-finalize/', views.adviser_force_change_finalize, name='adviser_force_change_finalize'),
+    
+    # 🟢 BIOMETRIC UNIQUENESS PRE-VALIDATION 🟢
+    path('api/check-face-duplicate/', views.check_face_duplicate_api, name='check_face_duplicate'),
 
     # 🟢 DOCUMENT VAULT URLS (PARA SA UPLOADS) 🟢
     path('organizer/event-vault/', views.organizer_event_vault, name='organizer_event_vault'),

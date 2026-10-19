@@ -17,6 +17,59 @@
     .action-item:hover { background: var(--hover-bg); color: var(--accent); }
     .action-item.danger:hover { background: rgba(220, 53, 69, 0.1); color: var(--danger); }
     
+    /* Action Buttons in Table */
+    .btn-view-action, .btn-transfer-action {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+        border-radius: 8px !important;
+        margin: 0 !important;
+        background: var(--hover-bg) !important;
+        border: 1px solid var(--border) !important;
+        cursor: pointer;
+        transition: all 0.2s ease !important;
+    }
+    .btn-view-action {
+        color: var(--text-main) !important;
+    }
+    .btn-view-action i {
+        font-size: 1.15rem;
+        margin: 0 !important;
+        line-height: 1;
+        color: var(--text-main) !important;
+        transition: color 0.2s ease;
+    }
+    .btn-view-action:hover {
+        background: var(--accent) !important;
+        border-color: var(--accent) !important;
+        color: #ffffff !important;
+    }
+    .btn-view-action:hover i {
+        color: #ffffff !important;
+    }
+
+    .btn-transfer-action {
+        color: var(--accent) !important;
+    }
+    .btn-transfer-action i {
+        font-size: 1.15rem;
+        margin: 0 !important;
+        line-height: 1;
+        color: var(--accent) !important;
+        transition: color 0.2s ease;
+    }
+    .btn-transfer-action:hover {
+        background: var(--accent) !important;
+        border-color: var(--accent) !important;
+        color: #ffffff !important;
+    }
+    .btn-transfer-action:hover i {
+        color: #ffffff !important;
+    }
+
     .user-cell { display: flex; align-items: center; gap: 12px; }
     .user-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
     .user-name { 
@@ -254,7 +307,7 @@
                         <th style="text-align: center;">Student ID</th>
                         <th style="text-align: center;">Assigned Org</th>
                         <th style="text-align: center;">Status</th>
-                        <th style="text-align: center;">Actions</th>
+                        <th style="text-align: center; width: 130px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -480,6 +533,16 @@
                     <span id="v_birthdate" style="display: block; font-size: 0.95rem; font-weight: 800; color: var(--text-main); word-break: break-all;"></span>
                 </div>
             </div>
+
+            <!-- Action buttons in modal -->
+            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+                <button type="button" class="btn-primary" onclick="openSingleTransferFromViewModal(event)" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 0.85rem; padding: 11px; border-radius: 8px; background: var(--accent);">
+                    <i class="ph-bold ph-arrows-left-right"></i> Transfer to Student Org
+                </button>
+                <button type="button" class="btn-cancel" onclick="openSingleDeleteFromViewModal(event)" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 0.85rem; padding: 11px; border-radius: 8px; color: var(--danger); border-color: rgba(220,53,69,0.3);">
+                    <i class="ph-bold ph-trash"></i> Deactivate Account
+                </button>
+            </div>
         </div>
         <input type="hidden" id="v_id">
     </div>
@@ -509,6 +572,60 @@
         <div class="modal-actions" style="justify-content: center; gap: 10px;">
             <button type="button" class="btn-cancel" onclick="closeModal('deleteModal')">Cancel</button>
             <button type="button" class="btn-primary" style="background: var(--danger);" onclick="submitAction('deactivate')">Yes, Deactivate</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🟢 TRANSFER MODAL (STUDENT TO ORG) 🟢 -->
+<div id="transferModal" class="modal">
+    <div class="modal-box" style="max-width: 440px; text-align: center;">
+        <div style="width: 64px; height: 64px; background: rgba(128, 0, 0, 0.08); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+            <i class="ph-bold ph-arrows-left-right" style="font-size: 2.2rem; color: var(--accent);"></i>
+        </div>
+        <h3 class="modal-title" style="margin-bottom: 8px; font-size: 1.25rem;">Transfer to Student Org</h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.4; margin-bottom: 20px;">
+            Are you sure you want to transfer <strong id="t_name" style="color: var(--text-main);"></strong> to a Student Organization account?
+        </p>
+
+        <div style="background: var(--input-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 20px; text-align: left;">
+            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                <i class="ph-bold ph-info" style="font-size: 1.1rem; color: var(--accent); flex-shrink: 0; margin-top: 2px;"></i>
+                <span style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+                    This will grant organizer privileges, generate a temporary password, and email the credentials to the student's email address.
+                </span>
+            </div>
+        </div>
+
+        <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+            <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Target Organization</label>
+            <div class="custom-dropdown" id="transferOrgDropdown">
+                <div class="custom-dropdown-summary" onclick="toggleTransferOrgDropdown(event)">
+                    <span id="transferOrgLabel">Keep Assigned Organization</span> <i class="ph-bold ph-caret-down"></i>
+                </div>
+                <div class="custom-dropdown-menu" id="transferOrgMenu" style="max-height: 220px; overflow-y: auto;">
+                    <div class="dropdown-item active" onclick="selectTransferOrg('KEEP_ASSIGNED', 'Keep Assigned Organization', event)">Keep Assigned Organization</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('ITO', 'ITO - Information Technology Org', event)">ITO - Information Technology Org</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('ITS', 'ITS - Institute of Technology Society', event)">ITS - Institute of Technology Society</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('YEO', 'YEO - Young Entrepreneurship Org', event)">YEO - Young Entrepreneurship Org</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('FTO', 'FTO - Future Teacher Org', event)">FTO - Future Teacher Org</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('PAS', 'PAS - Public Administration Society', event)">PAS - Public Administration Society</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('CAO', 'CAO - Culture and Arts', event)">CAO - Culture and Arts</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('NEWS', 'NEWS - NEWSETTE', event)">NEWS - NEWSETTE</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('PRIDE', 'PRIDE - PRIDEVerse', event)">PRIDE - PRIDEVerse</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('ROTC', 'ROTC - Reserve Officers Training Corps', event)">ROTC - Reserve Officers' Training Corps</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('PUSO', 'PUSO - PUP Unisan Sports Org', event)">PUSO - PUP Unisan Sports Org</div>
+                    <div class="dropdown-item" onclick="selectTransferOrg('SSC', 'SSC - Supreme Student Council', event)">SSC - Supreme Student Council</div>
+                </div>
+            </div>
+            <input type="hidden" id="t_target_org" value="KEEP_ASSIGNED">
+            <input type="hidden" id="t_id" value="">
+        </div>
+
+        <div class="modal-actions" style="justify-content: center; gap: 10px;">
+            <button type="button" class="btn-cancel" onclick="closeModal('transferModal')">Cancel</button>
+            <button type="button" class="btn-primary" id="btnConfirmTransfer" style="background: var(--accent);" onclick="submitTransferAction()">
+                <span id="btnTransferText"><i class="ph-bold ph-arrows-left-right"></i> Yes, Transfer</span>
+            </button>
         </div>
     </div>
 </div>
@@ -575,10 +692,15 @@
                     <td style="font-family: monospace; font-weight: 600; text-align: center;">${user.username}</td>
                     <td style="font-weight: 800; color: var(--accent); text-align: center;">${user.org}</td>
                     <td style="text-align: center;"><span class="badge ${badgeClass}">${user.status}</span></td>
-                    <td style="text-align: center;">
-                        <button class="btn-action-small desktop-manage-dropdown" onclick="event.stopPropagation(); openViewModal(${user.id}, event)" style="padding: 8px 12px; border-radius: 8px;">
-                            <i class="ph-bold ph-eye" style="font-size: 1.1rem; margin:0;"></i>
-                        </button>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 auto; width: 100%;">
+                            <button class="btn-action-small desktop-manage-dropdown btn-view-action" onclick="event.stopPropagation(); openViewModal(${user.id}, event)" title="View Details">
+                                <i class="ph-bold ph-eye"></i>
+                            </button>
+                            <button class="btn-action-small desktop-manage-dropdown btn-transfer-action" onclick="event.stopPropagation(); openSingleTransferModal(${user.id}, event)" title="Transfer to Student Org">
+                                <i class="ph-bold ph-arrows-left-right"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -597,7 +719,6 @@
                                 <span class="badge ${badgeClass}" style="font-size: 0.6rem; padding: 2px 6px;">${user.status}</span>
                             </div>
                         </div>
-                        
                     </div>
                 `;
                 mobileList.innerHTML += mobileCard;
@@ -691,7 +812,6 @@
             
             document.querySelectorAll('.student-checkbox').forEach(chk => chk.style.display = 'block');
             
-            
             const thCheck = document.getElementById('thCheckbox');
             if(thCheck) thCheck.style.display = 'table-cell';
             document.querySelectorAll('.td-checkbox').forEach(td => td.style.display = 'table-cell');
@@ -713,8 +833,6 @@
                 row.classList.remove('selected-row');
                 row.style.cursor = 'default';
             });
-            
-            
             
             const thCheck = document.getElementById('thCheckbox');
             if(thCheck) thCheck.style.display = 'none';
@@ -783,6 +901,126 @@
         document.getElementById('d_id').value = user.id;
         document.getElementById('d_name').innerText = user.name;
         openModal('deleteModal', event);
+    }
+
+    function openBulkTransferModal(event) {
+        if (selectedUserIds.size === 0) {
+            document.getElementById('alertModalMessage').innerText = "Please select at least one student to transfer.";
+            openModal('alertModal', event);
+            return;
+        }
+        document.getElementById('t_id').value = Array.from(selectedUserIds).join(',');
+        document.getElementById('t_name').innerText = selectedUserIds.size + " selected student(s)";
+        resetTransferOrgDropdown();
+        openModal('transferModal', event);
+    }
+
+    function openSingleTransferModal(id, event) {
+        const user = usersData.find(u => u.id === id);
+        if (!user) return;
+        document.getElementById('t_id').value = user.id;
+        document.getElementById('t_name').innerText = user.name;
+        resetTransferOrgDropdown(user.org);
+        openModal('transferModal', event);
+    }
+
+    function openSingleTransferFromViewModal(event) {
+        const id = parseInt(document.getElementById('v_id').value);
+        closeModal('viewDetailsModal');
+        setTimeout(() => {
+            openSingleTransferModal(id, event);
+        }, 250);
+    }
+
+    function openSingleDeleteFromViewModal(event) {
+        const id = parseInt(document.getElementById('v_id').value);
+        closeModal('viewDetailsModal');
+        setTimeout(() => {
+            openDeleteModal(id, event);
+        }, 250);
+    }
+
+    function toggleTransferOrgDropdown(e) {
+        if(e) e.stopPropagation();
+        const dropdown = document.getElementById('transferOrgDropdown');
+        dropdown.classList.toggle('active');
+        const menu = document.getElementById('transferOrgMenu');
+        if (dropdown.classList.contains('active')) {
+            menu.style.maxHeight = '220px';
+        } else {
+            menu.style.maxHeight = '0';
+        }
+    }
+
+    function selectTransferOrg(val, label, e) {
+        if(e) e.stopPropagation();
+        document.getElementById('transferOrgLabel').innerText = label;
+        document.getElementById('t_target_org').value = val;
+        const menu = document.getElementById('transferOrgMenu');
+        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+        if (e && e.target) e.target.classList.add('active');
+        const dropdown = document.getElementById('transferOrgDropdown');
+        dropdown.classList.remove('active');
+        menu.style.maxHeight = '0';
+    }
+
+    function resetTransferOrgDropdown(defaultOrg) {
+        document.getElementById('t_target_org').value = 'KEEP_ASSIGNED';
+        const labelText = defaultOrg ? `Keep Assigned Org (${defaultOrg})` : 'Keep Assigned Organization';
+        document.getElementById('transferOrgLabel').innerText = labelText;
+        const menu = document.getElementById('transferOrgMenu');
+        if (menu) {
+            menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+            if (menu.children.length > 0) menu.children[0].classList.add('active');
+            menu.style.maxHeight = '0';
+        }
+        const dropdown = document.getElementById('transferOrgDropdown');
+        if (dropdown) dropdown.classList.remove('active');
+    }
+
+    async function submitTransferAction() {
+        const targetIds = document.getElementById('t_id').value;
+        const targetOrg = document.getElementById('t_target_org').value;
+        const btn = document.getElementById('btnConfirmTransfer');
+        const textSpan = document.getElementById('btnTransferText');
+        
+        if (!targetIds) {
+            showToast("No account selected.", "error");
+            return;
+        }
+
+        const originalText = textSpan.innerHTML;
+        btn.disabled = true;
+        textSpan.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Transferring...';
+
+        try {
+            const res = await fetch("/admin/api/student-action/", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    action: 'transfer_to_org',
+                    id: targetIds,
+                    target_org: targetOrg
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                closeModal('transferModal');
+                showToast(data.message, "success");
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(data.message || "Failed to transfer account.", "error");
+                btn.disabled = false;
+                textSpan.innerHTML = originalText;
+            }
+        } catch (err) {
+            showToast("Connection error during transfer.", "error");
+            btn.disabled = false;
+            textSpan.innerHTML = originalText;
+        }
     }
 
     // 🟢 MODAL CONTROLS 🟢

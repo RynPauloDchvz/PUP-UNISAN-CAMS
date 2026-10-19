@@ -79,6 +79,121 @@ def query_huggingface_model(model_id, payload, timeout=15):
             continue
     return None
 
+def parse_face_descriptor(face_data):
+    """
+    Parses a 128-dimensional face descriptor from JSON string, comma-separated string, or list/array.
+    Returns np.ndarray with shape (128,) and float32 dtype, or None if invalid.
+    """
+    if not face_data:
+        return None
+    try:
+        if isinstance(face_data, str):
+            clean = face_data.strip()
+            if clean.startswith('data:image'):
+                return None
+            if clean.startswith('[') and clean.endswith(']'):
+                vec = json.loads(clean)
+            else:
+                vec = [float(x.strip()) for x in clean.strip('[]').split(',') if x.strip()]
+        elif isinstance(face_data, (list, tuple, np.ndarray)):
+            vec = list(face_data)
+        else:
+            return None
+
+        arr = np.array(vec, dtype=np.float32)
+        if arr.shape == (128,):
+            return arr
+    except Exception:
+        pass
+    return None
+
+def check_duplicate_face(candidate_face, current_user=None, threshold=0.60):
+    """
+    Scans the database across Students, OrgProfiles, and AdviserProfiles to check
+    if the candidate face descriptor matches any existing registered face.
+    
+    Excludes profiles belonging to `current_user` so that valid profile updates
+    or re-verifications don't trigger false duplicate alarms against the user's own account.
+    
+    Returns:
+        (is_duplicate: bool, matched_info: dict or None)
+        matched_info: {'role': str, 'identifier': str, 'name': str, 'distance': float}
+    """
+    candidate_vec = parse_face_descriptor(candidate_face)
+    if candidate_vec is None:
+        return False, None
+
+    # Lazy import to avoid circular dependency
+    from .models import Student, OrgProfile, AdviserProfile
+
+    records = []
+    vectors = []
+
+    # 1. Check Student records
+    student_qs = Student.objects.exclude(face_encoding__isnull=True).exclude(face_encoding='')
+    if current_user and getattr(current_user, 'is_authenticated', False):
+        student_qs = student_qs.exclude(user=current_user)
+
+    for s_id, s_num, s_name, encoding in student_qs.values_list('id', 'student_number', 'full_name', 'face_encoding'):
+        vec = parse_face_descriptor(encoding)
+        if vec is not None:
+            vectors.append(vec)
+            records.append({
+                'role': 'Student',
+                'id': s_id,
+                'identifier': s_num,
+                'name': s_name
+            })
+
+    # 2. Check OrgProfile records
+    org_qs = OrgProfile.objects.exclude(face_encoding__isnull=True).exclude(face_encoding='')
+    if current_user and getattr(current_user, 'is_authenticated', False):
+        org_qs = org_qs.exclude(user=current_user)
+
+    for o_id, org_name, encoding in org_qs.values_list('id', 'organization', 'face_encoding'):
+        vec = parse_face_descriptor(encoding)
+        if vec is not None:
+            vectors.append(vec)
+            records.append({
+                'role': 'Organizer',
+                'id': o_id,
+                'identifier': org_name,
+                'name': org_name
+            })
+
+    # 3. Check AdviserProfile records
+    adv_qs = AdviserProfile.objects.exclude(face_encoding__isnull=True).exclude(face_encoding='')
+    if current_user and getattr(current_user, 'is_authenticated', False):
+        adv_qs = adv_qs.exclude(user=current_user)
+
+    for a_id, a_username, encoding in adv_qs.values_list('id', 'user__username', 'face_encoding'):
+        vec = parse_face_descriptor(encoding)
+        if vec is not None:
+            vectors.append(vec)
+            records.append({
+                'role': 'Adviser',
+                'id': a_id,
+                'identifier': a_username,
+                'name': a_username
+            })
+
+    if not vectors:
+        return False, None
+
+    matrix = np.array(vectors, dtype=np.float32)
+    diffs = matrix - candidate_vec
+    distances = np.linalg.norm(diffs, axis=1)
+
+    min_idx = int(np.argmin(distances))
+    min_dist = float(distances[min_idx])
+
+    if min_dist < threshold:
+        matched = records[min_idx].copy()
+        matched['distance'] = min_dist
+        return True, matched
+
+    return False, None
+
 def verify_face(live_face, anchor_face, threshold=0.6):
     """
     Client-side Face-API Verification Engine.

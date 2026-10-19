@@ -26,7 +26,7 @@ from docxtpl import DocxTemplate
 from .models import OrgProfile, Student, Attendance, Event, LoginLockout, AuditLog, AdviserProfile
 from .utils import log_audit_event, get_client_ip
 from .middleware import get_current_request
-from .ai_utils import verify_face, get_sentiment, get_rating_sentiment
+from .ai_utils import verify_face, get_sentiment, get_rating_sentiment, check_duplicate_face, parse_face_descriptor
 from django.core.cache import cache
 
 # ==========================================
@@ -54,7 +54,7 @@ def is_organizer_strictly(user):
     return is_auth
 
 def is_student_strictly(user):
-    is_auth = user.is_authenticated and Student.objects.filter(user=user).exists()
+    is_auth = user.is_authenticated and Student.objects.filter(user=user).exists() and not OrgProfile.objects.filter(user=user).exists()
     if user.is_authenticated and not is_auth:
         request = get_current_request()
         log_audit_event(request, 'UNAUTHORIZED', status='Denied', changes={'attempted_role': 'Student'})
@@ -811,6 +811,15 @@ def update_student_face(request):
             if not face_data:
                 return JsonResponse({'status': 'error', 'message': 'No facial biometric data received.'})
             
+            # 🟢 BIOMETRIC UNIQUENESS CHECK 🟢
+            is_dup, dup_info = check_duplicate_face(face_data, current_user=request.user)
+            if is_dup:
+                role_label = dup_info.get('role', 'another')
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f"Biometric Identity Conflict: This facial biometric identity is already registered under an existing {role_label} account. Multiple accounts or using another individual's face is strictly prohibited."
+                })
+            
             student.face_encoding = face_data
             if face_image and str(face_image).startswith('data:image'):
                 save_base64_as_image_field(face_image, student.profile_picture, f"student_{student.student_number}")
@@ -1559,6 +1568,17 @@ def force_change_finalize(request):
         
         if not face_image and not face_encoding:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
+            
+        # 🟢 BIOMETRIC UNIQUENESS CHECK 🟢
+        candidate_bio = face_encoding if face_encoding else face_image
+        if candidate_bio:
+            is_dup, dup_info = check_duplicate_face(candidate_bio, current_user=request.user)
+            if is_dup:
+                role_label = dup_info.get('role', 'another')
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Biometric Identity Conflict: This face is already enrolled under an existing {role_label} account. Multiple accounts for a single individual are strictly prohibited."
+                })
             
         user = request.user
         user.set_password(password)
@@ -3582,6 +3602,15 @@ def register_organizer_face(request):
             if not face_data:
                 return JsonResponse({'status': 'error', 'message': 'No facial biometric data received.'})
             
+            # 🟢 BIOMETRIC UNIQUENESS CHECK 🟢
+            is_dup, dup_info = check_duplicate_face(face_data, current_user=request.user)
+            if is_dup:
+                role_label = dup_info.get('role', 'another')
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f"Biometric Identity Conflict: This facial biometric identity is already enrolled under an existing {role_label} account."
+                })
+            
             org_profile.face_encoding = face_data
             if face_image and str(face_image).startswith('data:image'):
                 save_base64_as_image_field(face_image, org_profile.profile_picture, f"org_{org_profile.organization}")
@@ -3815,7 +3844,7 @@ def admin_notifications_view(request):
 
 @user_passes_test(is_admin_strictly, login_url='/admin/login/')
 def manage_accounts_view(request): 
-    students = Student.objects.select_related('user').filter(user__is_active=True)
+    students = Student.objects.select_related('user').filter(user__is_active=True).exclude(user__orgprofile__isnull=False)
     student_data = []
     
     for s in students:
@@ -3908,14 +3937,77 @@ def student_api_action(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            if data.get('action') == 'deactivate':
+            action = data.get('action')
+            if action == 'deactivate':
                 ids = str(data.get('id')).split(',')
+                deactivated_count = 0
                 for id_str in ids:
                     if id_str.strip():
                         student = Student.objects.get(id=int(id_str.strip()))
                         student.user.is_active = False 
                         student.user.save()
-                return JsonResponse({"status": "success", "message": f"{len(ids)} Student(s) deactivated and moved to History."})
+                        deactivated_count += 1
+                return JsonResponse({"status": "success", "message": f"{deactivated_count} Student(s) deactivated and moved to History."})
+            elif action == 'transfer_to_org':
+                ids = str(data.get('id')).split(',')
+                target_org_override = data.get('target_org')
+                transferred_count = 0
+                import string, secrets
+
+                for id_str in ids:
+                    if id_str.strip():
+                        student = Student.objects.get(id=int(id_str.strip()))
+                        target_org = student.organization if (not target_org_override or target_org_override == 'KEEP_ASSIGNED') else target_org_override
+
+                        # 1. Create or update OrgProfile
+                        org_profile, _ = OrgProfile.objects.get_or_create(user=student.user)
+                        org_profile.organization = target_org
+                        org_profile.year_level = student.year_level or '1st Year'
+                        if student.profile_picture:
+                            org_profile.profile_picture = student.profile_picture
+                        if student.cover_photo:
+                            org_profile.cover_photo = student.cover_photo
+                        if student.face_encoding:
+                            org_profile.face_encoding = student.face_encoding
+                        org_profile.force_password_change = True
+                        org_profile.save()
+
+                        # 2. Update user name and state
+                        student.user.first_name = student.full_name
+                        student.user.is_active = True
+
+                        # 3. Generate new temporary password & send email credentials
+                        chars = string.ascii_letters + string.digits + "!@#$%^&*"
+                        temp_pwd = ''.join(secrets.choice(chars) for _ in range(12))
+                        student.user.set_password(temp_pwd)
+                        student.user.save()
+
+                        # 4. Send email credentials
+                        email = student.email_address or student.user.email
+                        if email:
+                            try:
+                                send_account_credentials(
+                                    email=email,
+                                    name=student.full_name,
+                                    identifier=student.student_number or student.user.username,
+                                    password=temp_pwd,
+                                    role='organizer',
+                                    login_url=request.build_absolute_uri('/')
+                                )
+                            except Exception as em_err:
+                                print(f"Email error during transfer to org: {em_err}")
+
+                        log_audit_event(request, 'UPDATE', target_model='Student', target_id=str(student.id), status='Success', changes={
+                            'action': 'Transferred to Student Org',
+                            'target_org': target_org,
+                            'student': student.full_name
+                        })
+                        transferred_count += 1
+
+                return JsonResponse({
+                    "status": "success",
+                    "message": f"Successfully transferred {transferred_count} student(s) to Student Org. Login credentials sent via email."
+                })
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
     return JsonResponse({"status": "error", "message": "Invalid request"})
@@ -4030,6 +4122,88 @@ def organizer_api_action(request):
                         user.is_active = False 
                         user.save()
                 return JsonResponse({"status": "success", "message": "Org access deactivated and moved to History."})
+
+            elif action == 'transfer_to_student':
+                user_ids = str(data.get('id')).split(',')
+                transferred_count = 0
+                import string, secrets
+
+                for uid in user_ids:
+                    if uid.strip():
+                        user = User.objects.filter(id=int(uid.strip())).first()
+                        if not user:
+                            continue
+                        org_profile = OrgProfile.objects.filter(user=user).first()
+
+                        student = Student.objects.filter(user=user).first()
+                        if not student:
+                            student = Student.objects.filter(student_number=user.username).first()
+                            if student:
+                                student.user = user
+
+                        if not student:
+                            student = Student.objects.create(
+                                user=user,
+                                full_name=user.first_name or user.username,
+                                student_number=user.username,
+                                email_address=user.email,
+                                organization=org_profile.organization if org_profile else 'Unassigned',
+                                year_level=org_profile.year_level if org_profile else '1st Year',
+                                is_verified=True,
+                                force_password_change=True
+                            )
+                        else:
+                            student.is_verified = True
+                            student.force_password_change = True
+                            if org_profile:
+                                if org_profile.year_level:
+                                    student.year_level = org_profile.year_level
+                                if org_profile.organization and not student.organization:
+                                    student.organization = org_profile.organization
+
+                        if org_profile:
+                            if org_profile.profile_picture and not student.profile_picture:
+                                student.profile_picture = org_profile.profile_picture
+                            if org_profile.cover_photo and not student.cover_photo:
+                                student.cover_photo = org_profile.cover_photo
+                            if org_profile.face_encoding and not student.face_encoding:
+                                student.face_encoding = org_profile.face_encoding
+                            org_profile.delete()
+
+                        student.save()
+
+                        # Generate temporary password
+                        chars = string.ascii_letters + string.digits + "!@#$%^&*"
+                        temp_pwd = ''.join(secrets.choice(chars) for _ in range(12))
+                        user.set_password(temp_pwd)
+                        user.is_active = True
+                        user.save()
+
+                        # Send login credentials via email
+                        email = student.email_address or user.email
+                        if email:
+                            try:
+                                send_account_credentials(
+                                    email=email,
+                                    name=student.full_name,
+                                    identifier=student.student_number or user.username,
+                                    password=temp_pwd,
+                                    role='student',
+                                    login_url=request.build_absolute_uri('/')
+                                )
+                            except Exception as em_err:
+                                print(f"Email error during transfer to student: {em_err}")
+
+                        log_audit_event(request, 'UPDATE', target_model='User', target_id=str(user.id), status='Success', changes={
+                            'action': 'Transferred from Org to Student',
+                            'username': user.username
+                        })
+                        transferred_count += 1
+
+                return JsonResponse({
+                    "status": "success",
+                    "message": f"Successfully transferred {transferred_count} organizer(s) to Student. Login credentials sent via email."
+                })
 
         except Exception as e: return JsonResponse({"status": "error", "message": str(e)})
     return JsonResponse({"status": "error", "message": "Invalid Request"})
@@ -5089,6 +5263,17 @@ def student_force_change_finalize(request):
         if not face_image and not face_encoding:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
             
+        # 🟢 BIOMETRIC UNIQUENESS CHECK 🟢
+        candidate_bio = face_encoding if face_encoding else face_image
+        if candidate_bio:
+            is_dup, dup_info = check_duplicate_face(candidate_bio, current_user=request.user)
+            if is_dup:
+                role_label = dup_info.get('role', 'another')
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Biometric Identity Conflict: This face is already enrolled under an existing {role_label} account. Multiple accounts for a single individual are strictly prohibited under the university's anti-proxy policy."
+                })
+            
         user = request.user
         user.set_password(password)
         user.save()
@@ -5383,6 +5568,17 @@ def adviser_force_change_finalize(request):
         if not face_image and not face_encoding:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
             
+        # 🟢 BIOMETRIC UNIQUENESS CHECK 🟢
+        candidate_bio = face_encoding if face_encoding else face_image
+        if candidate_bio:
+            is_dup, dup_info = check_duplicate_face(candidate_bio, current_user=request.user)
+            if is_dup:
+                role_label = dup_info.get('role', 'another')
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Biometric Identity Conflict: This face is already enrolled under an existing {role_label} account. Multiple accounts for a single individual are strictly prohibited."
+                })
+            
         user = request.user
         user.set_password(password)
         user.save()
@@ -5413,6 +5609,33 @@ def unified_force_change_password_view(request):
     elif Student.objects.filter(user=user).exists():
         return student_force_change_password_view(request)
     return redirect('/')
+
+@login_required(login_url='/')
+def check_face_duplicate_api(request):
+    """
+    Biometric de-duplication pre-validation API.
+    Checks whether a scanned face descriptor already exists in the system across other accounts.
+    """
+    if request.method == 'POST':
+        face_encoding = request.POST.get('face_encoding')
+        if not face_encoding:
+            return JsonResponse({'status': 'error', 'message': 'No facial biometric data received.'})
+        
+        is_dup, dup_info = check_duplicate_face(face_encoding, current_user=request.user)
+        if is_dup:
+            role_label = dup_info.get('role', 'another')
+            return JsonResponse({
+                'status': 'error',
+                'is_duplicate': True,
+                'message': f"Biometric Identity Conflict: This face is already enrolled under an existing {role_label} account. Multiple accounts for a single individual are strictly prohibited under the university's anti-proxy policy."
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'is_duplicate': False,
+            'message': 'Biometric face is unique and verified.'
+        })
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
 
 def custom_404_view(request, exception=None):
     return render(request, '404.html', status=404)
