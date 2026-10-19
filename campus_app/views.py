@@ -5038,33 +5038,74 @@ def send_account_credentials(email, name, identifier, password, role='student', 
 def send_student_credentials(email, name, student_id, password):
     send_account_credentials(email, name, student_id, password, role='student')
 
-@user_passes_test(is_admin_strictly, login_url='/')
+def is_admin_or_organizer(user):
+    if not user.is_authenticated:
+        return False
+    return user.is_superuser or OrgProfile.objects.filter(user=user).exists()
+
+@user_passes_test(is_admin_or_organizer, login_url='/')
 def create_student_manual(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            full_name = data.get('full_name')
-            student_id = data.get('student_id')
-            birthday = data.get('birthday')
-            year_level = data.get('year_level')
-            program = data.get('program', 'Not Assigned')
-            email = data.get('email')
-            
+            full_name = data.get('full_name', '').strip()
+            student_id = data.get('student_id', '').strip()
+            birthday = data.get('birthday', '').strip()
+            year_level = data.get('year_level', '1st Year')
+            program = data.get('program', '').strip()
+            email = data.get('email', '').strip()
+            organization = data.get('organization', '').strip()
+
             org_mapping = { 'BSIT': 'ITO', 'BSENT': 'YEO', 'BPA': 'PAS', 'BEED': 'FTO', 'DOMT': 'ITS', 'DIT': 'ITS' }
-            organization = org_mapping.get(program, 'Not Assigned')
-            
-            if User.objects.filter(username=student_id).exists() or User.objects.filter(email=email).exists():
-                return JsonResponse({'status': 'error', 'message': 'Student ID or Email already exists.'})
-                
+            prog_mapping = { 'ITO': 'BSIT', 'YEO': 'BSENT', 'PAS': 'BPA', 'FTO': 'BEED', 'ITS': 'DOMT' }
+
+            # If organization wasn't explicitly given, check program or current user's org
+            if not organization:
+                organization = org_mapping.get(program, '')
+            if not organization and OrgProfile.objects.filter(user=request.user).exists():
+                organization = OrgProfile.objects.get(user=request.user).organization.strip()
+
+            if not organization:
+                organization = 'Not Assigned'
+
+            if not program or program == 'Not Assigned':
+                program = prog_mapping.get(organization, 'Not Assigned')
+
+            # 🟢 SMART CO-ORG LINKING: Check if student already exists!
+            existing_student = Student.objects.filter(student_number__iexact=student_id).first() or Student.objects.filter(email_address__iexact=email).first()
+            if not existing_student:
+                user_match = User.objects.filter(username__iexact=student_id).first() or User.objects.filter(email__iexact=email).first()
+                if user_match:
+                    existing_student = Student.objects.filter(user=user_match).first()
+
+            if existing_student:
+                current_orgs = existing_student.get_all_organizations()
+                if organization and organization != 'Not Assigned':
+                    if organization.upper() not in [o.upper() for o in current_orgs]:
+                        co_list = [o.strip() for o in existing_student.co_organizations.split(',') if o.strip()]
+                        co_list.append(organization)
+                        existing_student.co_organizations = ', '.join(co_list)
+                        existing_student.is_verified = True
+                        existing_student.save(update_fields=['co_organizations', 'is_verified'])
+                        return JsonResponse({'status': 'success', 'message': f'Existing student {student_id} ({existing_student.full_name}) successfully linked to {organization}!'})
+                    else:
+                        return JsonResponse({'status': 'warning', 'message': f'Student {student_id} is already registered under {organization}.'})
+                else:
+                    return JsonResponse({'status': 'error', 'message': 'Student account already exists in the system.'})
+
+            # Check for conflict in User table
+            if User.objects.filter(username__iexact=student_id).exists() or User.objects.filter(email__iexact=email).exists():
+                return JsonResponse({'status': 'error', 'message': 'Account with this Student ID or Email already exists.'})
+
             import secrets
             import string
-            
+
             password = data.get('password')
             if not password:
                 password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
-                
+
             user = User.objects.create_user(username=student_id, email=email, password=password)
-            
+
             from datetime import datetime
             try:
                 bday_obj = datetime.strptime(birthday, '%m/%d/%Y').date()
@@ -5080,29 +5121,39 @@ def create_student_manual(request):
                 year_level=year_level,
                 program=program,
                 birthdate=bday_obj,
-                is_verified=False, 
+                is_verified=True,  # 🟢 INSTANT VERIFICATION!
                 force_password_change=True,
                 organization=organization
             )
-            
+
             try:
-                send_account_credentials(email, full_name, student_id, password, role='student', login_url=request.build_absolute_uri('/'))
+                send_student_credentials(email, full_name, student_id, password)
             except Exception:
                 pass
-            
-            return JsonResponse({'status': 'success', 'message': 'Student created successfully!'})
+
+            return JsonResponse({'status': 'success', 'message': f'Student created and verified for {organization}! Login credentials sent via email.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
 
-@user_passes_test(is_admin_strictly, login_url='/')
+@user_passes_test(is_admin_or_organizer, login_url='/')
 def create_student_bulk(request):
     if pd is None:
         return JsonResponse({'status': 'error', 'message': 'Spreadsheet parsing library (pandas) is not loaded.'})
     if request.method == 'POST' and request.FILES.getlist('files'):
         files = request.FILES.getlist('files')
         created_count = 0
+        linked_count = 0
         errors = []
-        
+
+        uploader_org = None
+        if OrgProfile.objects.filter(user=request.user).exists():
+            uploader_org = OrgProfile.objects.get(user=request.user).organization.strip()
+
+        prog_to_org = { 'BSIT': 'ITO', 'BSENT': 'YEO', 'BPA': 'PAS', 'BEED': 'FTO', 'DOMT': 'ITS', 'DIT': 'ITS' }
+        org_to_prog = { 'ITO': 'BSIT', 'YEO': 'BSENT', 'PAS': 'BPA', 'FTO': 'BEED', 'ITS': 'DOMT' }
+        known_orgs = ['ITO', 'ITS', 'YEO', 'FTO', 'PAS', 'CAO', 'NEWS', 'PRIDE', 'ROTC', 'PUSO', 'SSC']
+
         for file in files:
             try:
                 if file.name.endswith('.csv'):
@@ -5110,9 +5161,9 @@ def create_student_bulk(request):
                 elif file.name.endswith(('.xls', '.xlsx')):
                     df = pd.read_excel(file)
                 else:
-                    errors.append(f"Skipped {file.name}: Only CSV and Excel files are supported for auto-extraction.")
+                    errors.append(f"Skipped {file.name}: Only CSV and Excel files are supported.")
                     continue
-                
+
                 cols = df.columns.astype(str).str.lower()
                 name_col = next((c for c in cols if 'name' in c and 'unnamed' not in c), None)
                 id_col = next((c for c in cols if ('id' in c or 'number' in c or 'no' in c) and 'unnamed' not in c), None)
@@ -5120,17 +5171,22 @@ def create_student_bulk(request):
                 bday_col = next((c for c in cols if ('birth' in c or 'bday' in c) and 'unnamed' not in c), None)
                 year_col = next((c for c in cols if ('year' in c or 'level' in c) and 'unnamed' not in c), None)
                 prog_col = next((c for c in cols if ('program' in c or 'course' in c) and 'unnamed' not in c), None)
-                
+                org_col = next((c for c in cols if ('org' in c or 'organization' in c or 'club' in c) and 'unnamed' not in c), None)
+
                 if not name_col or not id_col or not email_col:
                     errors.append(f"Skipped {file.name}: Could not detect Name, ID, or Email columns.")
                     continue
-                
+
                 for index, row in df.iterrows():
                     try:
                         name = str(row[df.columns[cols.get_loc(name_col)]]).strip()
                         student_id = str(row[df.columns[cols.get_loc(id_col)]]).strip()
                         email = str(row[df.columns[cols.get_loc(email_col)]]).strip()
-                        
+
+                        if not name or not student_id or not email or name.lower() == 'nan' or email.lower() == 'nan':
+                            errors.append(f"Row {index+2}: Missing Name, ID, or Email.")
+                            continue
+
                         bday = None
                         if bday_col and not pd.isna(row[df.columns[cols.get_loc(bday_col)]]):
                             bday_val = str(row[df.columns[cols.get_loc(bday_col)]]).strip()
@@ -5138,7 +5194,7 @@ def create_student_bulk(request):
                                 bday = pd.to_datetime(bday_val).date()
                             except:
                                 bday = None
-                                
+
                         year = "1st Year"
                         if year_col and not pd.isna(row[df.columns[cols.get_loc(year_col)]]):
                             year_val = str(row[df.columns[cols.get_loc(year_col)]]).strip()
@@ -5146,27 +5202,81 @@ def create_student_bulk(request):
                             elif '2' in year_val: year = "2nd Year"
                             elif '3' in year_val: year = "3rd Year"
                             elif '4' in year_val: year = "4th Year"
-                            
-                        program = "Not Assigned"
+
+                        # 🟢 DUAL DETECTION: Program & Org name
+                        detected_org = None
+                        program_val = ""
+
                         if prog_col and not pd.isna(row[df.columns[cols.get_loc(prog_col)]]):
-                            program = str(row[df.columns[cols.get_loc(prog_col)]]).strip()
-                            
-                        org_mapping = { 'BSIT': 'ITO', 'BSENT': 'YEO', 'BPA': 'PAS', 'BEED': 'FTO', 'DOMT': 'ITS', 'DIT': 'ITS' }
-                        organization = org_mapping.get(program, 'Not Assigned')
-                            
-                        if not name or not student_id or not email or name.lower() == 'nan' or email.lower() == 'nan':
-                            errors.append(f"Skipped Row {index+2}: Missing Name, ID, or Email.")
+                            raw_prog = str(row[df.columns[cols.get_loc(prog_col)]]).strip().upper()
+                            for p_key, o_val in prog_to_org.items():
+                                if p_key in raw_prog:
+                                    program_val = p_key
+                                    detected_org = o_val
+                                    break
+                            if not program_val:
+                                program_val = str(row[df.columns[cols.get_loc(prog_col)]]).strip()
+
+                        if org_col and not pd.isna(row[df.columns[cols.get_loc(org_col)]]):
+                            raw_org = str(row[df.columns[cols.get_loc(org_col)]]).strip().upper()
+                            for o_code in known_orgs:
+                                if o_code == raw_org or o_code in raw_org:
+                                    detected_org = o_code
+                                    break
+                            if not detected_org and ('CULTURE' in raw_org or 'ARTS' in raw_org):
+                                detected_org = 'CAO'
+                            elif not detected_org and ('SUPREME' in raw_org or 'COUNCIL' in raw_org):
+                                detected_org = 'SSC'
+                            elif not detected_org and ('SPORTS' in raw_org or 'PUSO' in raw_org):
+                                detected_org = 'PUSO'
+                            elif not detected_org and ('NEWS' in raw_org or 'NEWSETTE' in raw_org):
+                                detected_org = 'NEWS'
+                            elif not detected_org and ('ROTC' in raw_org or 'RESERVE' in raw_org):
+                                detected_org = 'ROTC'
+                            elif not detected_org and ('PRIDE' in raw_org):
+                                detected_org = 'PRIDE'
+
+                        # If not detected from row, fallback to uploader_org
+                        if not detected_org:
+                            detected_org = uploader_org if uploader_org else 'Not Assigned'
+
+                        if not program_val or program_val == 'Not Assigned':
+                            program_val = org_to_prog.get(detected_org, 'Not Assigned')
+
+                        # 🟢 SMART CO-ORG LINKING FOR EXISTING STUDENTS
+                        existing_student = Student.objects.filter(student_number__iexact=student_id).first() or Student.objects.filter(email_address__iexact=email).first()
+                        if not existing_student:
+                            user_match = User.objects.filter(username__iexact=student_id).first() or User.objects.filter(email__iexact=email).first()
+                            if user_match:
+                                existing_student = Student.objects.filter(user=user_match).first()
+
+                        if existing_student:
+                            existing_orgs = [o.upper() for o in existing_student.get_all_organizations()]
+                            if detected_org and detected_org != 'Not Assigned':
+                                if detected_org.upper() not in existing_orgs:
+                                    co_list = [o.strip() for o in existing_student.co_organizations.split(',') if o.strip()]
+                                    co_list.append(detected_org)
+                                    existing_student.co_organizations = ', '.join(co_list)
+                                    existing_student.is_verified = True
+                                    existing_student.save(update_fields=['co_organizations', 'is_verified'])
+                                    linked_count += 1
+                                    continue
+                                else:
+                                    errors.append(f"Skipped {student_id}: Already a member of {detected_org}.")
+                                    continue
+                            else:
+                                errors.append(f"Skipped {student_id}: Account already exists.")
+                                continue
+
+                        if User.objects.filter(username__iexact=student_id).exists() or User.objects.filter(email__iexact=email).exists():
+                            errors.append(f"Skipped {student_id}: Account with this ID or Email already exists in User database.")
                             continue
-                            
-                        if User.objects.filter(username=student_id).exists() or User.objects.filter(email=email).exists():
-                            errors.append(f"Skipped {student_id}: Account or Email already exists in the system.")
-                            continue 
-                            
+
                         import secrets
                         import string
                         password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
                         user = User.objects.create_user(username=student_id, email=email, password=password)
-                        
+
                         Student.objects.create(
                             user=user,
                             full_name=name,
@@ -5174,29 +5284,38 @@ def create_student_bulk(request):
                             email_address=email,
                             password=make_password(password),
                             year_level=year,
-                            program=program,
+                            program=program_val,
                             birthdate=bday,
-                            is_verified=False,
+                            is_verified=True,  # 🟢 INSTANT VERIFICATION!
                             force_password_change=True,
-                            organization=organization
+                            organization=detected_org
                         )
-                        
-                        send_student_credentials(email, name, student_id, password)
+
+                        try:
+                            send_student_credentials(email, name, student_id, password)
+                        except Exception:
+                            pass
                         created_count += 1
                     except Exception as ex:
                         errors.append(f"Row {index+2} Failed: {str(ex)}")
                         continue
-                        
+
             except Exception as e:
                 errors.append(f"Error reading {file.name}: {str(e)}")
-                
-        if created_count > 0:
-            msg = f"Successfully created {created_count} student accounts and sent credentials via email."
-            if errors: msg += f" Issues: {', '.join(errors)}"
+
+        total_processed = created_count + linked_count
+        if total_processed > 0:
+            details = []
+            if created_count > 0:
+                details.append(f"{created_count} new accounts created & verified")
+            if linked_count > 0:
+                details.append(f"{linked_count} existing students auto-linked to organization")
+            msg = f"Successfully processed: {', '.join(details)}."
+            if errors: msg += f" Notice: {', '.join(errors[:5])}"
             return JsonResponse({'status': 'success', 'message': msg})
         else:
             msg = 'No valid new accounts found in the file.'
-            if errors: msg += f" Details: {', '.join(errors)}"
+            if errors: msg += f" Details: {', '.join(errors[:5])}"
             return JsonResponse({'status': 'error', 'message': msg})
     return JsonResponse({'status': 'error', 'message': 'No files uploaded.'})
 
@@ -5318,8 +5437,7 @@ from campus_app.views import is_admin_strictly, send_student_credentials
 
 
 
-@user_passes_test(is_admin_strictly, login_url='/')
-
+@user_passes_test(is_admin_or_organizer, login_url='/')
 def generate_and_send_password_api(request):
 
     if request.method == 'POST':
