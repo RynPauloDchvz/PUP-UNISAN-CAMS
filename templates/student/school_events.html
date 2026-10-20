@@ -211,26 +211,27 @@
                     </div>
                 </div>
 
-                <div class="w-full max-w-md mx-auto space-y-5 flex flex-col flex-grow">
-                    <div id="physicalAudit" class="bg-gray-50 dark:bg-[#0a0a0a] border border-gray-100 dark:border-gray-900 rounded-2xl p-4 flex items-start gap-4 shadow-sm">
-                        <div class="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-600">
-                            <i class="ph-bold ph-eyeglasses text-xl"></i>
+                <div class="w-full max-w-md mx-auto space-y-3 flex flex-col shrink-0">
+                    <!-- PROMINENT CAPTURE / AUTHORIZE BUTTON RIGHT BELOW SCANNER -->
+                    <button id="btnSubmitScan" disabled class="w-full bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black py-4 sm:py-5 px-6 rounded-2xl text-[10px] sm:text-xs flex items-center justify-center gap-3 transition-all shadow-2xl hover:opacity-90 active:scale-95 disabled:opacity-20 uppercase tracking-[0.3em]">
+                        <i class="ph-bold ph-bounding-box text-xl"></i> Authorize Entry
+                    </button>
+
+                    <p id="locStatus" class="text-[9px] font-black uppercase tracking-[0.2em] flex items-center justify-center w-full gap-2 text-center text-gray-400 bg-gray-50 dark:bg-[#0a0a0a] py-2.5 rounded-full border border-gray-100 dark:border-gray-900">
+                        <i class="ph-bold ph-spinner animate-spin text-base"></i> Secure Geofence Check...
+                    </p>
+
+                    <div id="physicalAudit" class="bg-gray-50 dark:bg-[#0a0a0a] border border-gray-100 dark:border-gray-900 rounded-2xl p-3 flex items-start gap-3 shadow-sm">
+                        <div class="p-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-600">
+                            <i class="ph-bold ph-eyeglasses text-lg"></i>
                         </div>
                         <div>
-                            <p class="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-tight">Physical Audit Required</p>
-                            <p class="text-[9px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5">Please remove <span class="text-pup-maroon dark:text-pup-gold font-bold">glasses, masks, or hats</span> for valid biometric synchronization.</p>
+                            <p class="text-[9px] font-black text-gray-900 dark:text-white uppercase tracking-tight">Audit Requirements</p>
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 leading-tight">Remove <span class="text-pup-maroon dark:text-pup-gold font-bold">glasses, masks, or hats</span> for valid facial synchronization.</p>
                         </div>
                     </div>
 
-                    <div id="locationMap" class="w-full h-28 rounded-[1.5rem] border border-gray-100 dark:border-gray-800 z-10 shadow-inner relative overflow-hidden shrink-0"></div>
-                    
-                    <p id="locStatus" class="text-[9px] font-black uppercase tracking-[0.2em] flex items-center justify-center w-full gap-3 text-center text-gray-400 bg-gray-50 dark:bg-[#0a0a0a] py-3 rounded-full border border-gray-100 dark:border-gray-900">
-                        <i class="ph-bold ph-spinner animate-spin text-lg"></i> Secure Geofence Check...
-                    </p>
-
-                    <button id="btnSubmitScan" disabled class="w-full bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black py-5 px-6 rounded-2xl text-[10px] flex items-center justify-center gap-3 transition-all shadow-2xl mt-4 hover:opacity-90 active:scale-95 disabled:opacity-10 uppercase tracking-[0.4em]">
-                        <i class="ph-bold ph-bounding-box text-xl"></i> Authorize Entry
-                    </button>
+                    <div id="locationMap" class="w-full h-24 rounded-[1.5rem] border border-gray-100 dark:border-gray-800 z-10 shadow-inner relative overflow-hidden shrink-0"></div>
                 </div>
             </div>
 
