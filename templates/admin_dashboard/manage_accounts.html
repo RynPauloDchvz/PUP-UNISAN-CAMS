@@ -211,11 +211,15 @@
 
     /* MOBILE BOTTOM SHEET OVERRIDES */
     @media (max-width: 900px) {
+        .modal.modal-fullscreen {
+            padding: 0 !important;
+        }
         .modal.modal-fullscreen .modal-box {
-            width: 100vw !important;
-            max-width: 100vw !important;
-            height: 100vh !important;
-            max-height: 100vh !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
             margin: 0 !important;
             border-radius: 0 !important;
             border: none !important;

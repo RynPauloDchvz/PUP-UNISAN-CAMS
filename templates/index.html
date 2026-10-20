@@ -231,9 +231,9 @@
         <!-- ============================================== -->
         <!-- 🟢 MULTI-ORG SELECTION MODAL (STEP 4) 🟢 -->
         <!-- ============================================== -->
-        <div v-if="showOrgSelectModal" class="fixed inset-0 z-[1000] flex justify-center items-center p-4">
+        <div v-if="showOrgSelectModal" class="fixed inset-0 z-[1000] flex justify-center items-center p-3 sm:p-4">
             <div class="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md" @click="showOrgSelectModal = false"></div>
-            <div class="relative w-full max-w-md bg-white dark:bg-pup-darkcard rounded-3xl p-6 sm:p-8 text-center shadow-2xl border border-gray-100 dark:border-gray-800 animate-in slide-in-from-bottom-8 duration-500 z-10 overflow-hidden">
+            <div class="relative w-full max-w-md bg-white dark:bg-pup-darkcard rounded-3xl p-5 sm:p-8 text-center shadow-2xl border border-gray-100 dark:border-gray-800 animate-in slide-in-from-bottom-8 duration-500 z-10 max-h-[88dvh] overflow-y-auto form-scroll">
                 <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-pup-maroon via-pup-gold to-pup-maroon"></div>
                 
                 <img src="{% static 'images/PUPLogo.png' %}" alt="PUP Logo" class="w-16 h-16 mx-auto mb-3 object-contain drop-shadow-md">
@@ -291,7 +291,7 @@
         </div>
 
         <!-- 🟢 RIGHT SIDE: FORMS 🟢 -->
-        <div :class="{'opacity-0 pointer-events-none blur-3xl scale-95': isModalActive}" class="w-full lg:w-1/2 h-screen overflow-y-auto form-scroll flex flex-col justify-center items-center p-6 sm:p-12 relative bg-white/90 dark:bg-pup-darkbg/90 z-0 transition-all duration-1000 ease-in-out">
+        <div :class="{'opacity-0 pointer-events-none blur-3xl scale-95': isModalActive}" class="w-full lg:w-1/2 min-h-screen lg:h-screen h-full h-[100dvh] overflow-y-auto form-scroll flex flex-col justify-center items-center p-4 sm:p-12 relative bg-white/90 dark:bg-pup-darkbg/90 z-0 transition-all duration-1000 ease-in-out">
             
             <!-- Mobile Background Image -->
             <div class="absolute inset-0 bg-cover bg-center mix-blend-multiply dark:mix-blend-screen opacity-20 dark:opacity-[0.15] blur-[1px] lg:hidden z-0 pointer-events-none" style="background-image: var(--img-pup1);"></div>

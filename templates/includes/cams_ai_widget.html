@@ -154,11 +154,11 @@
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
+        width: 100% !important;
+        height: 100% !important;
         height: 100dvh !important;
-        max-width: 100vw !important;
-        max-height: 100vh !important;
+        max-width: 100% !important;
+        max-height: 100dvh !important;
         border-radius: 0 !important;
         border: none !important;
         box-shadow: none !important;
@@ -334,25 +334,44 @@
 
     /* Mobile Responsive Optimizations */
     @media (max-width: 640px) {
+        #cams-ai-widget-root {
+            bottom: 16px;
+            right: 16px;
+        }
+
         #cams-ai-launcher {
-            width: 48px;
-            height: 48px;
+            width: 50px;
+            height: 50px;
         }
 
         .cams-launcher-icon {
-            font-size: 22px;
+            font-size: 24px;
         }
 
         #cams-ai-window {
-            bottom: 12px !important;
-            right: 12px !important;
-            left: 12px !important;
-            top: auto !important;
-            width: auto !important;
-            max-width: none !important;
-            height: calc(100vh - 24px) !important;
-            max-height: none !important;
-            border-radius: 18px !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            right: 0 !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            transform-origin: center center;
+        }
+
+        #cams-ai-window .cams-ai-header {
+            cursor: default !important;
+            padding: 12px 14px;
+        }
+
+        #cams-ai-window .cams-fullscreen-btn {
+            display: none !important; /* Screen is automatically edge-to-edge on phones */
         }
     }
 </style>
