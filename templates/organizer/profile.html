@@ -151,7 +151,7 @@
                             <img src="https://ui-avatars.com/api/?name={{ full_name|urlencode }}&background=800000&color=fff" class="w-full h-full object-cover" id="profileImage" alt="Profile">
                         {% endif %}
                         
-                        <div id="profileEditOverlay" class="absolute inset-0 z-20 hidden bg-black/50 items-center justify-center cursor-pointer hover:bg-black/70 transition-colors" style="display: none;" onclick="document.getElementById('profileFileInput').click()">
+                        <div id="profileEditOverlay" class="absolute inset-0 z-20 bg-black/50 items-center justify-center cursor-pointer hover:bg-black/70 transition-colors" style="display: none;" onclick="document.getElementById('profileFileInput').click()">
                             <i class="ph-bold ph-camera-plus text-2xl sm:text-4xl text-white"></i>
                         </div>
                     </div>
@@ -707,15 +707,53 @@
 
     window.addEventListener('load', initNotifications);
 
+    let cropper = null;
+    let currentCroppingType = null;
+    let croppedProfileBlob = null;
+    let croppedCoverBlob = null;
+    let originalProfileSrc = '';
+    let originalCoverSrc = '';
+
     function previewImage(event, imgId) {
         const file = event.target.files[0];
-        if (file) {
-            const img = document.getElementById(imgId);
-            img.src = URL.createObjectURL(file);
-            img.classList.remove('hidden');
-            const initials = document.getElementById('profileInitials');
-            if (initials && imgId === 'profileImage') initials.classList.add('hidden');
-        }
+        if (!file) return;
+
+        currentCroppingType = imgId === 'profileImage' ? 'profile' : 'cover';
+
+        const cropperImage = document.getElementById('cropperImage');
+        cropperImage.src = URL.createObjectURL(file);
+        document.getElementById('cropperModal').classList.remove('hidden');
+
+        if (cropper) cropper.destroy();
+        cropper = new Cropper(cropperImage, {
+            aspectRatio: currentCroppingType === 'profile' ? 1 : 16/9,
+            viewMode: 1,
+            autoCropArea: 1,
+        });
+
+        event.target.value = '';
+    }
+
+    function confirmCrop() {
+        if (!cropper) return;
+        cropper.getCroppedCanvas({
+            width: currentCroppingType === 'profile' ? 512 : 1280,
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high',
+        }).toBlob(blob => {
+            const imgEl = document.getElementById(currentCroppingType === 'profile' ? 'profileImage' : 'coverImage');
+            imgEl.src = URL.createObjectURL(blob);
+
+            if (currentCroppingType === 'profile') croppedProfileBlob = blob;
+            else croppedCoverBlob = blob;
+
+            closeCropperModal();
+        }, 'image/jpeg', 0.9);
+    }
+
+    function closeCropperModal() {
+        document.getElementById('cropperModal').classList.add('hidden');
+        if (cropper) { cropper.destroy(); cropper = null; }
     }
 
     function closeEventMessage() {
@@ -757,11 +795,22 @@
             profileOverlay.style.display = 'none';
             coverOverlay.style.display = 'none';
             inputEditName.value = nameDisplay.innerText.trim();
+
+            if (originalProfileSrc) document.getElementById('profileImage').src = originalProfileSrc;
+            if (originalCoverSrc) document.getElementById('coverImage').src = originalCoverSrc;
+            croppedProfileBlob = null;
+            croppedCoverBlob = null;
+            const pInput = document.getElementById('profileFileInput');
+            const cInput = document.getElementById('coverFileInput');
+            if (pInput) pInput.value = '';
+            if (cInput) cInput.value = '';
             return;
         }
 
         if (!isOrgEditMode) {
             isOrgEditMode = true;
+            originalProfileSrc = document.getElementById('profileImage') ? document.getElementById('profileImage').src : '';
+            originalCoverSrc = document.getElementById('coverImage') ? document.getElementById('coverImage').src : '';
             btnCancel.classList.remove('hidden');
             btnCancel.classList.add('flex');
             btn.classList.replace('bg-[#800000]', 'bg-green-600');
@@ -781,10 +830,12 @@
             btn.disabled = true;
 
             const formData = new FormData();
-            formData.append('full_name', inputEditName.value);
+            formData.append('full_name', inputEditName.value.trim());
             
-            const profileFile = document.getElementById('profileFileInput').files[0];
-            const coverFile = document.getElementById('coverFileInput').files[0];
+            const pInputEl = document.getElementById('profileFileInput');
+            const cInputEl = document.getElementById('coverFileInput');
+            const profileFile = pInputEl && pInputEl.files ? pInputEl.files[0] : null;
+            const coverFile = cInputEl && cInputEl.files ? cInputEl.files[0] : null;
             
             if (croppedProfileBlob) formData.append('profile_picture', croppedProfileBlob, 'profile.jpg');
             else if (profileFile) formData.append('profile_picture', profileFile);
@@ -801,7 +852,7 @@
                 const data = await response.json();
 
                 if(data.status === 'success') {
-                    nameDisplay.innerText = inputEditName.value;
+                    nameDisplay.innerText = inputEditName.value.trim();
                     isOrgEditMode = false;
                     btn.classList.replace('bg-green-600', 'bg-[#800000]');
                     btn.classList.replace('dark:bg-green-500', 'dark:bg-[#D4AF37]');
@@ -816,10 +867,17 @@
                     coverOverlay.style.display = 'none';
                     alert("Profile successfully updated!");
                     location.reload(); // Reload to update header and images everywhere
-                } else { alert("Error saving profile: " + data.message); }
-            } catch (error) { alert("Something went wrong connecting to the server."); } 
+                } else { 
+                    alert("Error saving profile: " + data.message); 
+                    btnText.innerText = "Save Changes"; 
+                    btnMobile.innerText = "Save";
+                }
+            } catch (error) { 
+                alert("Something went wrong connecting to the server."); 
+                btnText.innerText = "Save Changes"; 
+                btnMobile.innerText = "Save";
+            } 
             finally {
-                if (isOrgEditMode) { btnText.innerText = "Save Changes"; btnMobile.innerText = "Save"; }
                 btn.disabled = false;
             }
         }

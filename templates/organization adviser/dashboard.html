@@ -424,7 +424,7 @@
                                             <p class="mb-6">Dear <strong>Dr. Malabuyoc</strong>:</p>
                                             <p class="mb-6">Greetings!</p>
                                             <p class="mb-6 text-justify indent-10 leading-relaxed">
-                                                To comply with the commitment to UPHOLD E2E Program: Upscaling Holistic Development from Enrollment to Employment, the <strong>[[ selectedEvent.full_org ]]</strong> will be conducting an activity entitled <strong>"[[ selectedEvent.title ]]"</strong>. [[ parsedDescription.originalDesc ]]
+                                                To comply with the commitment to UPHOLD E2E Program: Upscaling Holistic Development from Enrollment to Employment, the <strong>[[ selectedEvent.full_org ]]</strong> will be conducting an activity entitled <strong>"[[ selectedEvent.title ]]"</strong>.<span v-if="parsedDescription.originalDesc"> [[ parsedDescription.originalDesc ]]</span>
                                             </p>
                                             <p class="mb-10 text-justify indent-10 leading-relaxed">
                                                 The activity is scheduled for <strong>[[ selectedEvent.date ]]</strong>, <strong>[[ selectedEvent.time ]]</strong> to <strong>[[ selectedEvent.end_time || '(End Time)' ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>.
@@ -447,7 +447,7 @@
                                                 We propose moving the event to <strong>[[ selectedEvent.date ]]</strong>, from <strong>[[ selectedEvent.time ]] to [[ selectedEvent.end_time || '(End Time)' ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>.
                                             </p>
                                             <p class="mb-10 text-justify indent-10 leading-relaxed">
-                                                This request is made due to [[ parsedDescription.reason ]]. [[ parsedDescription.originalDesc ]]
+                                                This request is made due to [[ parsedDescription.reason ]].<span v-if="parsedDescription.originalDesc"> [[ parsedDescription.originalDesc ]]</span>
                                             </p>
                                             <p class="mb-12">We look forward to your response and understanding regarding this proposed change. Thank you for your usual support!</p>
                                         </div>
@@ -905,6 +905,13 @@
                     });
                 });
 
+                const cleanLetterDesc = (str) => {
+                    if (!str) return "";
+                    const trimmed = str.trim();
+                    if (/^\(?(no description provided\.?)\)?$/i.test(trimmed)) return "";
+                    return trimmed;
+                };
+
                 const parsedDescription = computed(() => {
                     if (!selectedEvent.value) return null;
                     let desc = selectedEvent.value.description || "";
@@ -920,7 +927,7 @@
                             if(part.includes("Desc:")) origDescStr = part.split('Desc:')[1].trim();
                         });
 
-                        return { type: 'reschedule', reason: reasonStr, origDate: origDateStr, originalDesc: origDescStr };
+                        return { type: 'reschedule', reason: reasonStr, origDate: origDateStr, originalDesc: cleanLetterDesc(origDescStr) };
                     }
                     else if (desc.includes("[NEW EVENT]")) {
                         let targetStr = "N/A";
@@ -933,10 +940,10 @@
                             if(part.includes("Desc:")) origDescStr = part.split('Desc:')[1].trim();
                         });
 
-                        return { type: 'new_event', target: targetStr, equipment: equipStr, originalDesc: origDescStr }; 
+                        return { type: 'new_event', target: targetStr, equipment: equipStr, originalDesc: cleanLetterDesc(origDescStr) }; 
                     }
                     else {
-                        return { type: 'standard', originalDesc: desc };
+                        return { type: 'standard', originalDesc: cleanLetterDesc(desc) };
                     }
                 });
 

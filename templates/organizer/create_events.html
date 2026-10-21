@@ -1104,6 +1104,20 @@
 
         toggleFormFields();
 
+        // Enforce minimum date as today for Target Date (No past dates)
+        const evtDateInput = document.getElementById('evtDate');
+        if (evtDateInput) {
+            const now = new Date();
+            const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            evtDateInput.min = localToday;
+            evtDateInput.addEventListener('change', function () {
+                if (this.value && this.value < localToday) {
+                    alert("Event date cannot be in the past. Please select today or a future date.");
+                    this.value = localToday;
+                }
+            });
+        }
+
         // Setup custom select dropdown
         const selectBtn = document.getElementById('customSelectBtn');
         const menuWrapper = document.getElementById('customSelectMenuWrapper');
@@ -1789,6 +1803,14 @@
     }
 
     async function submitFlagRaising(btn) {
+        const evtDateVal = document.getElementById('evtDate') ? document.getElementById('evtDate').value : '';
+        const now = new Date();
+        const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (!evtDateVal || evtDateVal < localToday) {
+            alert("Event date cannot be in the past. Please select today or a future date.");
+            return;
+        }
+
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Deploying...';
         btn.disabled = true;
@@ -1940,6 +1962,15 @@
             if (window.innerWidth < 1024) setMobilePhase(2);
             dateInput.focus();
             alert("Please select Event Date.");
+            return;
+        }
+
+        const now = new Date();
+        const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (dateInput && dateInput.value < localToday) {
+            if (window.innerWidth < 1024) setMobilePhase(2);
+            dateInput.focus();
+            alert("Event date cannot be in the past. Please select today or a future date.");
             return;
         }
 
@@ -2144,13 +2175,21 @@
     }
 
     async function submitToAdviser(btn) {
+        const evtDateVal = document.getElementById('evtDate') ? document.getElementById('evtDate').value : '';
+        const now = new Date();
+        const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (!evtDateVal || evtDateVal < localToday) {
+            alert("Event date cannot be in the past. Please select today or a future date.");
+            return;
+        }
+
         if (!btn || !btn.innerHTML) btn = document.getElementById('btnSubmitToAdviser');
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Sending...';
         btn.disabled = true;
 
         const type = document.getElementById('letterType').value;
-        const descBase = document.getElementById('evtDesc').value || "No description provided.";
+        const descBase = (document.getElementById('evtDesc').value || "").trim();
         const target = document.getElementById('excuseClasses').value || "None";
         const equip = document.getElementById('reqEquipment').value || "None";
 

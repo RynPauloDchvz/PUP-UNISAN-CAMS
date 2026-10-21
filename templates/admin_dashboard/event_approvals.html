@@ -1397,7 +1397,7 @@
                                             <p style="margin-bottom: 15px;">Dear <strong>Dr. Malabuyoc</strong>:</p>
                                             <p style="margin-bottom: 15px;">Greetings!</p>
                                             <p style="margin-bottom: 15px; text-align: justify; text-indent: 40px;">
-                                                To comply with the commitment to UPHOLD E2E Program: Upscaling Holistic Development from Enrollment to Employment, the <strong>[[ selectedEvent.full_org ]]</strong> will be conducting an activity entitled <strong>"[[ selectedEvent.title ]]"</strong>. [[ parsedDescription.originalDesc ]]
+                                                To comply with the commitment to UPHOLD E2E Program: Upscaling Holistic Development from Enrollment to Employment, the <strong>[[ selectedEvent.full_org ]]</strong> will be conducting an activity entitled <strong>"[[ selectedEvent.title ]]"</strong>.<span v-if="parsedDescription.originalDesc"> [[ parsedDescription.originalDesc ]]</span>
                                             </p>
                                             <p style="margin-bottom: 30px; text-align: justify; text-indent: 40px;">
                                                 The activity is scheduled for <strong>[[ selectedEvent.date ]]</strong>, <strong>[[ selectedEvent.time ]]</strong> to <strong>[[ selectedEvent.end_time || '(End Time)' ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>.
@@ -1418,7 +1418,7 @@
                                                 We propose moving the event to <strong>[[ selectedEvent.date ]]</strong>, from <strong>[[ selectedEvent.time ]] to [[ selectedEvent.end_time || '(End Time)' ]]</strong> at <strong>[[ selectedEvent.venue ]]</strong>.
                                             </p>
                                             <p style="margin-bottom: 30px; text-align: justify; text-indent: 40px;">
-                                                This request is made due to [[ parsedDescription.reason ]]. [[ parsedDescription.originalDesc ]]
+                                                This request is made due to [[ parsedDescription.reason ]].<span v-if="parsedDescription.originalDesc"> [[ parsedDescription.originalDesc ]]</span>
                                             </p>
                                         </div>
                                     </div>
@@ -1899,6 +1899,13 @@
                 return docs;
             });
 
+            const cleanLetterDesc = (str) => {
+                if (!str) return "";
+                const trimmed = str.trim();
+                if (/^\(?(no description provided\.?)\)?$/i.test(trimmed)) return "";
+                return trimmed;
+            };
+
             const parsedDescription = computed(() => {
                 if (!selectedEvent.value) return { type: 'standard', originalDesc: '' };
                 let desc = selectedEvent.value.description || "";
@@ -1912,7 +1919,7 @@
                         if(part.includes("Original:")) origDateStr = part.split('Original:')[1]?.trim() || origDateStr;
                         if(part.includes("Desc:")) origDescStr = part.split('Desc:')[1]?.trim() || origDescStr;
                     });
-                    return { type: 'reschedule', reason: reasonStr, origDate: origDateStr, originalDesc: origDescStr };
+                    return { type: 'reschedule', reason: reasonStr, origDate: origDateStr, originalDesc: cleanLetterDesc(origDescStr) };
                 }
                 else if (desc.includes("[NEW EVENT]")) {
                     let targetStr = "N/A";
@@ -1923,10 +1930,10 @@
                         if(part.includes("Equipment:")) equipStr = part.split('Equipment:')[1]?.trim() || equipStr;
                         if(part.includes("Desc:")) origDescStr = part.split('Desc:')[1]?.trim() || origDescStr;
                     });
-                    return { type: 'new_event', target: targetStr, equipment: equipStr, originalDesc: origDescStr }; 
+                    return { type: 'new_event', target: targetStr, equipment: equipStr, originalDesc: cleanLetterDesc(origDescStr) }; 
                 }
                 else {
-                    return { type: 'standard', originalDesc: desc };
+                    return { type: 'standard', originalDesc: cleanLetterDesc(desc) };
                 }
             });
 

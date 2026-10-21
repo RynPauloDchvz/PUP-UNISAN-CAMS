@@ -841,7 +841,11 @@ def update_student_profile(request):
             year_level = request.POST.get('year_level')
             birthdate = request.POST.get('birthdate')
 
-            if full_name: student.full_name = full_name
+            if full_name:
+                student.full_name = full_name
+                if student.user:
+                    student.user.first_name = full_name
+                    student.user.save()
             if year_level: student.year_level = year_level
             if birthdate: student.birthdate = birthdate
 
@@ -2002,6 +2006,18 @@ def submit_event_proposal(request):
             description = request.POST.get('description')
             is_flag_raising = request.POST.get('is_flag_raising') == 'true'
 
+            # 🟢 Past Date Validation (Event date must be today or future)
+            if event_date:
+                try:
+                    parsed_date = datetime.strptime(event_date.strip(), '%Y-%m-%d').date()
+                    today = timezone.localtime(timezone.now()).date()
+                    if parsed_date < today:
+                        return JsonResponse({'status': 'error', 'message': 'Event date cannot be in the past. Please select today or a future date.'})
+                except ValueError:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid event date format.'})
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Event date is required.'})
+
             # 🟢 Target Audience, Evaluation, and Attendance Scope Settings
             target_audience = request.POST.get('target_audience', 'ALL')
             allowed_orgs = request.POST.get('allowed_orgs', 'ALL')
@@ -2810,6 +2826,10 @@ def update_organizer_profile(request):
             if full_name:
                 request.user.first_name = full_name
                 request.user.save()
+                student = Student.objects.filter(user=request.user).first()
+                if student:
+                    student.full_name = full_name
+                    student.save()
             
             if 'profile_picture' in request.FILES:
                 org_profile.profile_picture = request.FILES['profile_picture']

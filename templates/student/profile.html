@@ -94,7 +94,7 @@
                             <img src="https://ui-avatars.com/api/?name={{ student.full_name|urlencode }}&background=800000&color=fff" class="w-full h-full object-cover" id="profileImage" alt="Profile">
                         {% endif %}
                         
-                        <div id="profileEditOverlay" class="absolute inset-0 z-20 hidden bg-black/50 items-center justify-center cursor-pointer hover:bg-black/70 transition-colors" style="display: none;" onclick="document.getElementById('profileFileInput').click()">
+                        <div id="profileEditOverlay" class="absolute inset-0 z-20 bg-black/50 items-center justify-center cursor-pointer hover:bg-black/70 transition-colors" style="display: none;" onclick="document.getElementById('profileFileInput').click()">
                             <i class="ph-bold ph-camera-plus text-2xl sm:text-4xl text-white"></i>
                         </div>
                     </div>
@@ -155,7 +155,7 @@
                     <span id="yearDisplay" class="block text-[0.7rem] sm:text-base font-black text-gray-900 dark:text-white uppercase transition-colors truncate">{{ student.year_level }}</span>
                     <i id="yearChevron" class="ph-bold ph-caret-down text-gray-400 hidden"></i>
                 </div>
-                <select id="yearSelect" class="hidden absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                <select id="yearSelect" class="hidden absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="document.getElementById('yearDisplay').innerText = this.value">
                     <option value="1st Year" {% if student.year_level == '1st Year' %}selected{% endif %}>1st Year</option>
                     <option value="2nd Year" {% if student.year_level == '2nd Year' %}selected{% endif %}>2nd Year</option>
                     <option value="3rd Year" {% if student.year_level == '3rd Year' %}selected{% endif %}>3rd Year</option>
@@ -961,8 +961,18 @@ let cropper = null;
 
                 if(data.status === 'success') {
                     window.location.reload();
-                } else { alert("Error: " + data.message); }
-            } catch (error) { alert("Server connection error."); } 
+                } else { 
+                    alert("Error: " + data.message); 
+                    btnText.innerText = "Save Changes";
+                    btnMobile.innerText = "Save";
+                    cancelBtn.classList.remove('hidden');
+                }
+            } catch (error) { 
+                alert("Server connection error."); 
+                btnText.innerText = "Save Changes";
+                btnMobile.innerText = "Save";
+                cancelBtn.classList.remove('hidden');
+            } 
             finally { btn.disabled = false; }
         }
     }
