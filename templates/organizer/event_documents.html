@@ -202,8 +202,8 @@
                     </div>
                     
                     <!-- Mobile Toggle Button (Visible only on < lg) -->
-                    <button type="button" onclick="toggleVaultMobile()" class="lg:hidden shrink-0 px-4 py-3 bg-white dark:bg-[#151515] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 font-bold uppercase tracking-tight text-[11px] flex items-center justify-between shadow-sm w-[130px] transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <span class="truncate">Doc Vault</span>
+                    <button type="button" onclick="toggleVaultMobile()" class="lg:hidden shrink-0 px-3.5 py-3 bg-white dark:bg-[#151515] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 font-bold uppercase tracking-tight text-[11px] flex items-center justify-between shadow-sm min-w-[130px] gap-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <span class="truncate">All Documents</span>
                         <i id="vaultMobileIcon" class="ph-bold ph-caret-down transition-transform duration-300 shrink-0"></i>
                     </button>
                 </div>
@@ -293,7 +293,7 @@
         <div class="shrink-0 p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 flex flex-row gap-4">
             <button onclick="hideModal()" class="flex-1 py-4 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition">Cancel</button>
             <button id="submit-upload-btn" class="flex-1 py-4 text-xs font-black uppercase tracking-widest bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black rounded-xl hover:opacity-90 transition shadow-lg flex items-center justify-center gap-2">
-                Submit & Save to Vault
+                Submit
             </button>
         </div>
     </div>
@@ -874,13 +874,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 alert("Upload failed: " + data.message);
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Submit & Save to Vault';
+                submitBtn.innerHTML = 'Submit';
             }
         })
         .catch(err => {
             alert("Error communicating with server.");
             submitBtn.disabled = false;
-            submitBtn.innerHTML = 'Submit & Save to Vault';
+            submitBtn.innerHTML = 'Submit';
         });
     });
 

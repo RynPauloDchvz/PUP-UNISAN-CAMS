@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     { name: 'Home', label: 'Home', icon: 'ph-bold ph-house', iconActive: 'ph-fill ph-house', url: urls.homepage },
                     { name: 'Events', label: 'Events', icon: 'ph-bold ph-calendar-blank', iconActive: 'ph-fill ph-calendar-blank', url: urls.school_events },
                     { name: 'Create', label: 'Create', icon: 'ph-bold ph-plus-circle', iconActive: 'ph-fill ph-plus-circle', url: urls.create_events },
-                    { name: 'Students', label: 'Students', icon: 'ph-bold ph-users', iconActive: 'ph-fill ph-users', url: urls.manage_students },
+                    { name: 'Students', label: 'Manage', icon: 'ph-bold ph-users', iconActive: 'ph-fill ph-users', url: urls.manage_students },
                     { name: 'Attendance', label: 'Attendance', icon: 'ph-bold ph-user-focus', iconActive: 'ph-fill ph-user-focus', url: urls.manage_attendance },
                     { name: 'Analytics', label: 'Analytics', icon: 'ph-bold ph-chart-bar', iconActive: 'ph-fill ph-chart-bar', url: urls.analytics },
                     { name: 'Theme', label: 'Theme', icon: 'ph-bold ph-moon', iconActive: 'ph-fill ph-sun', url: null }

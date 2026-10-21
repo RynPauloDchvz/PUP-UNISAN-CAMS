@@ -106,12 +106,12 @@
     {% endif %}
 
     <div class="mb-6 border-b border-gray-200 dark:border-gray-800 pb-6 text-center sm:text-left">
-        <h1 class="font-sans font-black text-2xl sm:text-4xl text-pup-maroon dark:text-pup-gold uppercase tracking-wide whitespace-nowrap sm:whitespace-normal">Manage Students</h1>
+        <h1 class="font-sans font-black text-2xl sm:text-4xl text-pup-maroon dark:text-pup-gold uppercase tracking-wide whitespace-nowrap sm:whitespace-normal">Manage Student Accounts</h1>
         <p class="text-gray-500 dark:text-gray-400 mt-2 font-sans text-sm sm:text-base">Verify student registrations and assign them to their respective organizations.</p>
     </div>
 
     <div class="w-full text-center mb-6 flex flex-col items-center justify-center overflow-hidden px-2">
-        <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-2">Current View: <span class="text-pup-maroon dark:text-pup-gold">{{ org_acronym }}</span></p>
+        <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-2"><span class="text-pup-maroon dark:text-pup-gold">{{ org_acronym }} MEMBER</span></p>
         <div class="w-full flex justify-center">
             <span class="bg-pup-maroon dark:bg-pup-gold text-white dark:text-black px-4 sm:px-6 py-2 rounded-full shadow-md inline-block max-w-full truncate text-xs sm:text-sm md:text-base font-black uppercase tracking-wider" title="{{ full_org_name }}">
                 {{ full_org_name }}
@@ -161,7 +161,7 @@
 
 
 
-    <h2 class="text-xl font-black text-gray-900 dark:text-white mb-3 uppercase tracking-wide">Verified Students</h2>
+    <h2 class="text-xl font-black text-gray-900 dark:text-white mb-3 uppercase tracking-wide">All {{ org_acronym }} Members</h2>
     <div class="bg-white dark:bg-pup-darkcard rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden font-sans">
         <div class="hidden sm:grid grid-cols-12 gap-4 p-4 bg-gray-50 dark:bg-[#111] border-b border-gray-200 dark:border-gray-800 text-xs font-bold text-gray-500 uppercase tracking-wider">
             <div class="col-span-5">Student Information</div>
@@ -351,72 +351,8 @@
                     <input type="text" id="c_username" required placeholder="e.g. 2023-01234-MN-0" class="w-full bg-gray-50 dark:bg-[#1c1c1c] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold transition-colors">
                 </div>
 
-                <!-- Birthday (Month / Day / Year) -->
-                <div>
-                    <label class="block text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Birthday <span class="text-red-500">*</span></label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <!-- Month Select -->
-                        <div class="relative">
-                            <select id="b_month" required class="w-full bg-gray-50 dark:bg-[#1c1c1c] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs sm:text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold appearance-none cursor-pointer">
-                                <option value="" disabled selected>Month</option>
-                                <option value="01">Jan (01)</option>
-                                <option value="02">Feb (02)</option>
-                                <option value="03">Mar (03)</option>
-                                <option value="04">Apr (04)</option>
-                                <option value="05">May (05)</option>
-                                <option value="06">Jun (06)</option>
-                                <option value="07">Jul (07)</option>
-                                <option value="08">Aug (08)</option>
-                                <option value="09">Sep (09)</option>
-                                <option value="10">Oct (10)</option>
-                                <option value="11">Nov (11)</option>
-                                <option value="12">Dec (12)</option>
-                            </select>
-                            <i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
-                        </div>
-
-                        <!-- Day Select -->
-                        <div class="relative">
-                            <select id="b_day" required class="w-full bg-gray-50 dark:bg-[#1c1c1c] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs sm:text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold appearance-none cursor-pointer">
-                                <option value="" disabled selected>Day</option>
-                            </select>
-                            <i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
-                        </div>
-
-                        <!-- Year Select -->
-                        <div class="relative">
-                            <select id="b_year" required class="w-full bg-gray-50 dark:bg-[#1c1c1c] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-xs sm:text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold appearance-none cursor-pointer">
-                                <option value="" disabled selected>Year</option>
-                            </select>
-                            <i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Organization Selector -->
-                <div>
-                    <label class="block text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Organization <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <select id="c_org" required onchange="handleOrgChange(this.value)" class="w-full bg-gray-50 dark:bg-[#1c1c1c] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold appearance-none cursor-pointer">
-                            <optgroup label="Academic Organizations" class="bg-gray-100 dark:bg-[#1f1f1f] text-gray-900 dark:text-white font-bold">
-                                <option value="ITO" {% if org_acronym == 'ITO' %}selected{% endif %}>ITO - Information Technology Org (BSIT)</option>
-                                <option value="ITS" {% if org_acronym == 'ITS' %}selected{% endif %}>ITS - Institute of Technology Society (DOMT/DIT)</option>
-                                <option value="YEO" {% if org_acronym == 'YEO' %}selected{% endif %}>YEO - Young Entrepreneurship Org (BSENT)</option>
-                                <option value="FTO" {% if org_acronym == 'FTO' %}selected{% endif %}>FTO - Future Teacher Org (BEED)</option>
-                                <option value="PAS" {% if org_acronym == 'PAS' %}selected{% endif %}>PAS - Public Administration Society (BPA)</option>
-                            </optgroup>
-                            <optgroup label="Non-Academic Organizations" class="bg-gray-100 dark:bg-[#1f1f1f] text-gray-900 dark:text-white font-bold">
-                                <option value="CAO" {% if org_acronym == 'CAO' %}selected{% endif %}>CAO - Culture and Arts Organization</option>
-                                <option value="NEWS" {% if org_acronym == 'NEWS' %}selected{% endif %}>NEWS - The Newsette</option>
-                                <option value="PRIDE" {% if org_acronym == 'PRIDE' %}selected{% endif %}>PRIDE - PRIDEVerse</option>
-                                <option value="ROTC" {% if org_acronym == 'ROTC' %}selected{% endif %}>ROTC - Reserve Officers' Training Corps</option>
-                                <option value="PUSO" {% if org_acronym == 'PUSO' %}selected{% endif %}>PUSO - PUP Unisan Sports Org</option>
-                                <option value="SSC" {% if org_acronym == 'SSC' %}selected{% endif %}>SSC - Supreme Student Council</option>
-                            </optgroup>
-                        </select>
-                        <i class="ph-bold ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
-                    </div>
-                </div>
+                <!-- Hidden Org (Auto-bound to organizer's organization) -->
+                <input type="hidden" id="c_org" value="{{ org_acronym }}">
 
                 <!-- Program & Year Level -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -847,17 +783,17 @@
     async function submitCreateStudent() {
         const name = document.getElementById('c_name').value.trim();
         const username = document.getElementById('c_username').value.trim();
-        const b_month = document.getElementById('b_month').value;
-        const b_day = document.getElementById('b_day').value;
-        const b_year = document.getElementById('b_year').value;
+        const b_month = document.getElementById('b_month') ? document.getElementById('b_month').value : "";
+        const b_day = document.getElementById('b_day') ? document.getElementById('b_day').value : "";
+        const b_year = document.getElementById('b_year') ? document.getElementById('b_year').value : "";
         const bday = (b_month && b_day && b_year) ? `${b_month}/${b_day}/${b_year}` : "";
-        const organization = document.getElementById('c_org').value;
+        const organization = document.getElementById('c_org') ? document.getElementById('c_org').value : "{{ org_acronym }}";
         const program = document.getElementById('c_program').value;
         const year_level = document.getElementById('c_year').value;
         const email = document.getElementById('c_email').value.trim();
         const generated_password = document.getElementById('c_generated_password').value;
 
-        if (!name || !username || !bday || !email || !organization) {
+        if (!name || !username || !email || !organization) {
             showToast("Please complete all required fields.", "error");
             return;
         }
