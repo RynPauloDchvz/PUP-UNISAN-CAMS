@@ -381,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             triggerLogout() {
                 this.showProfileBubble = false;
                 this.isLogoutModalOpen = true;
+                if (window.openLogout) window.openLogout();
             },
             getStaticImageUrl(filename) {
                 if (!filename) return window.DEFAULT_LOGO;
