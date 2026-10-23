@@ -515,9 +515,9 @@
                 
                 <div class="form-group">
                     <label class="form-label">Email Address</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="email" id="c_email" required placeholder="Organizer's Email" class="form-input" style="flex: 1;">
-                        <button type="button" class="btn-primary" onclick="generateAndSendPassword('c')" style="white-space: nowrap;" id="btn-generate-c"><i class="ph-bold ph-key"></i> Generate & Send</button>
+                    <div style="display: flex; gap: 8px; align-items: center; width: 100%; box-sizing: border-box;">
+                        <input type="email" id="c_email" required placeholder="Organizer's Email" class="form-input" style="flex: 1; min-width: 0;">
+                        <button type="button" class="btn-primary" onclick="generateAndSendPassword('c')" style="white-space: nowrap; flex-shrink: 0; padding: 10px 16px; font-size: 0.85rem; font-weight: 700; border-radius: 8px;" id="btn-generate-c">Generate</button>
                     </div>
                 </div>
                 </div> <!-- End form-fields-scroll -->
@@ -566,7 +566,7 @@
             <div style="display: flex; gap: 8px; align-items: flex-start;">
                 <i class="ph-bold ph-info" style="font-size: 1.1rem; color: var(--accent); flex-shrink: 0; margin-top: 2px;"></i>
                 <span style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
-                    Their student organizer privileges will be revoked, and they will revert to a verified regular student account. A new temporary password will be sent to their email.
+                    Their student organizer privileges will be revoked, and they will revert to a verified regular student account. Their existing password and login credentials will remain active.
                 </span>
             </div>
         </div>
@@ -1183,8 +1183,8 @@
         }
         
         let btn = document.getElementById('btn-generate-' + prefix);
-        let originalText = btn.innerHTML;
-        btn.innerHTML = `<i class="ph-bold ph-spinner ph-spin" style="animation: spin 1s linear infinite;"></i> Sending...`;
+        let originalText = "Generate";
+        btn.innerHTML = `<i class="ph-bold ph-spinner ph-spin" style="animation: spin 1s linear infinite;"></i>`;
         btn.disabled = true;
 
         const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
@@ -1201,28 +1201,27 @@
             if(data.status === 'success') {
                 showToast(data.message);
                 
-                
                 // 60-second cooldown timer
                 let timeLeft = 60;
                 let timer = setInterval(() => {
-                    btn.innerHTML = `<i class="ph-bold ph-clock"></i> Wait ${timeLeft}s`;
+                    btn.innerHTML = `Wait ${timeLeft}s`;
                     btn.disabled = true;
                     if (timeLeft <= 0) {
                         clearInterval(timer);
                         btn.disabled = false;
-                        btn.innerHTML = originalText;
+                        btn.innerHTML = "Generate";
                     }
                     timeLeft -= 1;
                 }, 1000);
                 
             } else {
                 showError("Error: " + data.message);
-                btn.innerHTML = originalText;
+                btn.innerHTML = "Generate";
                 btn.disabled = false;
             }
         } catch (error) {
             showError("Server Error. Please try again.");
-            btn.innerHTML = originalText;
+            btn.innerHTML = "Generate";
             btn.disabled = false;
         }
     }

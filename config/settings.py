@@ -242,6 +242,17 @@ HF_TOKEN = os.environ.get('HF_TOKEN')
 AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL')
 
 # ==========================================
+# SITE URL & CANONICAL DOMAIN
+# ==========================================
+SITE_URL = os.environ.get('SITE_URL', 'https://pup-unisan-cams.onrender.com').rstrip('/')
+
+# ==========================================
+# PROXY & SSL SETTINGS (RENDER)
+# ==========================================
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# ==========================================
 # PRODUCTION SECURITY HARDENING
 # ==========================================
 if not DEBUG:

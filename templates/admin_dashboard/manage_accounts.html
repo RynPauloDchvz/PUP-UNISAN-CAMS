@@ -420,32 +420,27 @@
             <div style="display: flex; gap: 8px; align-items: flex-start;">
                 <i class="ph-bold ph-info" style="font-size: 1.1rem; color: var(--accent); flex-shrink: 0; margin-top: 2px;"></i>
                 <span style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
-                    This will grant organizer privileges, generate a temporary password, and email the credentials to the student's email address.
+                    This will grant organizer privileges for their assigned organization. Their existing password and biometric setup will remain active without needing to reset.
                 </span>
             </div>
         </div>
 
         <div class="form-group" style="text-align: left; margin-bottom: 20px;">
             <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Target Organization</label>
-            <div class="custom-dropdown" id="transferOrgDropdown">
+            
+            <div id="transferOrgStaticBox" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px;">
+                <span id="transferStaticOrgLabel" style="font-weight: 800; color: var(--accent); font-size: 0.95rem;">Assigned Org</span>
+                <span style="font-size: 0.72rem; background: rgba(128,0,0,0.08); color: var(--accent); padding: 3px 8px; border-radius: 6px; font-weight: 700;">Automatic</span>
+            </div>
+
+            <div class="custom-dropdown" id="transferOrgDropdown" style="display: none;">
                 <div class="custom-dropdown-summary" onclick="toggleTransferOrgDropdown(event)">
-                    <span id="transferOrgLabel">Keep Assigned Organization</span> <i class="ph-bold ph-caret-down"></i>
+                    <span id="transferOrgLabel">Select Organization</span> <i class="ph-bold ph-caret-down"></i>
                 </div>
                 <div class="custom-dropdown-menu" id="transferOrgMenu" style="max-height: 220px; overflow-y: auto;">
-                    <div class="dropdown-item active" onclick="selectTransferOrg('KEEP_ASSIGNED', 'Keep Assigned Organization', event)">Keep Assigned Organization</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('ITO', 'ITO - Information Technology Org', event)">ITO - Information Technology Org</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('ITS', 'ITS - Institute of Technology Society', event)">ITS - Institute of Technology Society</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('YEO', 'YEO - Young Entrepreneurship Org', event)">YEO - Young Entrepreneurship Org</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('FTO', 'FTO - Future Teacher Org', event)">FTO - Future Teacher Org</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('PAS', 'PAS - Public Administration Society', event)">PAS - Public Administration Society</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('CAO', 'CAO - Culture and Arts', event)">CAO - Culture and Arts</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('NEWS', 'NEWS - NEWSETTE', event)">NEWS - NEWSETTE</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('PRIDE', 'PRIDE - PRIDEVerse', event)">PRIDE - PRIDEVerse</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('ROTC', 'ROTC - Reserve Officers Training Corps', event)">ROTC - Reserve Officers' Training Corps</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('PUSO', 'PUSO - PUP Unisan Sports Org', event)">PUSO - PUP Unisan Sports Org</div>
-                    <div class="dropdown-item" onclick="selectTransferOrg('SSC', 'SSC - Supreme Student Council', event)">SSC - Supreme Student Council</div>
                 </div>
             </div>
+
             <input type="hidden" id="t_target_org" value="KEEP_ASSIGNED">
             <input type="hidden" id="t_id" value="">
         </div>
@@ -740,7 +735,15 @@
         }
         document.getElementById('t_id').value = Array.from(selectedUserIds).join(',');
         document.getElementById('t_name').innerText = selectedUserIds.size + " selected student(s)";
-        resetTransferOrgDropdown();
+        
+        const staticBox = document.getElementById('transferOrgStaticBox');
+        const staticLabel = document.getElementById('transferStaticOrgLabel');
+        const dropdown = document.getElementById('transferOrgDropdown');
+        if (staticBox) staticBox.style.display = 'flex';
+        if (dropdown) dropdown.style.display = 'none';
+        if (staticLabel) staticLabel.innerText = "Each student's assigned organization";
+        document.getElementById('t_target_org').value = 'KEEP_ASSIGNED';
+
         openModal('transferModal', event);
     }
 
@@ -749,7 +752,47 @@
         if (!user) return;
         document.getElementById('t_id').value = user.id;
         document.getElementById('t_name').innerText = user.name;
-        resetTransferOrgDropdown(user.org);
+        
+        const staticBox = document.getElementById('transferOrgStaticBox');
+        const staticLabel = document.getElementById('transferStaticOrgLabel');
+        const dropdown = document.getElementById('transferOrgDropdown');
+        const menu = document.getElementById('transferOrgMenu');
+        const targetInput = document.getElementById('t_target_org');
+        const assignedOrg = user.org || 'Assigned Org';
+
+        const coOrgs = Array.isArray(user.co_orgs) ? user.co_orgs : [];
+        if (coOrgs.length > 0) {
+            // Show selection between primary assigned org and co-org(s) only
+            if (staticBox) staticBox.style.display = 'none';
+            if (dropdown) dropdown.style.display = 'block';
+            if (menu) {
+                menu.innerHTML = '';
+                const primItem = document.createElement('div');
+                primItem.className = 'dropdown-item active';
+                primItem.innerText = `${assignedOrg} (Primary Org)`;
+                primItem.onclick = (e) => selectTransferOrg(assignedOrg, `${assignedOrg} (Primary Org)`, e);
+                menu.appendChild(primItem);
+                
+                coOrgs.forEach(co => {
+                    if (co.toUpperCase() !== assignedOrg.toUpperCase()) {
+                        const coItem = document.createElement('div');
+                        coItem.className = 'dropdown-item';
+                        coItem.innerText = `${co} (Co-Organization)`;
+                        coItem.onclick = (e) => selectTransferOrg(co, `${co} (Co-Organization)`, e);
+                        menu.appendChild(coItem);
+                    }
+                });
+            }
+            document.getElementById('transferOrgLabel').innerText = `${assignedOrg} (Primary Org)`;
+            targetInput.value = assignedOrg;
+        } else {
+            // Purely automatic transfer based on student's assigned org
+            if (staticBox) staticBox.style.display = 'flex';
+            if (dropdown) dropdown.style.display = 'none';
+            if (staticLabel) staticLabel.innerText = assignedOrg;
+            targetInput.value = assignedOrg;
+        }
+
         openModal('transferModal', event);
     }
 
@@ -786,21 +829,9 @@
         document.getElementById('transferOrgLabel').innerText = label;
         document.getElementById('t_target_org').value = val;
         const menu = document.getElementById('transferOrgMenu');
-        menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
-        if (e && e.target) e.target.classList.add('active');
-        const dropdown = document.getElementById('transferOrgDropdown');
-        dropdown.classList.remove('active');
-        menu.style.maxHeight = '0';
-    }
-
-    function resetTransferOrgDropdown(defaultOrg) {
-        document.getElementById('t_target_org').value = 'KEEP_ASSIGNED';
-        const labelText = defaultOrg ? `Keep Assigned Org (${defaultOrg})` : 'Keep Assigned Organization';
-        document.getElementById('transferOrgLabel').innerText = labelText;
-        const menu = document.getElementById('transferOrgMenu');
         if (menu) {
             menu.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
-            if (menu.children.length > 0) menu.children[0].classList.add('active');
+            if (e && e.target) e.target.classList.add('active');
             menu.style.maxHeight = '0';
         }
         const dropdown = document.getElementById('transferOrgDropdown');

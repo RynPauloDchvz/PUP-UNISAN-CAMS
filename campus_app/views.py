@@ -2339,8 +2339,11 @@ def send_student_email(student, email_type, context_data=None):
     context_data['email_address'] = student.email_address
     context_data['student_number'] = getattr(student, 'student_number', '') or (student.user.username if student.user else '')
     context_data['organization'] = student.organization
+    base_site_url = getattr(settings, 'SITE_URL', 'https://pup-unisan-cams.onrender.com').rstrip('/')
+    context_data['site_url'] = f"{base_site_url}/"
+    context_data['login_url'] = f"{base_site_url}/"
     if 'org_selection_url' not in context_data:
-        context_data['org_selection_url'] = 'http://127.0.0.1:8000/org-selection/'
+        context_data['org_selection_url'] = f"{base_site_url}/org-selection/"
 
     html_message = render_to_string(template_name, context_data)
     plain_message = strip_tags(html_message)
@@ -3872,9 +3875,10 @@ def manage_accounts_view(request):
         status = 'Active' if s.is_verified else 'Pending'
         avatar_url = s.profile_picture.url if s.profile_picture else f"https://ui-avatars.com/api/?name={s.full_name}&background=800000&color=fff"
         cover_url = s.cover_photo.url if s.cover_photo else ""
+        co_orgs = [o.strip() for o in (s.co_organizations or '').split(',') if o.strip()]
         student_data.append({
             'id': s.id, 'name': s.full_name, 'email': s.email_address, 'username': s.student_number,
-            'org': s.organization, 'year': s.year_level, 'birthdate': str(s.birthdate) if s.birthdate else '',
+            'org': s.organization, 'co_orgs': co_orgs, 'year': s.year_level, 'birthdate': str(s.birthdate) if s.birthdate else '',
             'status': status, 'avatar': avatar_url, 'cover': cover_url
         })
         
@@ -3973,12 +3977,19 @@ def student_api_action(request):
                 ids = str(data.get('id')).split(',')
                 target_org_override = data.get('target_org')
                 transferred_count = 0
-                import string, secrets
+                last_target_org = ""
 
                 for id_str in ids:
                     if id_str.strip():
-                        student = Student.objects.get(id=int(id_str.strip()))
+                        student = Student.objects.filter(id=int(id_str.strip())).first()
+                        if not student or not student.user:
+                            continue
+
                         target_org = student.organization if (not target_org_override or target_org_override == 'KEEP_ASSIGNED') else target_org_override
+                        if not target_org or target_org in ['Not Assigned', 'Unassigned']:
+                            org_mapping = { 'BSIT': 'ITO', 'BSENT': 'YEO', 'BPA': 'PAS', 'BEED': 'FTO', 'DOMT': 'ITS', 'DIT': 'ITS' }
+                            target_org = org_mapping.get(student.program, 'ITO')
+                        last_target_org = target_org
 
                         # 1. Create or update OrgProfile
                         org_profile, _ = OrgProfile.objects.get_or_create(user=student.user)
@@ -3990,29 +4001,24 @@ def student_api_action(request):
                             org_profile.cover_photo = student.cover_photo
                         if student.face_encoding:
                             org_profile.face_encoding = student.face_encoding
-                        org_profile.force_password_change = True
+                        org_profile.force_password_change = False
                         org_profile.save()
 
-                        # 2. Update user name and state
+                        # 2. Update user name and state (keep existing password intact!)
                         student.user.first_name = student.full_name
                         student.user.is_active = True
-
-                        # 3. Generate new temporary password & send email credentials
-                        chars = string.ascii_letters + string.digits + "!@#$%^&*"
-                        temp_pwd = ''.join(secrets.choice(chars) for _ in range(12))
-                        student.user.set_password(temp_pwd)
                         student.user.save()
 
-                        # 4. Send email credentials
+                        # 3. Send role transfer notification email
                         email = student.email_address or student.user.email
                         if email:
                             try:
-                                send_account_credentials(
+                                send_role_transfer_notification(
                                     email=email,
                                     name=student.full_name,
                                     identifier=student.student_number or student.user.username,
-                                    password=temp_pwd,
-                                    role='organizer',
+                                    new_role='organizer',
+                                    org_name=target_org,
                                     login_url=request.build_absolute_uri('/')
                                 )
                             except Exception as em_err:
@@ -4027,7 +4033,7 @@ def student_api_action(request):
 
                 return JsonResponse({
                     "status": "success",
-                    "message": f"Successfully transferred {transferred_count} student(s) to Student Org. Login credentials sent via email."
+                    "message": f"Successfully transferred {transferred_count} student(s) to Student Org ({last_target_org}). Existing credentials remain active."
                 })
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
@@ -4101,14 +4107,21 @@ def organizer_api_action(request):
 
             if action == 'create':
                 username = data.get('username')
-                email = data.get('email', '')
-                if User.objects.filter(email=email, is_active=True).exists(): return JsonResponse({"status": "error", "message": "This email is already in use by an active account."})
+                email = data.get('email', '').strip()
+                if not username or not email:
+                    return JsonResponse({"status": "error", "message": "Student ID and Email are required."})
+
+                if User.objects.filter(email=email, is_active=True).exists():
+                    return JsonResponse({"status": "error", "message": "This email is already in use by an active account."})
                 
                 password = cache.get(f'generated_org_pwd_{email}')
                 if not password:
-                    return JsonResponse({"status": "error", "message": "Please generate and send a password first, or it has expired."})
+                    import string, secrets
+                    chars = string.ascii_letters + string.digits + "!@#$%^&*"
+                    password = ''.join(secrets.choice(chars) for _ in range(12))
                     
                 existing_user = User.objects.filter(username=username).first()
+                login_url = request.build_absolute_uri('/')
                 if existing_user:
                     if existing_user.is_active:
                         return JsonResponse({"status": "error", "message": "Username already exists and is active!"})
@@ -4126,14 +4139,25 @@ def organizer_api_action(request):
                     org_profile.save()
                     
                     cache.delete(f'generated_org_pwd_{email}')
-                    return JsonResponse({"status": "success", "message": f"Account for {data.get('org')} successfully restored and updated!"})
+                    try:
+                        send_account_credentials(email, data.get('name'), username, password, role='organizer', login_url=login_url)
+                    except Exception as e:
+                        print(f"Email credentials error: {e}")
+
+                    return JsonResponse({"status": "success", "message": f"Account for {data.get('org')} successfully restored and updated! Login credentials sent via email."})
 
                 user = User.objects.create_user(username=username, password=password, email=email)
                 user.first_name = data.get('name') 
                 user.save()
                 OrgProfile.objects.create(user=user, organization=data.get('org'), year_level=data.get('year_level', '1st Year'), force_password_change=True)
                 cache.delete(f'generated_org_pwd_{email}')
-                return JsonResponse({"status": "success", "message": f"Account for {data.get('org')} successfully created!"})
+
+                try:
+                    send_account_credentials(email, data.get('name'), username, password, role='organizer', login_url=login_url)
+                except Exception as e:
+                    print(f"Email credentials error: {e}")
+
+                return JsonResponse({"status": "success", "message": f"Account for {data.get('org')} successfully created! Login credentials sent via email."})
 
             elif action == 'delete': 
                 user_ids = str(data.get('id')).split(',')
@@ -4147,7 +4171,6 @@ def organizer_api_action(request):
             elif action == 'transfer_to_student':
                 user_ids = str(data.get('id')).split(',')
                 transferred_count = 0
-                import string, secrets
 
                 for uid in user_ids:
                     if uid.strip():
@@ -4171,11 +4194,11 @@ def organizer_api_action(request):
                                 organization=org_profile.organization if org_profile else 'Unassigned',
                                 year_level=org_profile.year_level if org_profile else '1st Year',
                                 is_verified=True,
-                                force_password_change=True
+                                force_password_change=False
                             )
                         else:
                             student.is_verified = True
-                            student.force_password_change = True
+                            student.force_password_change = False
                             if org_profile:
                                 if org_profile.year_level:
                                     student.year_level = org_profile.year_level
@@ -4193,23 +4216,20 @@ def organizer_api_action(request):
 
                         student.save()
 
-                        # Generate temporary password
-                        chars = string.ascii_letters + string.digits + "!@#$%^&*"
-                        temp_pwd = ''.join(secrets.choice(chars) for _ in range(12))
-                        user.set_password(temp_pwd)
+                        # Keep existing user password intact
                         user.is_active = True
                         user.save()
 
-                        # Send login credentials via email
+                        # Send role transfer notification email
                         email = student.email_address or user.email
                         if email:
                             try:
-                                send_account_credentials(
+                                send_role_transfer_notification(
                                     email=email,
                                     name=student.full_name,
                                     identifier=student.student_number or user.username,
-                                    password=temp_pwd,
-                                    role='student',
+                                    new_role='student',
+                                    org_name=student.organization,
                                     login_url=request.build_absolute_uri('/')
                                 )
                             except Exception as em_err:
@@ -4223,7 +4243,7 @@ def organizer_api_action(request):
 
                 return JsonResponse({
                     "status": "success",
-                    "message": f"Successfully transferred {transferred_count} organizer(s) to Student. Login credentials sent via email."
+                    "message": f"Successfully transferred {transferred_count} organizer(s) to regular Student. Existing credentials remain active."
                 })
 
         except Exception as e: return JsonResponse({"status": "error", "message": str(e)})
@@ -4238,15 +4258,21 @@ def admin_adviser_api_action(request):
 
             if action == 'create':
                 username = data.get('username')
-                email = data.get('email', '')
+                email = data.get('email', '').strip()
+                if not username or not email:
+                    return JsonResponse({"status": "error", "message": "Employee ID and Email are required."})
+
                 if User.objects.filter(email=email, is_active=True).exists():
                     return JsonResponse({"status": "error", "message": "This email is already in use by an active account."})
                 
                 password = cache.get(f'generated_adviser_pwd_{email}')
                 if not password:
-                    return JsonResponse({"status": "error", "message": "Please generate and send a password first, or it has expired."})
+                    import string, secrets
+                    chars = string.ascii_letters + string.digits + "!@#$%^&*"
+                    password = ''.join(secrets.choice(chars) for _ in range(12))
                     
                 existing_user = User.objects.filter(username=username).first()
+                login_url = request.build_absolute_uri('/')
                 if existing_user:
                     if existing_user.is_active:
                         return JsonResponse({"status": "error", "message": "Username already exists and is active!"})
@@ -4264,7 +4290,12 @@ def admin_adviser_api_action(request):
                     adv_profile.save()
                     
                     cache.delete(f'generated_adviser_pwd_{email}')
-                    return JsonResponse({"status": "success", "message": f"Adviser Account successfully restored and updated!"})
+                    try:
+                        send_account_credentials(email, data.get('name'), username, password, role='adviser', login_url=login_url)
+                    except Exception as e:
+                        print(f"Email credentials error: {e}")
+
+                    return JsonResponse({"status": "success", "message": f"Adviser Account successfully restored and updated! Login credentials sent via email."})
 
                 user = User.objects.create_user(username=username, password=password, email=email)
                 user.first_name = data.get('name') 
@@ -4273,7 +4304,13 @@ def admin_adviser_api_action(request):
                 user.save()
                 AdviserProfile.objects.create(user=user, force_password_change=True)
                 cache.delete(f'generated_adviser_pwd_{email}')
-                return JsonResponse({"status": "success", "message": f"Adviser Account successfully created!"})
+
+                try:
+                    send_account_credentials(email, data.get('name'), username, password, role='adviser', login_url=login_url)
+                except Exception as e:
+                    print(f"Email credentials error: {e}")
+
+                return JsonResponse({"status": "success", "message": f"Adviser Account successfully created! Login credentials sent via email."})
 
             elif action == 'delete': 
                 user_ids = str(data.get('id')).split(',')
@@ -4682,7 +4719,9 @@ def send_adviser_review_email(event, is_approved, process_sentence='', remarks='
             'is_approved': is_approved,
             'adviser_name': adviser_name or event.adviser_name or 'Organization Adviser',
             'remarks': remarks or event.remarks or '',
-            'process_sentence': process_sentence
+            'process_sentence': process_sentence,
+            'portal_url': f"{getattr(settings, 'SITE_URL', 'https://pup-unisan-cams.onrender.com').rstrip('/')}/organizer/document-tracking",
+            'login_url': f"{getattr(settings, 'SITE_URL', 'https://pup-unisan-cams.onrender.com').rstrip('/')}/"
         }
 
         html_content = render_to_string('system_emails/adviser_event_review.html', context)
@@ -5023,7 +5062,17 @@ from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 from .models import Student
 from django.contrib.auth.decorators import user_passes_test
-def send_account_credentials(email, name, identifier, password, role='student', login_url=None):
+def get_site_url(request=None):
+    if request:
+        try:
+            host = request.get_host().lower()
+            if 'localhost' not in host and '127.0.0.1' not in host and not host.startswith('192.168.'):
+                return request.build_absolute_uri('/')
+        except Exception:
+            pass
+    return getattr(settings, 'SITE_URL', 'https://pup-unisan-cams.onrender.com').rstrip('/') + '/'
+
+def send_account_credentials(email, name, identifier, password, role='student', login_url=None, request=None):
     if role == 'adviser':
         id_label = "Employee ID"
         role_description = "Your adviser account has been successfully configured by the Administrator."
@@ -5038,7 +5087,7 @@ def send_account_credentials(email, name, identifier, password, role='student', 
         subject = "PUP UNISAN CAMS - Your Student Account Credentials"
 
     if not login_url:
-        login_url = "http://127.0.0.1:8000/"
+        login_url = get_site_url(request)
 
     context = {
         'name': name or 'User',
@@ -5056,8 +5105,38 @@ def send_account_credentials(email, name, identifier, password, role='student', 
     msg.attach_alternative(html_content, "text/html")
     msg.send()
 
-def send_student_credentials(email, name, student_id, password):
-    send_account_credentials(email, name, student_id, password, role='student')
+def send_student_credentials(email, name, student_id, password, request=None):
+    login_url = get_site_url(request)
+    send_account_credentials(email, name, student_id, password, role='student', login_url=login_url, request=request)
+
+def send_role_transfer_notification(email, name, identifier, new_role, org_name=None, login_url=None, request=None):
+    if not login_url:
+        login_url = get_site_url(request)
+    
+    if new_role == 'organizer':
+        id_label = "Student ID"
+        subject = f"PUP UNISAN CAMS - Role Updated: Student Organizer ({org_name})"
+        role_description = f"Your account has been successfully updated to <strong>Student Organizer for {org_name}</strong> by the Administrator. You may continue to log in using your existing password."
+    else:
+        id_label = "Student ID"
+        subject = "PUP UNISAN CAMS - Role Updated: Regular Student"
+        role_description = "Your account has been successfully updated to a verified <strong>Regular Student</strong> account by the Administrator. You may continue to log in using your existing password."
+
+    context = {
+        'name': name or 'User',
+        'email': email,
+        'identifier': identifier or email,
+        'id_label': id_label,
+        'password': None,
+        'role_description': role_description,
+        'login_url': login_url
+    }
+    html_content = render_to_string('system_emails/account_credentials.html', context)
+    text_content = strip_tags(html_content)
+    sender = f'"PUP UNISAN CAMS Admin" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>'
+    msg = EmailMultiAlternatives(subject, text_content, sender, [email])
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()
 
 def is_admin_or_organizer(user):
     if not user.is_authenticated:
@@ -5148,7 +5227,7 @@ def create_student_manual(request):
             )
 
             try:
-                send_student_credentials(email, full_name, student_id, password)
+                send_student_credentials(email, full_name, student_id, password, request=request)
             except Exception:
                 pass
 
@@ -5313,7 +5392,7 @@ def create_student_bulk(request):
                         )
 
                         try:
-                            send_student_credentials(email, name, student_id, password)
+                            send_student_credentials(email, name, student_id, password, request=request)
                         except Exception:
                             pass
                         created_count += 1
