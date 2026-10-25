@@ -45,11 +45,9 @@ def log_audit_event(request, action, target_model=None, target_id=None, status='
         print(f"CRITICAL: Failed to log audit event: {str(e)}")
 
 # ==========================================
-# HUGGING FACE INFERENCE API UTILITIES
+# SENTIMENT ANALYSIS UTILITIES
 # ==========================================
-import os
-HF_TOKEN = os.environ.get('HF_TOKEN')
-from .ai_utils import query_huggingface_model, get_hf_sentiment
+from .ai_utils import get_hf_sentiment, get_sentiment
 
 # ==========================================
 # 🟢 STUDENT MULTI-ORG CONTEXT PROCESSOR 🟢

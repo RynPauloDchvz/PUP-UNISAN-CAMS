@@ -6267,3 +6267,16 @@ Sent automatically via PUP UNISAN CAMS AI Assistant Issue Reporter.
             return JsonResponse({'status': 'success', 'message': 'Issue report recorded in database.'})
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
+
+def health_check(request):
+    """
+    Keep-alive health check endpoint for Render and cron-job.org.
+    Executes a lightweight DB query to keep the Supabase connection pool active.
+    """
+    try:
+        user_exists = User.objects.exists()
+        return JsonResponse({"status": "awake", "db_active": True, "users_present": user_exists})
+    except Exception as e:
+        return JsonResponse({"status": "awake", "db_active": False, "error": str(e)}, status=500)
+

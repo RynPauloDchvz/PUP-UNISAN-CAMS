@@ -52,32 +52,6 @@ analyzer.lexicon.update({
     'not helpful at all': -3.0,
 })
 
-# Hugging Face Configuration
-HF_TOKEN = os.environ.get('HF_TOKEN')
-
-def query_huggingface_model(model_id, payload, timeout=15):
-    """
-    Calls a Hugging Face model via the Inference API.
-    Uses HF_TOKEN for authentication without loading heavy models locally into RAM.
-    """
-    token = os.environ.get('HF_TOKEN') or HF_TOKEN
-    if not token:
-        return None
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    urls = [
-        f"https://router.huggingface.co/hf-inference/models/{model_id}",
-        f"https://api-inference.huggingface.co/models/{model_id}",
-    ]
-    for url in urls:
-        try:
-            import requests
-            response = requests.post(url, headers=headers, json=payload, timeout=timeout)
-            if response.status_code == 200:
-                return response.json()
-        except Exception:
-            continue
-    return None
 
 def parse_face_descriptor(face_data):
     """
@@ -293,47 +267,13 @@ def get_rating_sentiment(rating_1_to_5):
     except:
         return {'compound': 0, 'label': 'neutral'}
 
-def get_hf_sentiment(text, model_id="distilbert/distilbert-base-uncased-finetuned-sst-2-english"):
+def get_hf_sentiment(text, model_id=None):
     """
-    Runs sentiment analysis via Hugging Face Inference API.
-    Falls back gracefully to Tagalog-enhanced VADER sentiment analysis
-    if Hugging Face API is unavailable or offline.
+    Local sentiment analysis using VADER with Tagalog/Taglish dictionary.
+    Instant local computation with zero network cold starts.
     """
     if not text or not str(text).strip():
         return {'compound': 0, 'pos': 0, 'neg': 0, 'neu': 1, 'label': 'neutral', 'source': 'empty'}
-
-    # Attempt Hugging Face Inference API if token is present
-    token = os.environ.get('HF_TOKEN') or HF_TOKEN
-    if token:
-        try:
-            result = query_huggingface_model(model_id, {"inputs": str(text)})
-            if result and isinstance(result, list) and len(result) > 0:
-                first = result[0]
-                if isinstance(first, list):
-                    labels = {item.get('label', '').upper(): float(item.get('score', 0)) for item in first if isinstance(item, dict)}
-                    pos_score = labels.get('POSITIVE', labels.get('LABEL_2', 0.0))
-                    neg_score = labels.get('NEGATIVE', labels.get('LABEL_0', 0.0))
-                    neu_score = labels.get('NEUTRAL', labels.get('LABEL_1', 0.0))
-                    compound = round(pos_score - neg_score, 4)
-                    
-                    label = 'neutral'
-                    if compound >= 0.05:
-                        label = 'positive'
-                    elif compound <= -0.05:
-                        label = 'negative'
-                    
-                    return {
-                        'compound': compound,
-                        'pos': pos_score,
-                        'neg': neg_score,
-                        'neu': neu_score,
-                        'label': label,
-                        'source': 'huggingface'
-                    }
-        except Exception as e:
-            print(f"Hugging Face Inference note: {e}")
-
-    # Fallback to local VADER with Tagalog/Taglish dictionary
     res = get_sentiment(text)
     res['source'] = 'vader_local'
     return res

@@ -76,8 +76,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary_storage',
-    'cloudinary',
+    'storages',
     'campus_app',
 ]
 
@@ -201,45 +200,35 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'nbat affu cqed wton
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'pupuqcams2526@gmail.com')
 
 # ==========================================
-# MEDIA / FILE STORAGE (CLOUDINARY)
+# MEDIA / FILE STORAGE (SUPABASE S3)
 # ==========================================
-cloudinary_cloud = os.environ.get('CLOUDINARY_CLOUD_NAME')
-cloudinary_key = os.environ.get('CLOUDINARY_API_KEY')
-cloudinary_secret = os.environ.get('CLOUDINARY_API_SECRET')
-cloudinary_url = os.environ.get('CLOUDINARY_URL')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'bce5970d83013956bc28f6785071e519')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'ec43bd42c0660b782e977443279fa2f77e4e26777dd7d491922786ca22ca7802')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'pup-unisan-cams-media')
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://dkudjrjfylpyxruxfsaf.storage.supabase.co/storage/v1/s3')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'ap-southeast-1')
 
-if cloudinary_url and (not cloudinary_cloud or not cloudinary_key or not cloudinary_secret):
-    try:
-        from urllib.parse import urlparse
-        parsed = urlparse(cloudinary_url)
-        cloudinary_key = cloudinary_key or parsed.username
-        cloudinary_secret = cloudinary_secret or parsed.password
-        cloudinary_cloud = cloudinary_cloud or parsed.hostname
-    except Exception:
-        pass
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = 'public-read'
+AWS_QUERYSTRING_AUTH = False
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': cloudinary_cloud,
-    'API_KEY': cloudinary_key,
-    'API_SECRET': cloudinary_secret,
-}
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+supabase_ref = 'dkudjrjfylpyxruxfsaf'
+AWS_S3_CUSTOM_DOMAIN = os.environ.get(
+    'AWS_S3_CUSTOM_DOMAIN',
+    f'{supabase_ref}.supabase.co/storage/v1/object/public/{AWS_STORAGE_BUCKET_NAME}'
+)
+
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 STORAGES = {
     'default': {
-        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
     },
     'staticfiles': {
         'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
     },
 }
-MEDIA_URL = '/media/'
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-# ==========================================
-# HUGGING FACE & AI MICROSERVICE
-# ==========================================
-HF_TOKEN = os.environ.get('HF_TOKEN')
-AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL')
 
 # ==========================================
 # SITE URL & CANONICAL DOMAIN

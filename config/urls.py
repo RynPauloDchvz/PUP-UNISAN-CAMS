@@ -55,8 +55,9 @@ urlpatterns = [
     # 🟢 BAGONG API PARA SA ADVISER APPROVE/REJECT 🟢
     path('adviser/api/action/', views.adviser_api_action, name='adviser_api_action'),
 
-    # API FOR UPDATING USER LOCATION
+    # API FOR UPDATING USER LOCATION & KEEP-ALIVE PING
     path('api/update-user-location/', views.update_user_location, name='update_user_location'),
+    path('api/ping/', views.health_check, name='health_check'),
 
     # ==========================================
     # SEO URLS (GOOGLE SEARCH CONSOLE / CRAWLERS)
