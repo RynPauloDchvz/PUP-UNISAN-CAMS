@@ -1161,7 +1161,7 @@ def student_school_events(request):
         att_record = attendance_map.get(str(e.id))
         att_scope = getattr(e, 'attendance_scope', 'CAMPUS_ONLY')
         has_time_out = att_record.time_out is not None if att_record else False
-        eval_expiry = (att_record.time_out + timedelta(hours=1)).isoformat() if att_record and att_record.time_out else None
+        eval_expiry = (att_record.time_out + timedelta(hours=24)).isoformat() if att_record and att_record.time_out else None
 
         events_data.append({
             'id': e.id,
@@ -1317,12 +1317,12 @@ def student_evaluation(request):
 
         att_record = attendance_map.get(str(e.id))
         has_time_out = att_record is not None and att_record.time_out is not None
-        eval_expiry = (att_record.time_out + timedelta(hours=1)).isoformat() if has_time_out else None
+        eval_expiry = (att_record.time_out + timedelta(hours=24)).isoformat() if has_time_out else None
         time_out_iso = att_record.time_out.isoformat() if has_time_out else None
         
         is_expired = False
         if has_time_out:
-            is_expired = timezone.now() > (att_record.time_out + timedelta(hours=1))
+            is_expired = timezone.now() > (att_record.time_out + timedelta(hours=24))
 
         is_eligible = has_time_out and not is_expired
 
@@ -3715,11 +3715,11 @@ def submit_evaluation(request):
             if not attendance or not attendance.time_out:
                 return JsonResponse({'status': 'error', 'message': 'You must Time Out from the event before submitting an evaluation.'})
 
-            # 🟢 ENFORCE DYNAMIC 1-HOUR EVALUATION WINDOW (Starting from student's Time Out) 🟢
+            # 🟢 ENFORCE DYNAMIC 24-HOUR EVALUATION WINDOW (Starting from student's Time Out) 🟢
             now = timezone.now()
-            eval_expiry = attendance.time_out + timedelta(hours=1)
+            eval_expiry = attendance.time_out + timedelta(hours=24)
             if now > eval_expiry:
-                return JsonResponse({'status': 'error', 'message': 'Evaluation window has expired. You had 1 hour after Time Out to evaluate.'})
+                return JsonResponse({'status': 'error', 'message': 'Evaluation window has expired. You had 24 hours after Time Out to evaluate.'})
 
             # 🟢 PREVENT DUPLICATE EVALUATION
             already_evaluated = AuditLog.objects.filter(
