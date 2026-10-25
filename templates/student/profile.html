@@ -12,6 +12,7 @@
         document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
     }
 </script>
+<script src="{% static 'js/face-liveness.js' %}"></script>
 <style>
     #modalLeafletMap { z-index: 0; }
     .leaflet-popup-content-wrapper { border-radius: 12px; font-family: inherit; }
@@ -611,6 +612,7 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
     let updateInterval = null;
     let modelsLoaded = false;
     let capturedDescriptor = null;
+    const livenessDetector = new FaceLivenessDetector();
 
     window.openFaceUpdateModal = function() {
         document.getElementById('faceUpdateModal').classList.remove('hidden');
@@ -656,6 +658,7 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
         const btn = document.getElementById('btnConfirmUpdateFace');
         const qualityMeter = document.getElementById('updateQualityMeter');
 
+        livenessDetector.reset();
         status.innerText = "INITIALIZING AI CORE...";
         if (!modelsLoaded) await loadUpdateModels();
 
@@ -688,37 +691,65 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
                     const avgBrightness = brightness / (64 * 64);
                     const isValidLighting = avgBrightness > 40 && avgBrightness < 230;
 
-                    const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.7 }));
+                    try {
+                        const detections = await faceapi
+                            .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.65 }))
+                            .withFaceLandmarks();
 
-                    if (!isValidLighting) {
-                        btn.disabled = true;
-                        status.innerText = "ADJUSTING LIGHTING...";
-                        status.className = "absolute top-4 left-4 right-4 bg-amber-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
-                        updateQuality(false);
-                    } else if (detections.length === 0) {
-                        btn.disabled = true;
-                        status.innerText = "NO FACE DETECTED";
-                        status.className = "absolute top-4 left-4 right-4 bg-amber-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
-                        updateQuality(false);
-                    } else if (detections.length > 1) {
-                        btn.disabled = true;
-                        status.innerText = "MULTIPLE FACES DETECTED";
-                        status.className = "absolute top-4 left-4 right-4 bg-amber-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
-                        updateQuality(false);
-                    } else {
-                        btn.disabled = false;
-                        status.innerText = "SENSOR READY. CLICK CONFIRM.";
-                        status.className = "absolute top-4 left-4 right-4 bg-green-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
-                        updateQuality(true);
+                        if (!isValidLighting) {
+                            livenessDetector.reset();
+                            btn.disabled = true;
+                            status.innerText = "ADJUSTING LIGHTING...";
+                            status.className = "absolute top-4 left-4 right-4 bg-amber-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
+                            updateQuality(false);
+                        } else if (detections.length === 0) {
+                            livenessDetector.reset();
+                            btn.disabled = true;
+                            status.innerText = "NO FACE DETECTED";
+                            status.className = "absolute top-4 left-4 right-4 bg-amber-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
+                            updateQuality(false);
+                        } else if (detections.length > 1) {
+                            livenessDetector.reset();
+                            btn.disabled = true;
+                            status.innerText = "MULTIPLE FACES DETECTED — SINGLE PERSON ONLY";
+                            status.className = "absolute top-4 left-4 right-4 bg-red-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
+                            updateQuality(false);
+                        } else {
+                            const livenessRes = livenessDetector.processFrame(detections[0], video.videoWidth, video.videoHeight);
+                            status.innerText = livenessRes.message;
+                            if (livenessRes.isLive) {
+                                btn.disabled = false;
+                                status.className = "absolute top-4 left-4 right-4 bg-green-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20 border border-green-400/50 shadow-green-500/30";
+                                updateQuality(true);
+                            } else if (livenessRes.status === 'STATIC_PHOTO_DETECTED') {
+                                btn.disabled = true;
+                                status.className = "absolute top-4 left-4 right-4 bg-red-700/95 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20 animate-bounce border border-red-400";
+                                updateQuality(false);
+                            } else if (livenessRes.status === 'SPOOF_REJECTED') {
+                                btn.disabled = true;
+                                status.className = "absolute top-4 left-4 right-4 bg-red-800/95 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20 border border-red-500";
+                                updateQuality(false);
+                            } else {
+                                btn.disabled = true;
+                                status.className = "absolute top-4 left-4 right-4 bg-cyan-700/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20 animate-pulse border border-cyan-400/40";
+                                updateQuality(false);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("Profile liveness error:", err);
                     }
 
-                    if (updateStream) setTimeout(detectUpdateLoop, 300);
+                    if (updateStream) setTimeout(detectUpdateLoop, 150);
                 };
 
                 detectUpdateLoop();
             };
 
             btn.onclick = async () => {
+                if (!livenessDetector.isLive) {
+                    alert("Anti-Spoofing: Natural blink required. Static photos and gallery images are strictly prohibited.");
+                    return;
+                }
                 btn.disabled = true;
                 btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> SAVING...`;
 
@@ -749,6 +780,7 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
                 const fd = new FormData();
                 fd.append('face_encoding', JSON.stringify(descriptorArray));
                 fd.append('face_image', capturedImage);
+                fd.append('is_live_verified', 'true');
                 
                 try {
                     const resp = await fetch("{% url 'update_student_face' %}", {

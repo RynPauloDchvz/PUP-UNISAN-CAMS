@@ -94,6 +94,7 @@
             document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
         }
     </script>
+    <script src="{% static 'js/face-liveness.js' %}"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -667,7 +668,7 @@
                                     <div class="w-2 h-2 bg-pup-gold/40 rounded-full animate-ping"></div>
                                 </div>
 
-                                <!-- 🟢 REAL-TIME STATUS ALERTS 🟢 -->
+                                <!-- 🟢 REAL-TIME STATUS ALERTS & LIVENESS 🟢 -->
                                 <div class="absolute inset-x-6 bottom-12 flex flex-col items-center gap-2">
                                     <div v-if="qualityStatus.obstructed" class="bg-red-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl animate-bounce backdrop-blur-md">
                                         <i class="ph-bold ph-warning-circle"></i> Detection Blocked
@@ -678,8 +679,12 @@
                                     <div v-else-if="qualityStatus.noFaceDetail" class="bg-pup-maroon text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md">
                                         <i class="ph-bold ph-user-focus"></i> Position Face Clearly
                                     </div>
-                                    <div v-if="qualityStatus.isReady" class="bg-green-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md animate-pulse">
-                                        <i class="ph-bold ph-fingerprint"></i> Identity Ready
+                                    <div v-else class="text-center w-full px-2">
+                                        <div :class="{'bg-green-600 border-green-400/50 shadow-green-500/30': isLiveVerified, 'bg-red-700 animate-bounce border-red-400': isStaticPhoto, 'bg-cyan-700 animate-pulse border-cyan-400/40': !isLiveVerified && !isStaticPhoto}" 
+                                             class="text-white text-[8px] font-black uppercase px-3.5 py-1.5 rounded-full shadow-2xl backdrop-blur-md border flex items-center gap-1.5 justify-center">
+                                            <i :class="isLiveVerified ? 'ph-bold ph-check-circle' : (isStaticPhoto ? 'ph-bold ph-warning-circle' : 'ph-bold ph-eye')"></i>
+                                            <span v-text="livenessMessage"></span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -709,11 +714,12 @@
                             </button>
                             
                             <button v-if="isCameraActive && !faceCaptured" @click="captureFace" 
-                                    :disabled="!qualityStatus.isReady || qualityStatus.obstructed || qualityStatus.noFaceDetail"
+                                    :disabled="!qualityStatus.isReady || !isLiveVerified || qualityStatus.obstructed || qualityStatus.noFaceDetail"
                                     class="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-pup-gold dark:hover:bg-yellow-600 text-white dark:text-black font-bold text-sm flex justify-center items-center gap-2 transition-all shadow-lg disabled:opacity-30 disabled:grayscale transition-all duration-500">
-                                <i v-if="qualityStatus.isReady" class="ph-bold ph-bounding-box text-lg animate-pulse"></i>
-                                <i v-else class="ph-bold ph-spinner animate-spin text-lg"></i>
-                                <span v-text="qualityStatus.obstructed ? 'No Face Detected' : (qualityStatus.noFaceDetail ? 'Multiple Faces Detected' : (qualityStatus.isReady ? 'Secure Identity Data' : 'Optimizing Quality...'))"></span>
+                                <i v-if="isLiveVerified && qualityStatus.isReady" class="ph-bold ph-bounding-box text-lg animate-pulse"></i>
+                                <i v-else-if="qualityStatus.obstructed || qualityStatus.noFaceDetail || isStaticPhoto" class="ph-bold ph-warning-circle text-lg"></i>
+                                <i v-else class="ph-bold ph-eye text-lg animate-pulse"></i>
+                                <span v-text="qualityStatus.obstructed ? 'No Face Detected' : (qualityStatus.noFaceDetail ? 'Multiple Faces Detected' : (isStaticPhoto ? 'Static Photo Rejected — Natural Blink Required' : (!isLiveVerified ? 'Awaiting Natural Blink...' : 'Secure Identity Data (Live Verified)')))"></span>
                             </button>
                             
                             <div v-if="faceCaptured" class="flex flex-col gap-3">
@@ -782,7 +788,11 @@
                     registerOtp: ['', '', '', '', '', ''],
                     isVerifying: false, countdown: 0, timerInterval: null,
                     
-                    // 🟢 ENHANCED QUALITY STATE 🟢
+                    // 🟢 ENHANCED QUALITY & LIVENESS STATE 🟢
+                    livenessDetector: new FaceLivenessDetector(),
+                    livenessMessage: 'ALIGN FACE IN CENTER',
+                    isLiveVerified: false,
+                    isStaticPhoto: false,
                     qualityStatus: { tooDark: false, tooBright: false, isCentered: false, obstructed: false, noFaceDetail: false, isReady: false },
                     qualityScore: 0,
                     validationInterval: null,
@@ -972,6 +982,10 @@
                         }
 
                         this.isCameraActive = false; 
+                        this.livenessDetector.reset();
+                        this.isLiveVerified = false;
+                        this.isStaticPhoto = false;
+                        this.livenessMessage = 'ALIGN FACE IN CENTER';
                         
                         if (!this.modelsLoaded) {
                             const MODEL_PATH = "{% static 'models' %}";
@@ -1024,61 +1038,85 @@
                     }
                 },
 
-                // 🟢 REVOLUTIONIZED QUALITY VALIDATION (VANILLA JS) 🟢
+                // 🟢 REVOLUTIONIZED QUALITY & ANTI-SPOOFING VALIDATION 🟢
                 startQualityValidation() {
                     if (this.validationInterval) clearInterval(this.validationInterval);
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    this.validationInterval = setInterval(() => {
+                    this.validationInterval = setInterval(async () => {
                         if (!this.isCameraActive || this.faceCaptured || !this.$refs.video) return;
                         
                         const video = this.$refs.video;
                         if (video.videoWidth === 0) return;
 
-                        // Optimized Resolution: 64x64 for much faster processing
                         canvas.width = 64; canvas.height = 64; 
                         ctx.drawImage(video, 0, 0, 64, 64);
                         
                         const data = ctx.getImageData(0, 0, 64, 64).data;
                         let brightness = 0;
-                        
                         for (let i = 0; i < data.length; i += 4) {
                             brightness += (data[i] + data[i+1] + data[i+2]) / 3;
                         }
-                        
                         const avgBrightness = brightness / (64 * 64);
-                        
-                        // 🟢 SIMPLIFIED LOGIC: Trust Backend ArcFace & RetinaFace 🟢
                         this.qualityStatus.tooDark = avgBrightness < 40; 
                         this.qualityStatus.tooBright = avgBrightness > 230; 
                         
-                        // Async strict face check
-                        faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.7 })).then(faces => {
+                        try {
+                            const faces = await faceapi
+                                .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.65 }))
+                                .withFaceLandmarks();
+
                             this.qualityStatus.obstructed = faces.length === 0;
-                            this.qualityStatus.noFaceDetail = faces.length > 1; // Reuse this variable for multiple faces
+                            this.qualityStatus.noFaceDetail = faces.length > 1;
                             
                             if (faces.length === 0) {
+                                this.livenessDetector.reset();
                                 this.qualityScore = 0;
                                 this.qualityStatus.isReady = false;
+                                this.isLiveVerified = false;
+                                this.isStaticPhoto = false;
+                                this.livenessMessage = 'ALIGN FACE IN CENTER';
                                 return;
                             }
                             if (faces.length > 1) {
+                                this.livenessDetector.reset();
                                 this.qualityScore = 10;
                                 this.qualityStatus.isReady = false;
+                                this.isLiveVerified = false;
+                                this.isStaticPhoto = false;
+                                this.livenessMessage = 'MULTIPLE FACES DETECTED';
                                 return;
                             }
 
-                            // 🟢 SCORE & READY STATE 🟢
-                            this.qualityScore = (this.qualityStatus.tooDark || this.qualityStatus.tooBright) ? 30 : 100;
-                            this.qualityStatus.isReady = this.qualityScore === 100;
-                        });
+                            const livenessRes = this.livenessDetector.processFrame(faces[0], video.videoWidth, video.videoHeight);
+                            this.livenessMessage = livenessRes.message;
+                            this.isLiveVerified = livenessRes.isLive;
+                            this.isStaticPhoto = (livenessRes.status === 'STATIC_PHOTO_DETECTED' || livenessRes.status === 'SPOOF_REJECTED');
+
+                            if (this.qualityStatus.tooDark || this.qualityStatus.tooBright) {
+                                this.qualityScore = 30;
+                                this.qualityStatus.isReady = false;
+                            } else if (this.isLiveVerified) {
+                                this.qualityScore = 100;
+                                this.qualityStatus.isReady = true;
+                            } else {
+                                this.qualityScore = 60;
+                                this.qualityStatus.isReady = false;
+                            }
+                        } catch (err) {
+                            console.warn("Registration liveness check error:", err);
+                        }
                         
-                    }, 300); // Polling frequency
+                    }, 150);
                 },
 
                 async captureFace() {
-                    // 🟢 FINAL GUARD: Re-check quality before capturing 🟢
+                    // 🟢 FINAL GUARD: Re-check quality & liveness before capturing 🟢
+                    if (!this.isLiveVerified || !this.livenessDetector.isLive) {
+                        this.showToast("Anti-Spoofing: Natural blink required. Static photos and gallery images are strictly prohibited.", "error");
+                        return;
+                    }
                     if (!this.qualityStatus.isReady || this.qualityStatus.obstructed || this.qualityStatus.noFaceDetail) {
                         this.showToast("Biometric alignment failed. Please fix scanner issues.", "error");
                         return;
@@ -1198,6 +1236,7 @@
                     formData.append('program', finalProgram);
                     formData.append('facial_registration_data', this.capturedFaceDescriptor || this.capturedFace); 
                     formData.append('face_image', this.capturedFace); 
+                    formData.append('is_live_verified', 'true');
                     
                     if (this.formData.profile_file) formData.append('profile_picture', this.formData.profile_file);
                     if (this.formData.cover_file) formData.append('cover_photo', this.formData.cover_file);

@@ -10,6 +10,7 @@
         document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
     }
 </script>
+<script src="{% static 'js/face-liveness.js' %}"></script>
 <style>
     .countdown-timer { font-variant-numeric: tabular-nums; }
     .status-ongoing { background-color: #059669; }
@@ -304,6 +305,7 @@
         let userLat = null;
         let userLng = null;
         let modelsLoaded = false;
+        const livenessDetector = new FaceLivenessDetector();
 
         let qualityStatus = { tooDark: false, tooBright: false, obstructed: false, noFaceDetail: false, isReady: false };
         let qualityScore = 0;
@@ -589,6 +591,7 @@
             updateSubmitButton();
 
             try {
+                livenessDetector.reset();
                 videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } } });
                 const v = document.getElementById('video');
                 v.srcObject = videoStream;
@@ -599,26 +602,43 @@
                     const partScanLoop = async () => {
                         if (!videoStream) return;
                         
-                        const detections = await faceapi.detectAllFaces(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.7 }));
-                        let validFace = false;
+                        try {
+                            const detections = await faceapi
+                                .detectAllFaces(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.65 }))
+                                .withFaceLandmarks();
 
-                        if (!qualityStatus.isReady) { 
-                            status.innerText = "OPTIMIZING SENSOR QUALITY..."; 
-                        } else if (detections.length === 0) {
-                            status.innerText = "NO FACE DETECTED"; 
-                        } else if (detections.length > 1) {
-                            status.innerText = "MULTIPLE FACES DETECTED"; 
-                        } else {
-                            validFace = true;
-                            status.innerText = "SENSOR READY! ALIGN FACE TO CENTER";
+                            if (!qualityStatus.isReady) { 
+                                livenessDetector.reset();
+                                status.innerText = "OPTIMIZING SENSOR QUALITY..."; 
+                                status.className = "absolute top-6 left-6 right-6 bg-amber-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
+                            } else if (detections.length === 0) {
+                                livenessDetector.reset();
+                                status.innerText = "NO FACE DETECTED"; 
+                                status.className = "absolute top-6 left-6 right-6 bg-amber-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
+                            } else if (detections.length > 1) {
+                                livenessDetector.reset();
+                                status.innerText = "MULTIPLE FACES DETECTED — SINGLE PERSON ONLY"; 
+                                status.className = "absolute top-6 left-6 right-6 bg-red-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
+                            } else {
+                                const livenessRes = livenessDetector.processFrame(detections[0], v.videoWidth, v.videoHeight);
+                                status.innerText = livenessRes.message;
+                                if (livenessRes.isLive) {
+                                    status.className = "absolute top-6 left-6 right-6 bg-green-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl border border-green-400/50 shadow-green-500/30";
+                                } else if (livenessRes.status === 'STATIC_PHOTO_DETECTED') {
+                                    status.className = "absolute top-6 left-6 right-6 bg-red-700/95 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-bounce border border-red-400";
+                                } else if (livenessRes.status === 'SPOOF_REJECTED') {
+                                    status.className = "absolute top-6 left-6 right-6 bg-red-800/95 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl border border-red-500";
+                                } else {
+                                    status.className = "absolute top-6 left-6 right-6 bg-cyan-700/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse border border-cyan-400/40";
+                                }
+                            }
+                        } catch (err) {
+                            console.warn("Organizer liveness tick error:", err);
                         }
-                        
-                        const oldIsReady = qualityStatus.isReady;
-                        qualityStatus.isReady = qualityStatus.isReady && validFace;
-                        updateSubmitButton();
-                        qualityStatus.isReady = oldIsReady;
 
-                        if (videoStream) scanInterval = setTimeout(partScanLoop, 300);
+                        updateSubmitButton();
+
+                        if (videoStream) scanInterval = setTimeout(partScanLoop, 150);
                     };
                     partScanLoop();
                 };
@@ -670,9 +690,13 @@
             if (isSubmitting) return;
             const btn = document.getElementById('btnSubmitScan');
             if (!btn) return;
-            if (qualityStatus.isReady && isLocationVerified) {
+            const isLive = livenessDetector && livenessDetector.isLive;
+            if (qualityStatus.isReady && isLocationVerified && isLive) {
                 btn.disabled = false; btn.classList.add('bg-green-600');
                 btn.innerHTML = `<i class="ph-bold ph-check-circle text-xl"></i> Finalize Entry`;
+            } else if (!isLive && qualityStatus.isReady) {
+                btn.disabled = true; btn.classList.remove('bg-green-600');
+                btn.innerHTML = `<i class="ph-bold ph-eye text-xl"></i> Awaiting Live Blink...`;
             } else {
                 btn.disabled = true; btn.classList.remove('bg-green-600');
                 btn.innerHTML = `<i class="ph-bold ph-bounding-box text-xl"></i> Syncing Sensors...`;
@@ -683,6 +707,10 @@
         if (btnSubmitScan) {
             btnSubmitScan.addEventListener('click', async () => {
                 if (isSubmitting) return;
+                if (!livenessDetector.isLive) {
+                    alert("Anti-Spoofing: Live human verification required. Please look at the camera and blink naturally.");
+                    return;
+                }
                 isSubmitting = true;
                 
                 // ADD LOADING STATE TO BUTTON
@@ -725,6 +753,7 @@
                     fd.append('face_descriptor', JSON.stringify(descriptorArray));
                     fd.append('face_image', faceImage);
                     fd.append('is_valid_location', isLocationVerified);
+                    fd.append('is_live_verified', 'true');
                     fd.append('latitude', userLat || '');
                     fd.append('longitude', userLng || '');
                     

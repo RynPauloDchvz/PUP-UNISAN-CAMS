@@ -475,9 +475,13 @@ def student_register(request):
             program = request.POST.get('program')
             organization = request.POST.get('organization', 'Not Assigned') 
             face_data = request.POST.get('facial_registration_data')
+            is_live_verified = request.POST.get('is_live_verified') == 'true'
             birthdate = request.POST.get('birthdate')
             profile_picture = request.FILES.get('profile_picture')
             cover_photo = request.FILES.get('cover_photo')
+
+            if face_data and not is_live_verified:
+                return JsonResponse({"status": "error", "message": "Biometric anti-spoofing alert: Live human verification required. Static photos and gallery pictures are strictly prohibited."})
 
             if User.objects.filter(username=student_number).exists():
                 return JsonResponse({"status": "error", "message": "This Student ID is already registered."})
@@ -810,8 +814,11 @@ def update_student_face(request):
             student = Student.objects.get(user=request.user)
             face_data = request.POST.get('face_encoding')
             face_image = request.POST.get('face_image')
+            is_live_verified = request.POST.get('is_live_verified') == 'true'
             if not face_data:
                 return JsonResponse({'status': 'error', 'message': 'No facial biometric data received.'})
+            if not is_live_verified:
+                return JsonResponse({'status': 'error', 'message': 'Anti-spoofing alert: Live human verification required. Static photos are prohibited.'})
             
             # 🟢 BIOMETRIC UNIQUENESS CHECK 🟢
             is_dup, dup_info = check_duplicate_face(face_data, current_user=request.user)
@@ -3423,9 +3430,13 @@ def record_attendance(request):
             live_face_b64 = request.POST.get('face_image') # Receives live capture image from frontend for audit
             live_face_descriptor = request.POST.get('face_descriptor') or request.POST.get('face_encoding') # 128-d vector
             is_valid_location = request.POST.get('is_valid_location') == 'true'
+            is_live_verified = request.POST.get('is_live_verified') == 'true'
             lat = request.POST.get('latitude')
             lng = request.POST.get('longitude')
             
+            if not is_live_verified:
+                return JsonResponse({'status': 'error', 'message': 'Anti-spoofing alert: Live biometric verification required. Static photos or screen recordings are strictly prohibited.'})
+
             event = Event.objects.filter(id=event_id, event_status='Approved').first()
             if not event:
                 return JsonResponse({'status': 'error', 'message': 'Event not found or not yet approved.'})
@@ -3645,8 +3656,11 @@ def register_organizer_face(request):
             
             face_data = request.POST.get('face_encoding')
             face_image = request.POST.get('face_image')
+            is_live_verified = request.POST.get('is_live_verified') == 'true'
             if not face_data:
                 return JsonResponse({'status': 'error', 'message': 'No facial biometric data received.'})
+            if not is_live_verified:
+                return JsonResponse({'status': 'error', 'message': 'Anti-spoofing alert: Live human verification required. Static photos are prohibited.'})
             
             # 🟢 BIOMETRIC UNIQUENESS CHECK 🟢
             is_dup, dup_info = check_duplicate_face(face_data, current_user=request.user)
@@ -5504,9 +5518,12 @@ def student_force_change_finalize(request):
             del request.session['failed_sfc_otp_attempts']
             
         face_encoding = request.POST.get('face_encoding')
+        is_live_verified = request.POST.get('is_live_verified') == 'true'
         
         if not face_image and not face_encoding:
             return JsonResponse({"status": "error", "message": "Biometric face registration is required to complete security setup."})
+        if not is_live_verified:
+            return JsonResponse({"status": "error", "message": "Biometric anti-spoofing alert: Live human verification required. Static photos and gallery pictures are prohibited."})
             
         # 🟢 BIOMETRIC UNIQUENESS CHECK 🟢
         candidate_bio = face_encoding if face_encoding else face_image
