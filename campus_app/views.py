@@ -76,7 +76,9 @@ ORG_FULL_NAMES = {
     "FTO": "FTO - FUTURE TEACHER ORGANIZATION",
     "PAS": "PAS - PUBLIC ADMINISTRATION SOCIETY",
     "CAO": "CAO - CULTURE AND ARTS",
-    "PRIDEVerse": "PRIDEVerse",
+    "PRIDEVerse": "BahaghariU",
+    "PRIDE": "BahaghariU",
+    "BahaghariU": "BahaghariU",
     "SSC": "SSC - SUPREME STUDENT COUNCIL",
     "ROTC": "ROTC - Reserve Officers' Training Corps",
     "NEWSETTE": "NEWSETTE",
@@ -229,6 +231,8 @@ def portal_login_view(request):
                             logo_path = f"/static/images/orgImage/{code}/{code}.png"
                             if code == "PUSO":
                                 logo_path = "/static/images/orgImage/PUSO/PUSO.jpg"
+                            elif code in ("PRIDE", "PRIDEVerse", "BahaghariU"):
+                                logo_path = "/static/images/footer/bahaghari.png"
                             org_choices.append({
                                 "code": code,
                                 "name": ORG_FULL_NAMES.get(code, code),
@@ -1502,6 +1506,8 @@ ORG_ABOUT_US = {
     "PAS": "Training leaders in service. We offer a platform for governance and reforms.",
     "CAO": "Heartbeat of campus creativity. We showcase talent through theater, dance, and music.",
     "PRIDEVerse": "Advocacy for LGBTQIA+. We promote equality and a safe campus environment.",
+    "PRIDE": "Advocacy for LGBTQIA+. We promote equality and a safe campus environment.",
+    "BahaghariU": "Advocacy for LGBTQIA+. We promote equality and a safe campus environment.",
     "SSC": "Voice of the student body. We protect rights through leadership and initiatives.",
     "ROTC": "Instilling discipline and duty. We provide military science and disaster training.",
     "NEWSETTE": "Official student publication. Delivering timely news and fearless journalism.",
@@ -1985,7 +1991,7 @@ def organizer_create_events(request):
             'date': ae['event_date'].strftime('%Y-%m-%d')
         })
 
-    all_orgs_list = [{'code': k, 'name': v} for k, v in ORG_FULL_NAMES.items()]
+    all_orgs_list = [{'code': k, 'name': v} for k, v in ORG_FULL_NAMES.items() if k not in ('PRIDEVerse', 'BahaghariU')]
 
     return render(request, 'organizer/create_events.html', {
         'org_acronym': org_acronym, 
@@ -5373,7 +5379,7 @@ def create_student_bulk(request):
                                 detected_org = 'NEWS'
                             elif not detected_org and ('ROTC' in raw_org or 'RESERVE' in raw_org):
                                 detected_org = 'ROTC'
-                            elif not detected_org and ('PRIDE' in raw_org):
+                            elif not detected_org and ('PRIDE' in raw_org or 'BAHAGHARI' in raw_org):
                                 detected_org = 'PRIDE'
 
                         # If not detected from row, fallback to uploader_org

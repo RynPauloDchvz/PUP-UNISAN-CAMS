@@ -73,6 +73,8 @@ def student_org_context_processor(request):
                     logo = f"/static/images/orgImage/{code}/{code}.png"
                     if code == "PUSO":
                         logo = "/static/images/orgImage/PUSO/PUSO.jpg"
+                    elif code in ("PRIDE", "PRIDEVerse", "BahaghariU"):
+                        logo = "/static/images/footer/bahaghari.png"
                     user_org_details.append({
                         'code': code,
                         'name': ORG_FULL_NAMES.get(code, code),

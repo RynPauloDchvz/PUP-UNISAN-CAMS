@@ -1654,7 +1654,7 @@
                 { value: 'PAS', label: 'PAS' },
                 { value: 'CAO', label: 'CAO' },
                 { value: 'NEWSETTE', label: 'NEWSETTE' },
-                { value: 'PRIDEVerse', label: 'PRIDEVerse' },
+                { value: 'PRIDEVerse', label: 'BahaghariU' },
                 { value: 'ROTC', label: 'ROTC' },
                 { value: 'PUSO', label: 'PUSO' },
                 { value: 'SSC', label: 'SSC' }
@@ -1865,7 +1865,7 @@
                 return historyEvents.value.filter(e => {
                     const searchLower = searchHistory.value.toLowerCase();
                     const matchSearch = e.title.toLowerCase().includes(searchLower) || e.org.toLowerCase().includes(searchLower);
-                    const matchOrg = histOrg.value === 'All' || e.org === histOrg.value;
+                    const matchOrg = histOrg.value === 'All' || e.org === histOrg.value || (['PRIDEVerse', 'PRIDE', 'BahaghariU'].includes(histOrg.value) && ['PRIDEVerse', 'PRIDE', 'BahaghariU'].includes(e.org));
                     const matchStatus = histStatus.value === 'All' || e.status === histStatus.value;
                     let matchMonth = true;
                     if(histMonth.value) matchMonth = e.date.includes(histMonth.value);

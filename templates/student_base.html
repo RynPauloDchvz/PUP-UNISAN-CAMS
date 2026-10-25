@@ -497,8 +497,8 @@
                             <span class="text-[9px] md:text-xs text-gray-500 font-bold tracking-wider">NEWS</span>
                         </div>
                         <div class="flex flex-col items-center gap-2 w-10 sm:w-14">
-                            <img src="{% static 'images/footer/PRIDE.png' %}" alt="PRIDE" class="w-10 h-10 md:w-12 md:h-12 object-contain bg-white rounded-full p-0.5">
-                            <span class="text-[9px] md:text-xs text-gray-500 font-bold tracking-wider">PRIDE</span>
+                            <img src="{% static 'images/footer/bahaghari.png' %}" alt="BahaghariU" class="w-10 h-10 md:w-12 md:h-12 object-contain bg-white rounded-full p-0.5">
+                            <span class="text-[9px] md:text-xs text-gray-500 font-bold tracking-wider">BahaghariU</span>
                         </div>
                         <div class="flex flex-col items-center gap-2 w-10 sm:w-14">
                             <img src="{% static 'images/footer/ROTC.png' %}" alt="ROTC" class="w-10 h-10 md:w-12 md:h-12 object-contain bg-white rounded-full p-0.5">
@@ -1003,7 +1003,7 @@ async function switchActiveOrg(orgCode, orgName) {
 
     if (targetTitle) targetTitle.textContent = `Switching to ${orgCode}...`;
     if (targetLogo) {
-        targetLogo.src = orgCode === 'PUSO' ? '/static/images/orgImage/PUSO/PUSO.jpg' : `/static/images/orgImage/${orgCode}/${orgCode}.png`;
+        targetLogo.src = orgCode === 'PUSO' ? '/static/images/orgImage/PUSO/PUSO.jpg' : (['PRIDE', 'PRIDEVerse', 'BahaghariU'].includes(orgCode) ? '/static/images/footer/bahaghari.png' : `/static/images/orgImage/${orgCode}/${orgCode}.png`);
     }
 
     if (overlay) {

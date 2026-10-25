@@ -369,7 +369,7 @@
                                 <option value="BEED" {% if org_acronym == 'FTO' %}selected{% endif %}>BEED</option>
                                 <option value="DOMT" {% if org_acronym == 'ITS' %}selected{% endif %}>DOMT</option>
                                 <option value="DIT">DIT</option>
-                                <option value="Not Assigned" {% if org_acronym in 'CAO,NEWS,PRIDE,ROTC,PUSO,SSC' %}selected{% endif %}>Not Assigned</option>
+                                <option value="Not Assigned" {% if org_acronym in 'CAO,NEWS,PRIDE,PRIDEVerse,BahaghariU,ROTC,PUSO,SSC' %}selected{% endif %}>Not Assigned</option>
                             </select>
                             <i class="ph-bold ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
                         </div>
@@ -431,7 +431,7 @@
                     <p class="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 mb-1">
                         <i class="ph-bold ph-sparkle text-pup-maroon dark:text-pup-gold"></i> Dual-Detection & Smart Co-Org
                     </p>
-                    <p>Detects Program for academic orgs (BSIT➔ITO, BSENT➔YEO, BPA➔PAS, BEED➔FTO, DOMT/DIT➔ITS) and Organization name for non-academic orgs (CAO, SSC, ROTC, NEWS, PRIDE, PUSO). Existing students will automatically be linked to your organization without duplicate errors.</p>
+                    <p>Detects Program for academic orgs (BSIT➔ITO, BSENT➔YEO, BPA➔PAS, BEED➔FTO, DOMT/DIT➔ITS) and Organization name for non-academic orgs (CAO, SSC, ROTC, NEWS, BahaghariU, PUSO). Existing students will automatically be linked to your organization without duplicate errors.</p>
                 </div>
 
                 <!-- Bulk Actions -->
@@ -660,7 +660,7 @@
         const progSelect = document.getElementById('c_program');
         if (progSelect && orgToProg[org]) {
             progSelect.value = orgToProg[org];
-        } else if (progSelect && ['CAO', 'NEWS', 'PRIDE', 'ROTC', 'PUSO', 'SSC'].includes(org)) {
+        } else if (progSelect && ['CAO', 'NEWS', 'PRIDE', 'PRIDEVerse', 'BahaghariU', 'ROTC', 'PUSO', 'SSC'].includes(org)) {
             if (!progSelect.value) progSelect.value = 'Not Assigned';
         }
     }
