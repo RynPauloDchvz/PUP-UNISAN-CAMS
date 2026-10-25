@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q, Count, Sum, Avg
 from django.http import JsonResponse, HttpResponse
 from django.core.mail import send_mail, EmailMultiAlternatives
+from django.core.cache import cache
 from django.conf import settings 
 from django.core.serializers import serialize 
 from django.template.loader import render_to_string 
