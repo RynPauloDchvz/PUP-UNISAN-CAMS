@@ -581,9 +581,38 @@
             document.getElementById(viewId).style.display = 'flex';
         }
 
+        let autoSubmitted = false;
+        function startQualityValidation(v) {
+            if (validationInterval) clearInterval(validationInterval);
+            const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            validationInterval = setInterval(() => {
+                if (!videoStream || !v || v.videoWidth === 0) return;
+                canvas.width = 64; canvas.height = 64; ctx.drawImage(v, 0, 0, 64, 64);
+                const data = ctx.getImageData(0, 0, 64, 64).data;
+                let b = 0;
+                let glareCount = 0;
+                const total = 64 * 64;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], bP = data[i+2];
+                    b += (r + g + bP) / 3;
+                    if (r > 248 && g > 248 && bP > 248) glareCount++;
+                }
+                const avg = b / total;
+                const isTooDark = avg < 40;
+                const isTooBright = avg > 230;
+                const isGlare = (glareCount / total) > 0.12;
+
+                qualityStatus.tooDark = isTooDark;
+                qualityStatus.tooBright = isTooBright;
+                qualityStatus.glare = isGlare;
+                qualityStatus.isReady = !isTooDark && !isTooBright && !isGlare;
+            }, 200);
+        }
+
         async function startParticipationScanner() {
             participationModal.style.display = 'flex';
             switchParticipationView('viewScanner');
+            autoSubmitted = false;
             const status = document.getElementById('scanStatus');
             status.innerText = "AUTHENTICATING SENSORS...";
             isFaceVerified = false; 
@@ -694,9 +723,18 @@
             if (qualityStatus.isReady && isLocationVerified && isLive) {
                 btn.disabled = false; btn.classList.add('bg-green-600');
                 btn.innerHTML = `<i class="ph-bold ph-check-circle text-xl"></i> Finalize Entry`;
+                // 🟢 AUTOMATIC INSTANT ATTENDANCE MATCH 🟢
+                if (!autoSubmitted) {
+                    autoSubmitted = true;
+                    setTimeout(() => {
+                        if (!isSubmitting && livenessDetector && livenessDetector.isLive) {
+                            btn.click();
+                        }
+                    }, 350);
+                }
             } else if (!isLive && qualityStatus.isReady) {
                 btn.disabled = true; btn.classList.remove('bg-green-600');
-                btn.innerHTML = `<i class="ph-bold ph-user-focus text-xl"></i> Awaiting Head Turn Liveness...`;
+                btn.innerHTML = `<i class="ph-bold ph-scan text-xl"></i> Detecting Full Face...`;
             } else {
                 btn.disabled = true; btn.classList.remove('bg-green-600');
                 btn.innerHTML = `<i class="ph-bold ph-bounding-box text-xl"></i> Syncing Sensors...`;
@@ -708,7 +746,7 @@
             btnSubmitScan.addEventListener('click', async () => {
                 if (isSubmitting) return;
                 if (!livenessDetector.isLive) {
-                    alert("Anti-Spoofing: Live human verification required. Please look at the camera and turn your head slowly.");
+                    alert("Anti-Spoofing: Full live face verification required. Static photos and gallery images are strictly prohibited.");
                     return;
                 }
                 isSubmitting = true;

@@ -687,9 +687,16 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
                     ctx.drawImage(video, 0, 0, 64, 64);
                     const data = ctx.getImageData(0, 0, 64, 64).data;
                     let brightness = 0;
-                    for (let i = 0; i < data.length; i += 4) brightness += (data[i] + data[i+1] + data[i+2]) / 3;
-                    const avgBrightness = brightness / (64 * 64);
-                    const isValidLighting = avgBrightness > 40 && avgBrightness < 230;
+                    let glareCount = 0;
+                    const total = 64 * 64;
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i], g = data[i+1], bP = data[i+2];
+                        brightness += (r + g + bP) / 3;
+                        if (r > 248 && g > 248 && bP > 248) glareCount++;
+                    }
+                    const avgBrightness = brightness / total;
+                    const isGlare = (glareCount / total) > 0.12;
+                    const isValidLighting = avgBrightness > 40 && avgBrightness < 230 && !isGlare;
 
                     try {
                         const detections = await faceapi
@@ -747,7 +754,7 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
 
             btn.onclick = async () => {
                 if (!livenessDetector.isLive) {
-                    alert("Anti-Spoofing: Head turn verification required. Static photos and gallery images are strictly prohibited.");
+                    alert("Anti-Spoofing: Full live face verification required. Static photos and gallery images are strictly prohibited.");
                     return;
                 }
                 btn.disabled = true;

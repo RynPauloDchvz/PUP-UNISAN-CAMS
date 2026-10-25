@@ -716,10 +716,10 @@
                             <button v-if="isCameraActive && !faceCaptured" @click="captureFace" 
                                     :disabled="!qualityStatus.isReady || !isLiveVerified || qualityStatus.obstructed || qualityStatus.noFaceDetail"
                                     class="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-pup-gold dark:hover:bg-yellow-600 text-white dark:text-black font-bold text-sm flex justify-center items-center gap-2 transition-all shadow-lg disabled:opacity-30 disabled:grayscale transition-all duration-500">
-                                <i v-if="isLiveVerified && qualityStatus.isReady" class="ph-bold ph-bounding-box text-lg animate-pulse"></i>
+                                <i v-if="isLiveVerified && qualityStatus.isReady" class="ph-bold ph-check-circle text-lg animate-pulse text-green-400"></i>
                                 <i v-else-if="qualityStatus.obstructed || qualityStatus.noFaceDetail || isStaticPhoto" class="ph-bold ph-warning-circle text-lg"></i>
-                                <i v-else class="ph-bold ph-user-focus text-lg animate-pulse"></i>
-                                <span v-text="qualityStatus.obstructed ? 'No Face Detected' : (qualityStatus.noFaceDetail ? 'Multiple Faces Detected' : (isStaticPhoto ? 'Static Photo Rejected — Head Turn Required' : (!isLiveVerified ? 'Awaiting Head Turn (Look Left/Right)...' : 'Secure Identity Data (Live Verified)')))"></span>
+                                <i v-else class="ph-bold ph-scan text-lg animate-pulse"></i>
+                                <span v-text="qualityStatus.obstructed ? 'No Face Detected' : (qualityStatus.noFaceDetail ? 'Multiple Faces Detected' : (isStaticPhoto ? 'Static Photo Rejected — Real Face Required' : (!isLiveVerified ? 'Detecting Full Face...' : 'Capture Biometric Face (Live Verified)')))"></span>
                             </button>
                             
                             <div v-if="faceCaptured" class="flex flex-col gap-3">
@@ -1055,12 +1055,21 @@
                         
                         const data = ctx.getImageData(0, 0, 64, 64).data;
                         let brightness = 0;
+                        let glareCount = 0;
+                        const total = 64 * 64;
                         for (let i = 0; i < data.length; i += 4) {
-                            brightness += (data[i] + data[i+1] + data[i+2]) / 3;
+                            const r = data[i], g = data[i+1], bP = data[i+2];
+                            brightness += (r + g + bP) / 3;
+                            if (r > 248 && g > 248 && bP > 248) glareCount++;
                         }
-                        const avgBrightness = brightness / (64 * 64);
-                        this.qualityStatus.tooDark = avgBrightness < 40; 
-                        this.qualityStatus.tooBright = avgBrightness > 230; 
+                        const avgBrightness = brightness / total;
+                        const isTooDark = avgBrightness < 40; 
+                        const isTooBright = avgBrightness > 230; 
+                        const isGlare = (glareCount / total) > 0.12;
+                        
+                        this.qualityStatus.tooDark = isTooDark; 
+                        this.qualityStatus.tooBright = isTooBright; 
+                        this.qualityStatus.glare = isGlare;
                         
                         try {
                             const faces = await faceapi
@@ -1076,7 +1085,7 @@
                                 this.qualityStatus.isReady = false;
                                 this.isLiveVerified = false;
                                 this.isStaticPhoto = false;
-                                this.livenessMessage = 'ALIGN FACE IN CENTER';
+                                this.livenessMessage = 'ALIGN WHOLE FACE IN FRAME';
                                 return;
                             }
                             if (faces.length > 1) {
@@ -1114,7 +1123,7 @@
                 async captureFace() {
                     // 🟢 FINAL GUARD: Re-check quality & liveness before capturing 🟢
                     if (!this.isLiveVerified || !this.livenessDetector.isLive) {
-                        this.showToast("Anti-Spoofing: Head turn verification required. Static photos and gallery images are strictly prohibited.", "error");
+                        this.showToast("Anti-Spoofing: Full live face verification required. Static photos and gallery images are strictly prohibited.", "error");
                         return;
                     }
                     if (!this.qualityStatus.isReady || this.qualityStatus.obstructed || this.qualityStatus.noFaceDetail) {
