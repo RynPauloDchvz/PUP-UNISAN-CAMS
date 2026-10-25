@@ -747,7 +747,7 @@ const updatePasswordUrl = "{% url 'update_student_password' %}";
 
             btn.onclick = async () => {
                 if (!livenessDetector.isLive) {
-                    alert("Anti-Spoofing: Natural blink required. Static photos and gallery images are strictly prohibited.");
+                    alert("Anti-Spoofing: Head turn verification required. Static photos and gallery images are strictly prohibited.");
                     return;
                 }
                 btn.disabled = true;

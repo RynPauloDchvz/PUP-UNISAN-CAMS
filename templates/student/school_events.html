@@ -680,7 +680,7 @@
                 btn.innerHTML = `<i class="ph-bold ph-check-circle text-2xl"></i> Finalize Authorization`;
             } else if (!isLive && qualityStatus.isReady) {
                 btn.disabled = true; btn.classList.remove('bg-green-600');
-                btn.innerHTML = `<i class="ph-bold ph-eye text-2xl"></i> Awaiting Live Blink Verification...`;
+                btn.innerHTML = `<i class="ph-bold ph-user-focus text-2xl"></i> Awaiting Head Turn Liveness...`;
             } else {
                 btn.disabled = true; btn.classList.remove('bg-green-600');
                 btn.innerHTML = `<i class="ph-bold ph-bounding-box text-2xl"></i> Synchronizing Sensors...`;
@@ -690,7 +690,7 @@
         document.getElementById('btnSubmitScan').addEventListener('click', async () => {
             if (isSubmitting) return;
             if (!livenessDetector.isLive) {
-                alert("Anti-Spoofing: Live human verification required. Please look at the camera and blink naturally.");
+                alert("Anti-Spoofing: Live human verification required. Please look at the camera and turn your head slowly.");
                 return;
             }
             isSubmitting = true;

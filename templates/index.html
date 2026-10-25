@@ -718,8 +718,8 @@
                                     class="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-pup-gold dark:hover:bg-yellow-600 text-white dark:text-black font-bold text-sm flex justify-center items-center gap-2 transition-all shadow-lg disabled:opacity-30 disabled:grayscale transition-all duration-500">
                                 <i v-if="isLiveVerified && qualityStatus.isReady" class="ph-bold ph-bounding-box text-lg animate-pulse"></i>
                                 <i v-else-if="qualityStatus.obstructed || qualityStatus.noFaceDetail || isStaticPhoto" class="ph-bold ph-warning-circle text-lg"></i>
-                                <i v-else class="ph-bold ph-eye text-lg animate-pulse"></i>
-                                <span v-text="qualityStatus.obstructed ? 'No Face Detected' : (qualityStatus.noFaceDetail ? 'Multiple Faces Detected' : (isStaticPhoto ? 'Static Photo Rejected — Natural Blink Required' : (!isLiveVerified ? 'Awaiting Natural Blink...' : 'Secure Identity Data (Live Verified)')))"></span>
+                                <i v-else class="ph-bold ph-user-focus text-lg animate-pulse"></i>
+                                <span v-text="qualityStatus.obstructed ? 'No Face Detected' : (qualityStatus.noFaceDetail ? 'Multiple Faces Detected' : (isStaticPhoto ? 'Static Photo Rejected — Head Turn Required' : (!isLiveVerified ? 'Awaiting Head Turn (Look Left/Right)...' : 'Secure Identity Data (Live Verified)')))"></span>
                             </button>
                             
                             <div v-if="faceCaptured" class="flex flex-col gap-3">
@@ -1114,7 +1114,7 @@
                 async captureFace() {
                     // 🟢 FINAL GUARD: Re-check quality & liveness before capturing 🟢
                     if (!this.isLiveVerified || !this.livenessDetector.isLive) {
-                        this.showToast("Anti-Spoofing: Natural blink required. Static photos and gallery images are strictly prohibited.", "error");
+                        this.showToast("Anti-Spoofing: Head turn verification required. Static photos and gallery images are strictly prohibited.", "error");
                         return;
                     }
                     if (!this.qualityStatus.isReady || this.qualityStatus.obstructed || this.qualityStatus.noFaceDetail) {
