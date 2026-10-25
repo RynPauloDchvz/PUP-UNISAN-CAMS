@@ -80,7 +80,7 @@
             </div>
 
             <!-- 🟢 STEP VIEW: CATEGORIES I to V (Rating Statements) 🟢 -->
-            <div v-if="currentStep < 5" class="transition-opacity duration-300">
+            <div v-show="currentStep < 5" class="transition-opacity duration-300">
                 <!-- Current Category Header -->
                 <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-gray-800">
                     <h3 class="text-base sm:text-lg font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.15em] flex items-center gap-2">
@@ -118,7 +118,7 @@
             </div>
 
             <!-- 🟢 STEP VIEW: CATEGORY VI (Open-Ended Feedback) 🟢 -->
-            <div v-else-if="currentStep === 5" class="transition-opacity duration-300">
+            <div v-show="currentStep === 5" class="transition-opacity duration-300">
                 <div class="mb-6 flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-800">
                     <span class="w-2.5 h-6 bg-pup-maroon dark:bg-pup-gold rounded-full inline-block"></span>
                     <h3 class="text-base sm:text-lg font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.15em]">
@@ -164,8 +164,8 @@
                 </button>
 
                 <!-- Final Submit Button (Only on Step 5 / Category VI) -->
-                <button v-if="currentStep === 5" 
-                        type="button"
+                <button v-show="currentStep === 5" 
+                        type="submit"
                         @click="submitEvaluation" 
                         :disabled="isSubmitting" 
                         class="flex-[2] sm:flex-1 py-4 sm:py-5 px-6 sm:px-8 rounded-2xl bg-pup-maroon text-white dark:bg-pup-gold dark:text-black hover:opacity-90 active:scale-95 font-black text-[10px] sm:text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2 shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed ml-auto">

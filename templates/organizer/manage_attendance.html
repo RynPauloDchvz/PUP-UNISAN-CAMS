@@ -142,10 +142,10 @@
     <h2 class="text-xl font-black text-gray-900 dark:text-white mb-3 uppercase tracking-wide hidden lg:block">Synchronization List</h2>
     <div class="bg-white dark:bg-pup-darkcard rounded-[2rem] shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden font-sans">
         <div class="hidden lg:grid grid-cols-12 gap-4 p-4 bg-gray-50 dark:bg-[#111] border-b border-gray-200 dark:border-gray-800 text-[10px] uppercase tracking-widest text-gray-500 font-black">
-            <div class="col-span-4 pl-4">Student Identity</div>
+            <div class="col-span-3 pl-4">Student Identity</div>
             <div class="col-span-2">Program & Year</div>
-            <div class="col-span-2">Activity Title</div>
-            <div class="col-span-2">Synchronization Time</div>
+            <div class="col-span-2">Sync Time</div>
+            <div class="col-span-3 text-center">Face Scan Evidence (IN & OUT)</div>
             <div class="col-span-2 pr-4 text-right">Security Status</div>
         </div>
         <div id="tableBody" class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -165,10 +165,10 @@
 
         <div class="p-6 sm:p-10 overflow-y-auto hide-scrollbar pt-16 sm:pt-10">
 
-            <div class="mb-10">
-                <span class="inline-block bg-pup-maroon/10 text-pup-maroon dark:bg-pup-gold/10 dark:text-pup-gold text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-4">Security Verification Record</span>
-                <h2 id="modalEventTitle" class="text-3xl font-black text-gray-900 dark:text-white leading-tight uppercase tracking-tighter">Event Title</h2>
-                <div class="flex items-center gap-4 mt-4 text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest">
+            <div class="mb-8">
+                <span class="inline-block bg-pup-maroon/10 text-pup-maroon dark:bg-pup-gold/10 dark:text-pup-gold text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-3">Security Verification Record</span>
+                <h2 id="modalEventTitle" class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white leading-tight uppercase tracking-tighter">Event Title</h2>
+                <div class="flex items-center gap-4 mt-3 text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-widest">
                     <span id="modalDateInfo">Date</span>
                     <span class="w-1 h-1 bg-gray-300 rounded-full"></span>
                     <span id="modalVenueInfo">Venue</span>
@@ -176,10 +176,57 @@
             </div>
 
             <!-- Profile Info Header -->
-            <div class="flex flex-col items-center text-center mb-8 p-6 bg-gray-50 dark:bg-[#111] rounded-[2rem] border border-gray-100 dark:border-gray-800">
-                <h3 id="modalName" class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none mb-2">Name</h3>
-                <p id="modalId" class="text-pup-maroon dark:text-pup-gold text-xs font-black uppercase tracking-widest mb-4">0000-00000</p>
-                <div id="modalStatusBadge" class="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">STATUS</div>
+            <div class="flex flex-col items-center text-center mb-6 p-5 sm:p-6 bg-gray-50 dark:bg-[#111] rounded-[2rem] border border-gray-100 dark:border-gray-800">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden mb-3 border-2 border-pup-maroon dark:border-pup-gold shadow-md">
+                    <img id="modalProfileImg" src="" class="w-full h-full object-cover">
+                </div>
+                <h3 id="modalName" class="text-xl sm:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none mb-1.5">Name</h3>
+                <p id="modalId" class="text-pup-maroon dark:text-pup-gold text-xs font-black uppercase tracking-widest mb-3">0000-00000</p>
+                <div id="modalStatusBadge" class="px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">STATUS</div>
+            </div>
+
+            <!-- 🟢 3-WAY BIOMETRIC AUDIT MATRIX (Side-by-Side Face Comparison) 🟢 -->
+            <div class="mb-8 p-5 sm:p-6 bg-gray-50/80 dark:bg-black/30 rounded-3xl border border-gray-100 dark:border-gray-800">
+                <div class="text-[9px] font-black uppercase tracking-[0.25em] text-gray-400 mb-4 flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><i class="ph-bold ph-shield-check text-green-500 text-sm"></i> Biometric Face Verification Matrix</span>
+                    <span class="text-pup-maroon dark:text-pup-gold font-bold">1:1 Visual Evidence</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- 1. Registered Baseline ID -->
+                    <div class="flex flex-col items-center bg-white dark:bg-[#111] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm text-center">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-gray-400 mb-2">Registered Profile Face</span>
+                        <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-pup-maroon dark:border-pup-gold shadow-md bg-gray-100 dark:bg-gray-800 mb-2">
+                            <img id="auditBaselineImg" src="" class="w-full h-full object-cover">
+                        </div>
+                        <span class="text-[9px] font-black text-gray-900 dark:text-white uppercase truncate max-w-full">System Identity</span>
+                    </div>
+
+                    <!-- 2. Time In Live Scan -->
+                    <div class="flex flex-col items-center bg-white dark:bg-[#111] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm text-center cursor-pointer hover:border-green-400 transition-colors" onclick="switchTab('IN')">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-green-600 dark:text-green-400 mb-2">Time In Face Scan</span>
+                        <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-green-500 shadow-md bg-gray-100 dark:bg-gray-800 mb-2 flex items-center justify-center relative">
+                            <img id="auditInImg" src="" class="w-full h-full object-cover hidden">
+                            <div id="auditInFallback" class="flex flex-col items-center text-gray-400 p-2">
+                                <i class="ph-bold ph-camera-slash text-2xl mb-1"></i>
+                                <span class="text-[7px] font-black uppercase">No In Scan</span>
+                            </div>
+                        </div>
+                        <span id="auditInTime" class="text-[9px] font-black text-green-600 dark:text-green-400 uppercase">--:--</span>
+                    </div>
+
+                    <!-- 3. Time Out Live Scan -->
+                    <div class="flex flex-col items-center bg-white dark:bg-[#111] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm text-center cursor-pointer hover:border-blue-400 transition-colors" onclick="switchTab('OUT')">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2">Time Out Face Scan</span>
+                        <div class="w-24 h-24 rounded-2xl overflow-hidden border-2 border-blue-500 shadow-md bg-gray-100 dark:bg-gray-800 mb-2 flex items-center justify-center relative">
+                            <img id="auditOutImg" src="" class="w-full h-full object-cover hidden">
+                            <div id="auditOutFallback" class="flex flex-col items-center text-gray-400 p-2">
+                                <i class="ph-bold ph-camera-slash text-2xl mb-1"></i>
+                                <span class="text-[7px] font-black uppercase">No Out Scan</span>
+                            </div>
+                        </div>
+                        <span id="auditOutTime" class="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase">--:--</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Tabs -->
@@ -188,10 +235,10 @@
                 <div id="tabIndicator" class="absolute left-1.5 top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white dark:bg-[#1a1a1a] rounded-xl shadow-sm transition-transform duration-300 transform translate-x-0"></div>
                 
                 <button type="button" id="tabTimeIn" onclick="switchTab('IN')" class="flex-1 relative z-10 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white transition-colors">
-                    Time In
+                    Time In (GPS)
                 </button>
                 <button type="button" id="tabTimeOut" onclick="switchTab('OUT')" class="flex-1 relative z-10 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-gray-400 transition-colors cursor-not-allowed">
-                    Time Out
+                    Time Out (GPS)
                 </button>
             </div>
 
@@ -284,18 +331,54 @@
             const yearDisplay = isOrganizer ? 'OFFICIAL MEMBER' : `${item.program} • YR ${item.year.replace(' Year', '')}`;
             
             const timeDisplay = item.has_timed_out ? 
-                `<div class="flex flex-col leading-tight"><span class="text-green-600 dark:text-green-400">IN: ${item.time}</span><span class="text-blue-600 dark:text-blue-400">OUT: ${item.time_out}</span></div>` : 
-                `<span class="text-green-600 dark:text-green-400">IN: ${item.time}</span>`;
+                `<div class="flex flex-col leading-tight"><span class="text-green-600 dark:text-green-400 font-bold">IN: ${item.time}</span><span class="text-blue-600 dark:text-blue-400 font-bold">OUT: ${item.time_out}</span></div>` : 
+                `<span class="text-green-600 dark:text-green-400 font-bold">IN: ${item.time}</span>`;
+
+            // 🟢 LIVE BIOMETRIC FACE EVIDENCE BADGES 🟢
+            const inScanHtml = item.captured_face ? 
+                `<div class="flex items-center gap-1.5 bg-green-50/80 dark:bg-green-950/20 px-2.5 py-1 rounded-xl border border-green-200/80 dark:border-green-800/40 shrink-0" title="Time In Biometric Capture: ${item.time}">
+                    <div class="w-8 h-8 rounded-lg overflow-hidden border border-green-500 shadow-sm shrink-0 bg-gray-100 dark:bg-black">
+                        <img src="${item.captured_face}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex flex-col text-left">
+                        <span class="text-[8px] font-black text-green-700 dark:text-green-400 leading-none">IN SCAN</span>
+                        <span class="text-[8px] font-bold text-gray-500 leading-none mt-0.5">${item.time}</span>
+                    </div>
+                 </div>` : 
+                `<div class="flex items-center gap-1 bg-gray-100/60 dark:bg-gray-800/40 px-2 py-1 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 opacity-60 shrink-0" title="No Time In Face Scan on Record">
+                    <i class="ph-bold ph-camera-slash text-xs text-gray-400"></i>
+                    <span class="text-[8px] font-bold text-gray-400">NO IN</span>
+                 </div>`;
+
+            const outScanHtml = (item.has_timed_out && item.captured_face_out) ? 
+                `<div class="flex items-center gap-1.5 bg-blue-50/80 dark:bg-blue-950/20 px-2.5 py-1 rounded-xl border border-blue-200/80 dark:border-blue-800/40 shrink-0" title="Time Out Biometric Capture: ${item.time_out || ''}">
+                    <div class="w-8 h-8 rounded-lg overflow-hidden border border-blue-500 shadow-sm shrink-0 bg-gray-100 dark:bg-black">
+                        <img src="${item.captured_face_out}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex flex-col text-left">
+                        <span class="text-[8px] font-black text-blue-700 dark:text-blue-400 leading-none">OUT SCAN</span>
+                        <span class="text-[8px] font-bold text-gray-500 leading-none mt-0.5">${item.time_out || '--:--'}</span>
+                    </div>
+                 </div>` : 
+                (item.has_timed_out ? 
+                    `<div class="flex items-center gap-1 bg-gray-100/60 dark:bg-gray-800/40 px-2 py-1 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 opacity-60 shrink-0" title="Time Out Recorded without Photo">
+                        <i class="ph-bold ph-camera-slash text-xs text-gray-400"></i>
+                        <span class="text-[8px] font-bold text-gray-400">NO OUT</span>
+                     </div>` : 
+                    `<div class="flex items-center gap-1 bg-amber-50/50 dark:bg-amber-950/10 px-2 py-1.5 rounded-xl border border-amber-200/50 dark:border-amber-800/30 shrink-0" title="Student has not timed out yet">
+                        <i class="ph-bold ph-clock-countdown text-amber-500 text-xs"></i>
+                        <span class="text-[8px] font-black text-amber-600 dark:text-amber-400">PENDING</span>
+                     </div>`);
 
             tbody.insertAdjacentHTML('beforeend', `
-                <div class="flex flex-row items-start lg:items-center lg:grid lg:grid-cols-12 gap-3 lg:gap-4 p-4 sm:p-5 hover:bg-gray-50 dark:hover:bg-[#111]/50 transition-colors cursor-pointer group ${rowStyle}" onclick="openProofModal(${item.id}, event)">
+                <div class="flex flex-col lg:grid lg:grid-cols-12 gap-3 lg:gap-4 p-4 sm:p-5 hover:bg-gray-50 dark:hover:bg-[#111]/50 transition-colors cursor-pointer group ${rowStyle}" onclick="openProofModal(${item.id}, event)">
                     <!-- Identity: Mobile & Desktop -->
-                    <div class="flex items-center gap-3 flex-1 lg:col-span-4 lg:pl-4 min-w-0">
+                    <div class="flex items-center gap-3 lg:col-span-3 lg:pl-4 min-w-0">
                         <div class="w-10 h-10 rounded-xl overflow-hidden shrink-0 border-2 ${isOrganizer ? 'border-pup-maroon dark:border-pup-gold shadow-md' : 'border-gray-100 dark:border-gray-800'}">
                             <img src="${item.img}" class="w-full h-full object-cover">
                         </div>
                         <div class="min-w-0">
-                            <h4 class="font-bold text-gray-900 dark:text-white leading-tight truncate text-sm sm:text-base flex items-center mb-1">
+                            <h4 class="font-bold text-gray-900 dark:text-white leading-tight truncate text-sm sm:text-base flex items-center mb-0.5">
                                 ${item.name}
                                 ${roleBadge}
                             </h4>
@@ -305,16 +388,26 @@
 
                     <!-- DESKTOP ONLY COLUMNS -->
                     <div class="hidden lg:block lg:col-span-2 text-[11px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-tight">${yearDisplay}</div>
-                    <div class="hidden lg:block lg:col-span-2 text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-tighter truncate">${item.event}</div>
                     <div class="hidden lg:block lg:col-span-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">${timeDisplay}</div>
-                    <div class="hidden lg:flex lg:col-span-2 lg:pr-4 justify-end items-center">
-                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-current opacity-80 ${statusClass}">${item.status}</span>
+                    
+                    <!-- 🟢 FACE SCAN EVIDENCE IN TABLE 🟢 -->
+                    <div class="hidden lg:flex lg:col-span-3 items-center justify-center gap-2">
+                        ${inScanHtml}
+                        ${outScanHtml}
                     </div>
 
-                    <!-- MOBILE ONLY COLUMNS (Right Side) -->
-                    <div class="flex flex-col items-end gap-1 lg:hidden shrink-0 mt-0.5">
-                        <span class="inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border border-current ${statusClass}">${item.status}</span>
-                        <div class="text-[10px] font-black text-gray-600 dark:text-gray-400 leading-none mt-1 uppercase">${isOrganizer ? 'MEMBER' : item.year}</div>
+                    <div class="hidden lg:flex lg:col-span-2 lg:pr-4 justify-end items-center gap-2">
+                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-current opacity-80 ${statusClass}">${item.status}</span>
+                        <i class="ph-bold ph-eye text-base text-gray-400 group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-colors"></i>
+                    </div>
+
+                    <!-- MOBILE ONLY COLUMNS (Right Side & Evidence) -->
+                    <div class="flex items-center justify-between gap-2 lg:hidden pt-2 border-t border-gray-100 dark:border-gray-800/60 mt-1">
+                        <div class="flex items-center gap-2 overflow-x-auto">
+                            ${inScanHtml}
+                            ${outScanHtml}
+                        </div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border border-current ${statusClass}">${item.status}</span>
                     </div>
                 </div>
             `);
@@ -359,8 +452,42 @@
         document.getElementById('modalVenueInfo').innerText = item.venue;
         document.getElementById('modalName').innerText = item.name;
         document.getElementById('modalId').innerText = item.number;
+        const profileImgElem = document.getElementById('modalProfileImg');
+        if (profileImgElem) profileImgElem.src = item.img;
         
-        // Face Scan Image Logic
+        // 🟢 3-WAY BIOMETRIC AUDIT MATRIX POPULATION 🟢
+        const auditBaselineImg = document.getElementById('auditBaselineImg');
+        if (auditBaselineImg) auditBaselineImg.src = item.img;
+
+        const auditInImg = document.getElementById('auditInImg');
+        const auditInFallback = document.getElementById('auditInFallback');
+        const auditInTime = document.getElementById('auditInTime');
+        if (item.captured_face) {
+            auditInImg.src = item.captured_face;
+            auditInImg.classList.remove('hidden');
+            auditInFallback.classList.add('hidden');
+            auditInTime.innerText = item.time;
+        } else {
+            auditInImg.classList.add('hidden');
+            auditInFallback.classList.remove('hidden');
+            auditInTime.innerText = 'Missed In';
+        }
+
+        const auditOutImg = document.getElementById('auditOutImg');
+        const auditOutFallback = document.getElementById('auditOutFallback');
+        const auditOutTime = document.getElementById('auditOutTime');
+        if (item.captured_face_out) {
+            auditOutImg.src = item.captured_face_out;
+            auditOutImg.classList.remove('hidden');
+            auditOutFallback.classList.add('hidden');
+            auditOutTime.innerText = item.time_out || '--:--';
+        } else {
+            auditOutImg.classList.add('hidden');
+            auditOutFallback.classList.remove('hidden');
+            auditOutTime.innerText = item.has_timed_out ? 'No Photo' : 'Pending Out';
+        }
+
+        // Face Scan Image Logic (Tabs Section)
         const faceImg = document.getElementById('proofFaceImg');
         const faceIcon = document.getElementById('proofFaceIcon');
         if (item.captured_face) {
@@ -431,8 +558,12 @@
                 });
         }
         
-        // Always start with Time In tab when opening modal
-        switchTab('IN');
+        // Smart Tab UI logic: Switch to OUT if only Time Out photo exists
+        if (!item.captured_face && item.captured_face_out) {
+            switchTab('OUT');
+        } else {
+            switchTab('IN');
+        }
         
         // Tab UI logic (Disable Time Out if no time out recorded)
         const tabTimeOut = document.getElementById('tabTimeOut');

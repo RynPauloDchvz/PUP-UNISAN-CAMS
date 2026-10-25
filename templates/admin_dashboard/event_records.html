@@ -844,9 +844,12 @@
                             <td style="color: var(--text-muted); font-weight: 700; text-align: center; white-space: nowrap; font-size: 0.8rem;">[[ event.date ]]</td>
                             <td>
                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    <span class="badge" style="background: rgba(40, 167, 69, 0.1); color: #28a745; border-color: rgba(40, 167, 69, 0.3);">
-                                        <i class="ph-bold ph-users"></i> [[ event.attendance_count || 0 ]] Attendance
-                                    </span>
+                                    <a :href="'/organizer/manage-attendance?event_id=' + event.id" 
+                                       class="badge" 
+                                       title="View Live Attendance Scans & Biometric Records"
+                                       style="background: rgba(40, 167, 69, 0.1); color: #28a745; border-color: rgba(40, 167, 69, 0.3); text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="ph-bold ph-users"></i> [[ event.attendance_count || 0 ]] Attendance <i class="ph-bold ph-arrow-up-right" style="font-size: 0.65rem;"></i>
+                                    </a>
                                     <span class="badge" style="background: rgba(0, 123, 255, 0.1); color: #007bff; border-color: rgba(0, 123, 255, 0.3);">
                                         <i class="ph-bold ph-star"></i> [[ event.evaluation_count || 0 ]] Feedback
                                     </span>

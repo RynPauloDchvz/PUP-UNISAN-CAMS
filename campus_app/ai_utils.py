@@ -107,7 +107,7 @@ def parse_face_descriptor(face_data):
         pass
     return None
 
-def check_duplicate_face(candidate_face, current_user=None, threshold=0.60):
+def check_duplicate_face(candidate_face, current_user=None, threshold=0.42):
     """
     Scans the database across Students, OrgProfiles, and AdviserProfiles to check
     if the candidate face descriptor matches any existing registered face.
@@ -194,7 +194,7 @@ def check_duplicate_face(candidate_face, current_user=None, threshold=0.60):
 
     return False, None
 
-def verify_face(live_face, anchor_face, threshold=0.6):
+def verify_face(live_face, anchor_face, threshold=0.48):
     """
     Client-side Face-API Verification Engine.
     Compares two 128-dimensional face descriptors (JSON lists or numerical vectors)

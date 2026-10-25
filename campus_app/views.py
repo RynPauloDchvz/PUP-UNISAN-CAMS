@@ -2392,7 +2392,14 @@ def organizer_attendance_events(request):
     except OrgProfile.DoesNotExist:
         org_acronym = "UNKNOWN"
 
-    org_events = Event.objects.filter(org_id=org_acronym, event_status='Approved').order_by('-event_date', '-start_time')
+    org_events = Event.objects.filter(
+        Q(org_id__iexact=org_acronym) | 
+        Q(event_title__icontains='Flag Raising') | 
+        Q(event_title__icontains='General Assembly') | 
+        Q(event_title__icontains='Student Week') |
+        Q(org_id='ALL'),
+        event_status='Approved'
+    ).order_by('-event_date', '-start_time')
     
     event_data = []
     for event in org_events:
@@ -2411,7 +2418,7 @@ def organizer_attendance_events(request):
         'events_data_json': json.dumps(event_data)
     })
 
-@user_passes_test(is_organizer_strictly, login_url='/')
+@login_required(login_url='/')
 def organizer_manage_attendance(request): 
     try:
         org_profile = OrgProfile.objects.get(user=request.user)
@@ -2424,7 +2431,19 @@ def organizer_manage_attendance(request):
         return redirect('organizer_attendance_events')
 
     try:
-        current_event = Event.objects.get(id=event_id, org_id=org_acronym)
+        if request.user.is_superuser:
+            current_event = Event.objects.get(id=event_id)
+        else:
+            current_event = Event.objects.filter(
+                Q(org_id__iexact=org_acronym) | 
+                Q(event_title__icontains='Flag Raising') | 
+                Q(event_title__icontains='General Assembly') | 
+                Q(event_title__icontains='Student Week') |
+                Q(org_id='ALL'),
+                id=event_id
+            ).first()
+            if not current_event:
+                current_event = Event.objects.get(id=event_id)
     except Event.DoesNotExist:
         return redirect('organizer_attendance_events')
 
@@ -3416,7 +3435,8 @@ def record_attendance(request):
                 allowed_orgs_str = getattr(event, 'allowed_orgs', 'ALL')
                 if target_aud == 'SPECIFIC' and allowed_orgs_str and allowed_orgs_str != 'ALL':
                     allowed_list = [o.strip().upper() for o in allowed_orgs_str.split(',') if o.strip()]
-                    if student.organization.strip().upper() not in allowed_list:
+                    student_orgs = [o.upper() for o in student.get_all_organizations()]
+                    if not any(so in allowed_list for so in student_orgs):
                         return JsonResponse({'status': 'error', 'message': f'Attendance for this event is restricted to: {allowed_orgs_str}. You are not authorized to attend.'})
 
             # 🟢 ATTENDANCE SCOPE CHECK 🟢
@@ -3457,12 +3477,13 @@ def record_attendance(request):
             start_dt = timezone.make_aware(datetime.combine(event.event_date, event.start_time))
             end_dt = timezone.make_aware(datetime.combine(event.event_date, event.end_time)) if event.end_time else (start_dt + timedelta(hours=4))
 
-            # 🟢 1. TIME IN WINDOW (Start Time up to Start Time + 1 Hour) 🟢
-            time_in_close = start_dt + timedelta(hours=1)
+            # 🟢 1. TIME IN WINDOW (30 mins before Start Time up to End Time or Start Time + 3 Hours) 🟢
+            time_in_open = start_dt - timedelta(minutes=30)
+            time_in_close = max(end_dt - timedelta(minutes=15), start_dt + timedelta(hours=3))
 
-            # 🟢 2. TIME OUT WINDOW (15 mins before End Time up to End Time + 1 Hour, total 1h 15m) 🟢
+            # 🟢 2. TIME OUT WINDOW (15 mins before End Time up to End Time + 2 Hours) 🟢
             timeout_start = end_dt - timedelta(minutes=15)
-            timeout_expiry = end_dt + timedelta(hours=1)
+            timeout_expiry = end_dt + timedelta(hours=2)
 
             # Determine whether this is a TIME OUT attempt
             is_timeout_attempt = False
@@ -3555,10 +3576,10 @@ def record_attendance(request):
                     return JsonResponse({'status': 'success', 'message': f'Time Out recorded at {location_name}. Note: Missed Time In window. You may proceed to submit your evaluation within 1 hour.'})
 
             # 🟢 HANDLE TIME IN 🟢
-            if now < start_dt:
-                return JsonResponse({'status': 'error', 'message': f'Authorization window hasn\'t opened yet. Access available starting at {event.start_time.strftime("%I:%M %p")}.'})
+            if now < time_in_open:
+                return JsonResponse({'status': 'error', 'message': f'Authorization window hasn\'t opened yet. Access available starting at {time_in_open.strftime("%I:%M %p")}.'})
             if now > time_in_close:
-                return JsonResponse({'status': 'error', 'message': f'Time In window has expired. Time In was open from {event.start_time.strftime("%I:%M %p")} until {time_in_close.strftime("%I:%M %p")}.'})
+                return JsonResponse({'status': 'error', 'message': f'Time In window has expired. Time In was open from {time_in_open.strftime("%I:%M %p")} until {time_in_close.strftime("%I:%M %p")}.'})
 
             # Client-Side Face-API Verification for Time In
             face_matched = False
@@ -3822,7 +3843,7 @@ def get_all_admin_notifications():
     
     # 1. Events pending Admin actions
     try:
-        pending_events = Event.objects.filter(event_status='Final Admin Review').order_by('-id')
+        pending_events = Event.objects.filter(event_status__in=['Pending Admin', 'Final Admin Review']).order_by('-id')
         for e in pending_events:
             dt = getattr(e, 'created_at', None) or now
             
@@ -3830,8 +3851,12 @@ def get_all_admin_notifications():
             full_org_name = ORG_FULL_NAMES.get(e.org_id, e.org_id)
             org_display = full_org_name
             
-            title = "Final Review Request"
-            msg = f"Good day Admin, {e.requester_name or 'an Organizer'} from {org_display} has uploaded the signed permits for '{e.event_title}'. It is now awaiting Final Admin Review."
+            if e.event_status == 'Pending Admin':
+                title = "New Proposal Clearance"
+                msg = f"Good day Admin, {e.requester_name or 'an Organizer'} from {org_display} submitted proposal '{e.event_title}'. It is awaiting initial Admin review."
+            else:
+                title = "Final Review Request"
+                msg = f"Good day Admin, {e.requester_name or 'an Organizer'} from {org_display} has uploaded the signed permits for '{e.event_title}'. It is now awaiting Final Admin Review."
                 
             org_profile = OrgProfile.objects.filter(organization=e.org_id).first()
             avatar_url = org_profile.profile_picture.url if (org_profile and org_profile.profile_picture) else f"https://ui-avatars.com/api/?name={e.org_id}&background=800000&color=fff"
@@ -4962,7 +4987,7 @@ def admin_audit_logs(request):
     Dashboard for the Admin to monitor system activity.
     Fetches all logs and passes them as JSON for Vue.js rendering.
     """
-    logs = AuditLog.objects.all().order_by('-timestamp')
+    logs = AuditLog.objects.select_related('actor', 'actor__student', 'actor__orgprofile').order_by('-timestamp')[:300]
     
     logs_data = []
     for log in logs:
