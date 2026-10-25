@@ -120,8 +120,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     import dj_database_url
-    # For Neon serverless pooler or in development, conn_max_age=0 prevents stale connection drops when compute auto-suspends
-    is_pooler = '-pooler' in DATABASE_URL
+    # For Neon and Supabase serverless poolers or in development, conn_max_age=0 prevents stale connection drops
+    is_pooler = '-pooler' in DATABASE_URL or 'pooler.' in DATABASE_URL
     conn_age = 0 if (DEBUG or is_pooler) else 600
     DATABASES = {
         'default': dj_database_url.config(
