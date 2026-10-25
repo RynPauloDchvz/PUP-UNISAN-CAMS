@@ -532,7 +532,7 @@
             sessionStorage.setItem('eval_event_id', id);
             sessionStorage.setItem('eval_event_title', title);
             sessionStorage.setItem('eval_event_img', img);
-            window.location.href = "{% url 'student_evaluation_form' %}";
+            window.location.href = "{% url 'student_evaluation_form' %}?event_id=" + encodeURIComponent(id);
         };
 
         if (openSearch) {

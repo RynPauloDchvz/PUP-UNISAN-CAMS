@@ -27,7 +27,7 @@
         <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
         <div class="relative z-10 p-6 sm:p-10 w-full max-w-4xl mx-auto">
             <a href="{% url 'student_evaluation' %}" class="absolute top-4 left-4 sm:top-6 sm:left-6 text-white hover:text-pup-gold transition-colors flex items-center gap-2 text-sm font-bold bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
-                <i class="ph-bold ph-arrow-left text-lg"></i> Back to Hub
+                <i class="ph-bold ph-arrow-left text-lg"></i> Back to Evaluation
             </a>
             <div class="bg-pup-gold inline-block text-black font-black text-[0.65rem] px-3 py-1 rounded-full uppercase mb-2 mt-8">Institutional Activity</div>
             <h2 class="text-3xl sm:text-5xl font-black text-white leading-tight uppercase tracking-tight" v-text="currentTitle"></h2>    
@@ -80,12 +80,12 @@
             </div>
 
             <!-- 🟢 STEP VIEW: CATEGORIES I to V (Rating Statements) 🟢 -->
-            <div v-show="currentStep < 5" class="transition-opacity duration-300">
+            <div v-if="currentStep < 5" class="transition-opacity duration-300">
                 <!-- Current Category Header -->
                 <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-gray-800">
                     <h3 class="text-base sm:text-lg font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.15em] flex items-center gap-2">
                         <span class="w-2.5 h-6 bg-pup-maroon dark:bg-pup-gold rounded-full inline-block"></span>
-                        [[ evaluationData[currentStep].category ]]
+                        [[ evaluationData[currentStep] ? evaluationData[currentStep].category : '' ]]
                     </h3>
                     <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">
                         [[ getCategoryRatedCount(currentStep) ]] of 5 Rated
@@ -93,8 +93,8 @@
                 </div>
 
                 <!-- 5 Questions in Active Category -->
-                <div class="space-y-4 mb-8">
-                    <div v-for="(q, qIdx) in evaluationData[currentStep].questions" :key="qIdx" 
+                <div class="space-y-4 mb-8" v-if="evaluationData[currentStep]">
+                    <div v-for="(q, qIdx) in (evaluationData[currentStep] ? evaluationData[currentStep].questions : [])" :key="qIdx" 
                          class="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-800 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 transition-all hover:shadow-md">
                         <p class="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 sm:w-2/3 leading-relaxed">
                             <span class="text-pup-maroon dark:text-pup-gold mr-2 font-black">[[ (currentStep * 5) + qIdx + 1 ]].</span>
@@ -105,12 +105,12 @@
                                 <i v-for="star in 5" :key="star" 
                                    @click="setRating(currentStep, qIdx, star)"
                                    :class="['ph-fill ph-star text-2xl cursor-pointer star-btn transition-all', 
-                                            evaluationData[currentStep].ratings[qIdx] >= star ? 'star-active scale-110' : 'text-gray-200 dark:text-gray-700']">
+                                            evaluationData[currentStep] && evaluationData[currentStep].ratings[qIdx] >= star ? 'star-active scale-110' : 'text-gray-200 dark:text-gray-700']">
                                 </i>
                             </div>
                             <div class="text-2xl sm:text-3xl transition-all select-none" 
                                  :id="'emoji-' + currentStep + '-' + qIdx" 
-                                 v-text="emojis[evaluationData[currentStep].ratings[qIdx]]">
+                                 v-text="evaluationData[currentStep] ? emojis[evaluationData[currentStep].ratings[qIdx]] : ''">
                             </div>
                         </div>
                     </div>
@@ -118,7 +118,7 @@
             </div>
 
             <!-- 🟢 STEP VIEW: CATEGORY VI (Open-Ended Feedback) 🟢 -->
-            <div v-show="currentStep === 5" class="transition-opacity duration-300">
+            <div v-if="currentStep === 5" class="transition-opacity duration-300">
                 <div class="mb-6 flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-800">
                     <span class="w-2.5 h-6 bg-pup-maroon dark:bg-pup-gold rounded-full inline-block"></span>
                     <h3 class="text-base sm:text-lg font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.15em]">
@@ -164,8 +164,8 @@
                 </button>
 
                 <!-- Final Submit Button (Only on Step 5 / Category VI) -->
-                <button v-show="currentStep === 5" 
-                        type="submit"
+                <button v-if="currentStep === 5" 
+                        type="button"
                         @click="submitEvaluation" 
                         :disabled="isSubmitting" 
                         class="flex-[2] sm:flex-1 py-4 sm:py-5 px-6 sm:px-8 rounded-2xl bg-pup-maroon text-white dark:bg-pup-gold dark:text-black hover:opacity-90 active:scale-95 font-black text-[10px] sm:text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2 shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed ml-auto">
@@ -193,7 +193,7 @@
             <h2 class="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-3 leading-none">Sync Successful!</h2>
             <p class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-[0.2em] mb-8 sm:mb-10">Your feedback has been analyzed and recorded in the Institutional Ledger.</p>
             <button @click="redirectToLedger" class="w-full py-4 sm:py-5 bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black rounded-2xl uppercase tracking-[0.3em] shadow-2xl hover:opacity-90 active:scale-95 transition-all text-[11px]">
-                Return to Evaluation Hub
+                Back to Evaluation
             </button>
         </div>
     </div>
@@ -204,9 +204,9 @@
 <script>
     // 🟢 INTEGRATE INTO STUDENT BASE VUE APP 🟢
     window.VUE_APP_DATA = {
-        currentId: sessionStorage.getItem('eval_event_id'),
-        currentTitle: sessionStorage.getItem('eval_event_title') || sessionStorage.getItem('currentEvalTitle') || "General Event Evaluation",
-        currentImg: sessionStorage.getItem('eval_event_img') || sessionStorage.getItem('currentEvalImg') || "{% static 'images/background.jpg' %}",
+        currentId: new URLSearchParams(window.location.search).get('event_id') || sessionStorage.getItem('eval_event_id'),
+        currentTitle: new URLSearchParams(window.location.search).get('event_title') || sessionStorage.getItem('eval_event_title') || sessionStorage.getItem('currentEvalTitle') || "General Event Evaluation",
+        currentImg: new URLSearchParams(window.location.search).get('event_img') || sessionStorage.getItem('eval_event_img') || sessionStorage.getItem('currentEvalImg') || "{% static 'images/background.jpg' %}",
         currentStep: 0,
         maxVisitedStep: 0,
         feedbackComment: '',
@@ -300,7 +300,8 @@
             if (this.currentStep < 5) {
                 const unratedCount = 5 - this.getCategoryRatedCount(this.currentStep);
                 if (unratedCount > 0) {
-                    alert(`Please provide a rating for all 5 statements in ${this.evaluationData[this.currentStep].category} before proceeding.`);
+                    const catName = this.evaluationData[this.currentStep] ? this.evaluationData[this.currentStep].category : `Category ${this.currentStep + 1}`;
+                    alert(`Please provide a rating for all 5 statements in ${catName} before proceeding.`);
                     return;
                 }
                 this.currentStep++;
@@ -332,10 +333,17 @@
             });
         },
         async submitEvaluation() {
+            if (!this.currentId || this.currentId === 'null' || this.currentId === 'undefined') {
+                alert("Event identification missing. Please launch the evaluation from the Evaluation page.");
+                window.location.href = "{% url 'student_evaluation' %}";
+                return;
+            }
+
             // Check that all 25 questions across categories 1 to 5 are rated
             for (let i = 0; i < 5; i++) {
                 if (this.getCategoryRatedCount(i) < 5) {
-                    alert(`Please complete the ratings for Category ${i + 1} (${this.evaluationData[i].category}) before submitting.`);
+                    const catName = this.evaluationData[i] ? this.evaluationData[i].category : `Category ${i + 1}`;
+                    alert(`Please complete the ratings for Category ${i + 1} (${catName}) before submitting.`);
                     this.currentStep = i;
                     this.scrollToFormTop();
                     return;
