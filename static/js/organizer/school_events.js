@@ -249,6 +249,121 @@ const eventsText = document.getElementById('events-data').textContent;
                 startParticipationScanner(); 
             });
         }
+        // --- BIOMETRIC MODAL & TOAST SYSTEM (FORCE-CHANGE UI STYLE) ---
+        function showBiometricModal({
+            type = 'error',
+            title = '',
+            message = '',
+            policyHeader = '',
+            policyBody = '',
+            buttonText = 'Understood',
+            onConfirm = null
+        } = {}) {
+            const modal = document.getElementById('biometricFeedbackModal');
+            if (!modal) {
+                alert(message);
+                return;
+            }
+
+            const iconContainer = document.getElementById('bioModalIconContainer');
+            const icon = document.getElementById('bioModalIcon');
+            const titleEl = document.getElementById('bioModalTitle');
+            const msgEl = document.getElementById('bioModalMessage');
+            const policyBox = document.getElementById('bioModalPolicyBox');
+            const policyHeaderEl = document.getElementById('bioModalPolicyHeader');
+            const policyBodyEl = document.getElementById('bioModalPolicyBody');
+            const btn = document.getElementById('bioModalBtn');
+            const btnIcon = document.getElementById('bioModalBtnIcon');
+            const btnText = document.getElementById('bioModalBtnText');
+
+            titleEl.innerText = title;
+            msgEl.innerText = message;
+
+            if (type === 'conflict') {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 transition-colors";
+                icon.className = "ph-bold ph-shield-warning text-3xl";
+                policyBox.classList.remove('hidden');
+                policyBox.className = "p-3 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-[11px] text-red-900 dark:text-red-300 text-left mb-5 space-y-1";
+                policyHeaderEl.innerHTML = `<i class="ph-fill ph-prohibit"></i> ${policyHeader || 'Biometric Security Policy:'}`;
+                policyBodyEl.innerText = policyBody || "Your scanned face must match your registered account face profile. Proxy attendance or logging attendance on behalf of another individual is strictly audited and prohibited.";
+                btn.className = "w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+                btnIcon.className = "ph-bold ph-arrow-counter-clockwise";
+                btnText.innerText = buttonText || "Rescan Face Biometrics";
+            } else if (type === 'location') {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-4 transition-colors";
+                icon.className = "ph-bold ph-map-pin-line text-3xl";
+                policyBox.classList.remove('hidden');
+                policyBox.className = "p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-[11px] text-amber-900 dark:text-amber-300 text-left mb-5 space-y-1";
+                policyHeaderEl.innerHTML = `<i class="ph-fill ph-navigation-arrow"></i> ${policyHeader || 'Campus Geofence Policy:'}`;
+                policyBodyEl.innerText = policyBody || "You must be physically present within the official PUP Unisan campus boundary to verify and record event attendance.";
+                btn.className = "w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+                btnIcon.className = "ph-bold ph-map-pin";
+                btnText.innerText = buttonText || "Understood";
+            } else if (type === 'spoof') {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 transition-colors";
+                icon.className = "ph-bold ph-user-focus text-3xl";
+                policyBox.classList.remove('hidden');
+                policyBox.className = "p-3 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-[11px] text-red-900 dark:text-red-300 text-left mb-5 space-y-1";
+                policyHeaderEl.innerHTML = `<i class="ph-fill ph-shield-check"></i> ${policyHeader || 'Live Face Verification Policy:'}`;
+                policyBodyEl.innerText = policyBody || "Real live human presence is strictly required. Static photos, printed pictures, screens, masks, and spoof attempts are strictly prohibited and audited.";
+                btn.className = "w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+                btnIcon.className = "ph-bold ph-arrow-counter-clockwise";
+                btnText.innerText = buttonText || "Try Again (Live Face)";
+            } else if (type === 'warning') {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-4 transition-colors";
+                icon.className = "ph-bold ph-warning-circle text-3xl";
+                policyBox.classList.add('hidden');
+                btn.className = "w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+                btnIcon.className = "ph-bold ph-arrow-counter-clockwise";
+                btnText.innerText = buttonText || "Adjust & Try Again";
+            } else if (type === 'success') {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center mb-4 transition-colors";
+                icon.className = "ph-bold ph-check-circle text-3xl";
+                policyBox.classList.add('hidden');
+                btn.className = "w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-green-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+                btnIcon.className = "ph-bold ph-check";
+                btnText.innerText = buttonText || "Done";
+            } else {
+                iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 transition-colors";
+                icon.className = "ph-bold ph-x-circle text-3xl";
+                policyBox.classList.add('hidden');
+                btn.className = "w-full py-3.5 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-2";
+                btnIcon.className = "ph-bold ph-x";
+                btnText.innerText = buttonText || "Close";
+            }
+
+            modal.classList.remove('hidden');
+
+            btn.onclick = () => {
+                modal.classList.add('hidden');
+                if (typeof onConfirm === 'function') onConfirm();
+            };
+        }
+
+        function showBiometricToast(message, type='info') {
+            const toast = document.getElementById('biometricToast');
+            if (!toast) return;
+            const icon = document.getElementById('bioToastIcon');
+            const text = document.getElementById('bioToastText');
+            
+            text.innerText = message;
+            if (type === 'error') {
+                toast.className = "fixed left-1/2 -translate-x-1/2 px-5 py-3 rounded-[50px] font-bold text-[0.85rem] shadow-[0_6px_25px_rgba(0,0,0,0.25)] transition-all duration-300 ease-out z-[10003] flex items-center justify-center gap-2.5 w-max max-w-[85%] text-center break-words bg-red-600 text-white bottom-[30px]";
+                icon.className = "ph-bold ph-warning-circle text-lg";
+            } else if (type === 'warning') {
+                toast.className = "fixed left-1/2 -translate-x-1/2 px-5 py-3 rounded-[50px] font-bold text-[0.85rem] shadow-[0_6px_25px_rgba(0,0,0,0.25)] transition-all duration-300 ease-out z-[10003] flex items-center justify-center gap-2.5 w-max max-w-[85%] text-center break-words bg-amber-600 text-white bottom-[30px]";
+                icon.className = "ph-bold ph-info text-lg";
+            } else {
+                toast.className = "fixed left-1/2 -translate-x-1/2 px-5 py-3 rounded-[50px] font-bold text-[0.85rem] shadow-[0_6px_25px_rgba(0,0,0,0.25)] transition-all duration-300 ease-out z-[10003] flex items-center justify-center gap-2.5 w-max max-w-[85%] text-center break-words bg-emerald-600 text-white bottom-[30px]";
+                icon.className = "ph-bold ph-check-circle text-lg";
+            }
+            
+            setTimeout(() => {
+                toast.classList.remove('bottom-[30px]');
+                toast.classList.add('-bottom-[100px]');
+            }, 3500);
+        }
+
         const btnCancelScan = document.getElementById('btnCancelScan');
         if (btnCancelScan) {
             btnCancelScan.addEventListener('click', () => { 
@@ -390,7 +505,14 @@ const eventsText = document.getElementById('events-data').textContent;
                     };
                     partScanLoop();
                 };
-            } catch (e) { alert("Camera Error (Participation): " + e.message); participationModal.style.display = 'none'; }
+            } catch (e) { 
+                showBiometricModal({
+                    type: 'error',
+                    title: 'CAMERA INITIALIZATION ERROR',
+                    message: "Camera Error: " + e.message,
+                    onConfirm: () => { participationModal.style.display = 'none'; }
+                });
+            }
         }
 
         function startGeofenceWatch() {
@@ -465,7 +587,11 @@ const eventsText = document.getElementById('events-data').textContent;
             btnSubmitScan.addEventListener('click', async () => {
                 if (isSubmitting) return;
                 if (!livenessDetector.isLive) {
-                    alert("Anti-Spoofing: Full live face verification required. Static photos and gallery images are strictly prohibited.");
+                    showBiometricModal({
+                        type: 'spoof',
+                        title: 'ANTI-SPOOFING VERIFICATION',
+                        message: 'Full live face verification is required. Static photos, printed images, and screen projections are strictly prohibited.'
+                    });
                     return;
                 }
                 isSubmitting = true;
@@ -497,7 +623,11 @@ const eventsText = document.getElementById('events-data').textContent;
                     }
 
                     if (!detection || !detection.descriptor) {
-                        alert("Face not clearly detected. Please align your face inside the frame.");
+                        showBiometricModal({
+                            type: 'warning',
+                            title: 'FACE NOT CLEARLY DETECTED',
+                            message: 'Face not clearly detected. Please align your face inside the frame in good lighting.'
+                        });
                         isSubmitting = false; 
                         btnSubmitScan.innerHTML = originalText;
                         btnSubmitScan.classList.remove('opacity-80', 'cursor-not-allowed');
@@ -522,15 +652,30 @@ const eventsText = document.getElementById('events-data').textContent;
                     if (!res.ok) throw new Error("Server returned " + res.status);
                     const data = await res.json();
                     if (data.status === 'success' || data.status === 'issue') {
+                        showBiometricToast("Attendance verified and securely logged!", "success");
                         switchParticipationView('viewSuccess');
                     } else { 
-                        alert(data.message); 
+                        const msg = data.message || "Attendance verification failed.";
+                        const isMismatch = msg.includes("does not match") || msg.includes("Biometric") || msg.includes("mismatch");
+                        const isLocation = msg.includes("geofence") || msg.includes("outside") || msg.includes("premises") || msg.includes("campus");
+                        const isSpoof = msg.includes("spoof") || msg.includes("Live") || msg.includes("Static");
+                        const isNotice = msg.includes("already") || msg.includes("expired") || msg.includes("timed out") || msg.includes("closed");
+
+                        showBiometricModal({
+                            type: isMismatch ? 'conflict' : (isLocation ? 'location' : (isSpoof ? 'spoof' : (isNotice ? 'warning' : 'error'))),
+                            title: isMismatch ? 'BIOMETRIC MISMATCH' : (isLocation ? 'GEOFENCE PERIMETER RESTRICTION' : (isSpoof ? 'ANTI-SPOOFING ALERT' : (isNotice ? 'ATTENDANCE NOTICE' : 'VERIFICATION FAILED'))),
+                            message: msg
+                        });
                         isSubmitting = false; 
                         btnSubmitScan.innerHTML = originalText;
                         btnSubmitScan.classList.remove('opacity-80', 'cursor-not-allowed');
                     }
                 } catch (e) { 
-                    alert("Submission failed: " + e.message); 
+                    showBiometricModal({
+                        type: 'error',
+                        title: 'INSTITUTIONAL SYNC ERROR',
+                        message: "Submission failed: " + e.message
+                    });
                     isSubmitting = false; 
                     btnSubmitScan.innerHTML = originalText;
                     btnSubmitScan.classList.remove('opacity-80', 'cursor-not-allowed');

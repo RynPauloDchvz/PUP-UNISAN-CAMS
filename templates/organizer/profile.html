@@ -376,6 +376,83 @@
     </div>
 </div>
 
+<!-- Password Modal -->
+<div id="passwordModal" class="hidden fixed inset-0 z-[2010] flex items-center justify-center p-4 font-sans">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" onclick="closePasswordModal()"></div>
+    <div class="relative bg-white dark:bg-[#151515] rounded-3xl shadow-xl w-full max-w-sm p-6 sm:p-8 text-center border border-gray-200 dark:border-gray-800 z-10 transition-colors">
+        <button type="button" onclick="closePasswordModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+            <i class="ph-bold ph-x text-lg"></i>
+        </button>
+        <div class="w-16 h-16 mx-auto bg-gray-100 dark:bg-[#111] rounded-full flex items-center justify-center mb-4 border border-gray-200 dark:border-gray-800">
+            <i class="ph-fill ph-lock-key text-3xl text-[#800000] dark:text-[#D4AF37]"></i>
+        </div>
+        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2 uppercase">Change Password</h3>
+        
+        <!-- Progress Bar -->
+        <div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 mb-6">
+            <div id="pwProgressBar" class="bg-[#800000] dark:bg-[#D4AF37] h-1.5 rounded-full transition-all duration-300" style="width: 50%"></div>
+        </div>
+
+        <!-- PHASE 1 -->
+        <div id="pwPhase1" class="flex flex-col gap-4 mb-6 text-left transition-opacity duration-300">
+            <div class="relative">
+                <label class="text-[0.65rem] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">New Password</label>
+                <div class="relative flex items-center mt-1">
+                    <input type="password" id="newPw" placeholder="••••••••" class="w-full bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-12 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#800000] dark:focus:border-[#D4AF37] transition-colors">
+                    <button type="button" onclick="togglePasswordVisibility('newPw', 'eyeIconPw')" class="absolute right-4 text-gray-500 dark:text-gray-400 hover:text-[#800000] dark:hover:text-[#D4AF37] transition-colors">
+                        <i id="eyeIconPw" class="ph-bold ph-eye text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="relative">
+                <label class="text-[0.65rem] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Retype New Password</label>
+                <div class="relative flex items-center mt-1">
+                    <input type="password" id="retypePw" placeholder="••••••••" class="w-full bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 rounded-xl pl-4 pr-12 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#800000] dark:focus:border-[#D4AF37] transition-colors">
+                    <button type="button" onclick="togglePasswordVisibility('retypePw', 'eyeIconRetypePw')" class="absolute right-4 text-gray-500 dark:text-gray-400 hover:text-[#800000] dark:hover:text-[#D4AF37] transition-colors">
+                        <i id="eyeIconRetypePw" class="ph-bold ph-eye text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-4">
+                <button type="button" onclick="closePasswordModal()" class="flex-1 py-3 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm">Cancel</button>
+                <button type="button" onclick="goToPhase2()" class="flex-1 py-3 rounded-xl bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black font-bold hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2">Next <i class="ph-bold ph-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- PHASE 2 -->
+        <div id="pwPhase2" class="hidden flex-col gap-4 mb-6 text-left transition-opacity duration-300 opacity-0">
+            <div class="relative">
+                <label class="text-[0.65rem] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-2 block">Email Address</label>
+                <div class="relative flex items-center mt-1 gap-2">
+                    <input type="text" id="emailDisplay" value="{{ org.user.email }}" readonly class="w-full bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 rounded-xl pl-4 py-3 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed">
+                    <button type="button" id="btnGetCodeProfile" onclick="sendPasswordResetCode()" class="px-4 py-3 bg-gray-900 dark:bg-pup-gold text-white dark:text-black font-bold rounded-xl transition-colors text-[10px] sm:text-xs shadow-sm whitespace-nowrap min-w-[100px] flex justify-center items-center uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span id="btnGetCodeText">Send OTP</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="relative mt-2">
+                <label class="text-[0.65rem] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center block mb-2">Enter 6-Digit OTP</label>
+                <div class="flex justify-center gap-1 sm:gap-2">
+                    <input type="text" maxlength="1" class="otp-box w-10 h-12 sm:w-12 sm:h-14 text-center font-black text-xl rounded-xl bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#800000] dark:focus:border-[#D4AF37] text-gray-900 dark:text-white shadow-inner transition-colors" oninput="moveOtpNext(this, 1)" onkeydown="moveOtpPrev(event, this, 0)" onpaste="handleOtpPaste(event)">
+                    <input type="text" maxlength="1" class="otp-box w-10 h-12 sm:w-12 sm:h-14 text-center font-black text-xl rounded-xl bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#800000] dark:focus:border-[#D4AF37] text-gray-900 dark:text-white shadow-inner transition-colors" oninput="moveOtpNext(this, 2)" onkeydown="moveOtpPrev(event, this, 1)">
+                    <input type="text" maxlength="1" class="otp-box w-10 h-12 sm:w-12 sm:h-14 text-center font-black text-xl rounded-xl bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#800000] dark:focus:border-[#D4AF37] text-gray-900 dark:text-white shadow-inner transition-colors" oninput="moveOtpNext(this, 3)" onkeydown="moveOtpPrev(event, this, 2)">
+                    <input type="text" maxlength="1" class="otp-box w-10 h-12 sm:w-12 sm:h-14 text-center font-black text-xl rounded-xl bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#800000] dark:focus:border-[#D4AF37] text-gray-900 dark:text-white shadow-inner transition-colors" oninput="moveOtpNext(this, 4)" onkeydown="moveOtpPrev(event, this, 3)">
+                    <input type="text" maxlength="1" class="otp-box w-10 h-12 sm:w-12 sm:h-14 text-center font-black text-xl rounded-xl bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#800000] dark:focus:border-[#D4AF37] text-gray-900 dark:text-white shadow-inner transition-colors" oninput="moveOtpNext(this, 5)" onkeydown="moveOtpPrev(event, this, 4)">
+                    <input type="text" maxlength="1" class="otp-box w-10 h-12 sm:w-12 sm:h-14 text-center font-black text-xl rounded-xl bg-[#f4f4f4] dark:bg-[#111] border border-gray-200 dark:border-gray-700 focus:outline-none focus:border-[#800000] dark:focus:border-[#D4AF37] text-gray-900 dark:text-white shadow-inner transition-colors" oninput="moveOtpNext(this, 6)" onkeydown="moveOtpPrev(event, this, 5)">
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-4">
+                <button type="button" onclick="goToPhase1()" class="flex-1 py-3 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm">Back</button>
+                <button type="button" id="btnSubmitPassword" onclick="submitPasswordChange()" class="flex-1 py-3 rounded-xl bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black font-bold hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2">Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="logoutModal" class="hidden fixed inset-0 z-[3000] flex items-center justify-center p-4 font-sans">
     <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" onclick="closeLogoutModal()"></div>
     <div class="relative bg-white dark:bg-[#151515] rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center border border-gray-200 dark:border-gray-800 z-10 transition-colors">

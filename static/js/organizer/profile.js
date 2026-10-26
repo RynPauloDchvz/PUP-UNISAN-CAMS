@@ -457,14 +457,17 @@ const generatePasswordUrl = "/organizer/api/profile-generate-password/";
         }, 3000);
     }
 
-    function openPasswordModal() { 
+    window.openPasswordModal = function() { 
+        document.getElementById('settingsModal').classList.add('hidden');
         document.getElementById('passwordModal').classList.remove('hidden'); 
+        document.body.style.overflow = 'hidden';
         goToPhase1();
-    }
+    };
     
-    function closePasswordModal() {
+    window.closePasswordModal = function() {
         document.getElementById('passwordModal').classList.add('hidden');
-    }
+        document.body.style.overflow = '';
+    };
 
     function goToPhase2() {
         const newPw = document.getElementById('newPw').value;

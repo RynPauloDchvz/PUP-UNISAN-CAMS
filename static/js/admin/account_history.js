@@ -268,41 +268,57 @@ try {
         document.getElementById('v_org').innerText = user.org;
         document.getElementById('v_year').innerText = user.year || 'N/A';
         
+        const vBirthContainer = document.getElementById('v_birthdate_container');
+        const vYearContainer = document.getElementById('v_year_container');
+        const vUserContainer = document.getElementById('v_username_container');
+        const vOrgContainer = document.getElementById('v_org_container');
+
         if (user.type === 'Student Org') {
-            document.getElementById('v_birthdate_container').style.display = 'none';
-            document.getElementById('v_year_container').style.display = 'block';
-            
-            // Layout: Row 1 = Year, Org. Row 2 = Username (full width)
-            document.getElementById('v_year_container').style.order = '1';
-            document.getElementById('v_org_container').style.order = '2';
-            document.getElementById('v_username_container').style.order = '3';
-            document.getElementById('v_username_container').style.gridColumn = '1 / -1';
+            if (vBirthContainer) vBirthContainer.style.display = 'none';
+            if (vYearContainer) {
+                vYearContainer.style.display = 'block';
+                vYearContainer.style.order = '1';
+                vYearContainer.style.gridColumn = 'auto';
+            }
+            if (vOrgContainer) vOrgContainer.style.order = '2';
+            if (vUserContainer) {
+                vUserContainer.style.order = '3';
+                vUserContainer.style.gridColumn = '1 / -1';
+            }
         } else if (user.type === 'Adviser') {
-            document.getElementById('v_birthdate_container').style.display = 'none';
-            document.getElementById('v_year_container').style.display = 'none';
-            
-            // Layout: Row 1 = Username, Org
-            document.getElementById('v_username_container').style.order = '1';
-            document.getElementById('v_org_container').style.order = '2';
-            document.getElementById('v_username_container').style.gridColumn = 'auto';
+            if (vBirthContainer) vBirthContainer.style.display = 'none';
+            if (vYearContainer) vYearContainer.style.display = 'none';
+            if (vUserContainer) {
+                vUserContainer.style.order = '1';
+                vUserContainer.style.gridColumn = 'auto';
+            }
+            if (vOrgContainer) vOrgContainer.style.order = '2';
         } else {
             // Student
-            document.getElementById('v_birthdate_container').style.display = 'block';
-            document.getElementById('v_year_container').style.display = 'block';
+            if (vBirthContainer) vBirthContainer.style.display = 'none';
+            if (vUserContainer) {
+                vUserContainer.style.order = '1';
+                vUserContainer.style.gridColumn = 'auto';
+            }
+            if (vOrgContainer) {
+                vOrgContainer.style.order = '2';
+                vOrgContainer.style.gridColumn = 'auto';
+            }
+            if (vYearContainer) {
+                vYearContainer.style.display = 'block';
+                vYearContainer.style.order = '3';
+                vYearContainer.style.gridColumn = '1 / -1';
+            }
             
-            // Default Layout: Row 1 = Username, Org. Row 2 = Year, Birthday
-            document.getElementById('v_username_container').style.order = '1';
-            document.getElementById('v_org_container').style.order = '2';
-            document.getElementById('v_year_container').style.order = '3';
-            document.getElementById('v_birthdate_container').style.order = '4';
-            document.getElementById('v_username_container').style.gridColumn = 'auto';
-            
-            if (user.birthdate && user.birthdate !== '') {
-                let dateObj = new Date(user.birthdate);
-                let formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                document.getElementById('v_birthdate').innerText = isNaN(dateObj) ? user.birthdate : formattedDate;
-            } else {
-                document.getElementById('v_birthdate').innerText = 'Not Provided';
+            const vBirth = document.getElementById('v_birthdate');
+            if (vBirth) {
+                if (user.birthdate && user.birthdate !== '') {
+                    let dateObj = new Date(user.birthdate);
+                    let formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                    vBirth.innerText = isNaN(dateObj) ? user.birthdate : formattedDate;
+                } else {
+                    vBirth.innerText = 'Not Provided';
+                }
             }
         }
         

@@ -443,16 +443,19 @@ try {
         document.getElementById('v_username').innerText = user.username;
         document.getElementById('v_year').innerText = user.year || 'N/A';
         
-        let formattedDate = 'N/A';
-        if (user.birthdate) {
-            let dateObj = new Date(user.birthdate);
-            if (!isNaN(dateObj)) {
-                formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            } else {
-                formattedDate = user.birthdate;
+        const vBirth = document.getElementById('v_birthdate');
+        if (vBirth) {
+            let formattedDate = 'N/A';
+            if (user.birthdate) {
+                let dateObj = new Date(user.birthdate);
+                if (!isNaN(dateObj)) {
+                    formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                } else {
+                    formattedDate = user.birthdate;
+                }
             }
+            vBirth.innerText = formattedDate;
         }
-        document.getElementById('v_birthdate').innerText = formattedDate;
         
         openModal('viewDetailsModal', event);
     }

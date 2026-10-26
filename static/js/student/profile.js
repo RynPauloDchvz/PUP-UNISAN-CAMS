@@ -1,6 +1,111 @@
     const generatePasswordUrl = "/student/generate-password";
 const updatePasswordUrl = "/student/update-password";
 
+    // --- BIOMETRIC MODAL & TOAST SYSTEM (FORCE-CHANGE UI STYLE) ---
+    function showBiometricModal({
+        type = 'error',
+        title = '',
+        message = '',
+        policyHeader = '',
+        policyBody = '',
+        buttonText = 'Understood',
+        onConfirm = null
+    } = {}) {
+        const modal = document.getElementById('biometricFeedbackModal');
+        if (!modal) {
+            alert(message);
+            return;
+        }
+
+        const iconContainer = document.getElementById('bioModalIconContainer');
+        const icon = document.getElementById('bioModalIcon');
+        const titleEl = document.getElementById('bioModalTitle');
+        const msgEl = document.getElementById('bioModalMessage');
+        const policyBox = document.getElementById('bioModalPolicyBox');
+        const policyHeaderEl = document.getElementById('bioModalPolicyHeader');
+        const policyBodyEl = document.getElementById('bioModalPolicyBody');
+        const btn = document.getElementById('bioModalBtn');
+        const btnIcon = document.getElementById('bioModalBtnIcon');
+        const btnText = document.getElementById('bioModalBtnText');
+
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+
+        if (type === 'conflict') {
+            iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 transition-colors";
+            icon.className = "ph-bold ph-shield-warning text-3xl";
+            policyBox.classList.remove('hidden');
+            policyBox.className = "p-3 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-[11px] text-red-900 dark:text-red-300 text-left mb-5 space-y-1";
+            policyHeaderEl.innerHTML = `<i class="ph-fill ph-prohibit"></i> ${policyHeader || 'Anti-Proxy Attendance Policy:'}`;
+            policyBodyEl.innerText = policyBody || "Only one (1) account is permitted per person. Registering the same biometric face across multiple accounts is strictly prohibited to prevent attendance proxy and impersonation.";
+            btn.className = "w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+            btnIcon.className = "ph-bold ph-arrow-counter-clockwise";
+            btnText.innerText = buttonText || "Rescan Face Biometrics";
+        } else if (type === 'spoof') {
+            iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 transition-colors";
+            icon.className = "ph-bold ph-user-focus text-3xl";
+            policyBox.classList.remove('hidden');
+            policyBox.className = "p-3 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 text-[11px] text-red-900 dark:text-red-300 text-left mb-5 space-y-1";
+            policyHeaderEl.innerHTML = `<i class="ph-fill ph-shield-check"></i> ${policyHeader || 'Live Face Verification Policy:'}`;
+            policyBodyEl.innerText = policyBody || "Real live human presence is strictly required. Static photos, printed pictures, screens, masks, and spoof attempts are strictly prohibited and audited.";
+            btn.className = "w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+            btnIcon.className = "ph-bold ph-arrow-counter-clockwise";
+            btnText.innerText = buttonText || "Try Again (Live Face)";
+        } else if (type === 'warning') {
+            iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-4 transition-colors";
+            icon.className = "ph-bold ph-warning-circle text-3xl";
+            policyBox.classList.add('hidden');
+            btn.className = "w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+            btnIcon.className = "ph-bold ph-arrow-counter-clockwise";
+            btnText.innerText = buttonText || "Adjust & Try Again";
+        } else if (type === 'success') {
+            iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center mb-4 transition-colors";
+            icon.className = "ph-bold ph-check-circle text-3xl";
+            policyBox.classList.add('hidden');
+            btn.className = "w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-green-600/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+            btnIcon.className = "ph-bold ph-check";
+            btnText.innerText = buttonText || "Done";
+        } else {
+            iconContainer.className = "w-16 h-16 mx-auto rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 transition-colors";
+            icon.className = "ph-bold ph-x-circle text-3xl";
+            policyBox.classList.add('hidden');
+            btn.className = "w-full py-3.5 rounded-xl bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-black font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-2";
+            btnIcon.className = "ph-bold ph-x";
+            btnText.innerText = buttonText || "Close";
+        }
+
+        modal.classList.remove('hidden');
+
+        btn.onclick = () => {
+            modal.classList.add('hidden');
+            if (typeof onConfirm === 'function') onConfirm();
+        };
+    }
+
+    function showBiometricToast(message, type='info') {
+        const toast = document.getElementById('biometricToast');
+        if (!toast) return;
+        const icon = document.getElementById('bioToastIcon');
+        const text = document.getElementById('bioToastText');
+        
+        text.innerText = message;
+        if (type === 'error') {
+            toast.className = "fixed left-1/2 -translate-x-1/2 px-5 py-3 rounded-[50px] font-bold text-[0.85rem] shadow-[0_6px_25px_rgba(0,0,0,0.25)] transition-all duration-300 ease-out z-[10003] flex items-center justify-center gap-2.5 w-max max-w-[85%] text-center break-words bg-red-600 text-white bottom-[30px]";
+            icon.className = "ph-bold ph-warning-circle text-lg";
+        } else if (type === 'warning') {
+            toast.className = "fixed left-1/2 -translate-x-1/2 px-5 py-3 rounded-[50px] font-bold text-[0.85rem] shadow-[0_6px_25px_rgba(0,0,0,0.25)] transition-all duration-300 ease-out z-[10003] flex items-center justify-center gap-2.5 w-max max-w-[85%] text-center break-words bg-amber-600 text-white bottom-[30px]";
+            icon.className = "ph-bold ph-info text-lg";
+        } else {
+            toast.className = "fixed left-1/2 -translate-x-1/2 px-5 py-3 rounded-[50px] font-bold text-[0.85rem] shadow-[0_6px_25px_rgba(0,0,0,0.25)] transition-all duration-300 ease-out z-[10003] flex items-center justify-center gap-2.5 w-max max-w-[85%] text-center break-words bg-emerald-600 text-white bottom-[30px]";
+            icon.className = "ph-bold ph-check-circle text-lg";
+        }
+        
+        setTimeout(() => {
+            toast.classList.remove('bottom-[30px]');
+            toast.classList.add('-bottom-[100px]');
+        }, 3500);
+    }
+
     // --- FACE UPDATE SCANNER LOGIC ---
     let updateStream = null;
     let updateInterval = null;
@@ -9,16 +114,25 @@ const updatePasswordUrl = "/student/update-password";
     const livenessDetector = new FaceLivenessDetector();
 
     window.openFaceUpdateModal = function() {
-        document.getElementById('faceUpdateModal').classList.remove('hidden');
         document.getElementById('settingsModal').classList.add('hidden');
+        document.getElementById('faceUpdateModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
         startFaceUpdateScanner();
     }
 
     window.closeFaceUpdateModal = function() {
-        if (updateStream) { updateStream.getTracks().forEach(t => t.stop()); updateStream = null; }
-        if (updateInterval) clearInterval(updateInterval);
+        if (updateStream) { 
+            updateStream.getTracks().forEach(t => t.stop()); 
+            updateStream = null; 
+        }
+        const video = document.getElementById('faceUpdateVideo');
+        if (video) video.srcObject = null;
+        if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+        }
         document.getElementById('faceUpdateModal').classList.add('hidden');
-        document.getElementById('settingsModal').classList.remove('hidden');
+        document.body.style.overflow = '';
     }
 
     async function loadUpdateModels() {
@@ -148,7 +262,11 @@ const updatePasswordUrl = "/student/update-password";
 
             btn.onclick = async () => {
                 if (!livenessDetector.isLive) {
-                    alert("Anti-Spoofing: Full live face verification required. Static photos and gallery images are strictly prohibited.");
+                    showBiometricModal({
+                        type: 'spoof',
+                        title: 'ANTI-SPOOFING VERIFICATION',
+                        message: 'Anti-Spoofing: Full live face verification required. Static photos and gallery images are strictly prohibited.'
+                    });
                     return;
                 }
                 btn.disabled = true;
@@ -171,7 +289,11 @@ const updatePasswordUrl = "/student/update-password";
                 }
 
                 if (!detection || !detection.descriptor) {
-                    alert("Face not clearly detected. Please face the camera directly in good lighting.");
+                    showBiometricModal({
+                        type: 'warning',
+                        title: 'FACE NOT RECOGNIZED',
+                        message: 'Face not clearly detected. Please face the camera directly in good lighting.'
+                    });
                     btn.disabled = false;
                     btn.innerHTML = `<i class="ph-bold ph-fingerprint"></i> Confirm New Identity`;
                     return;
@@ -191,23 +313,46 @@ const updatePasswordUrl = "/student/update-password";
                     });
                     const data = await resp.json();
                     if (data.status === 'success') {
-                        alert("Biometric identity updated successfully!");
-                        closeFaceUpdateModal();
-                        location.reload();
+                        showBiometricToast("Biometric identity updated successfully!", "success");
+                        showBiometricModal({
+                            type: 'success',
+                            title: 'IDENTITY UPDATED',
+                            message: 'Your facial biometric profile and official picture have been updated successfully.',
+                            buttonText: 'Done',
+                            onConfirm: () => {
+                                closeFaceUpdateModal();
+                                location.reload();
+                            }
+                        });
                     } else {
-                        alert(data.message);
+                        const isConflict = data.message && (data.message.includes('Conflict') || data.message.includes('already registered'));
+                        const isSpoof = data.message && (data.message.includes('spoof') || data.message.includes('Live'));
+                        showBiometricModal({
+                            type: isConflict ? 'conflict' : (isSpoof ? 'spoof' : 'error'),
+                            title: isConflict ? 'BIOMETRIC IDENTITY CONFLICT' : (isSpoof ? 'ANTI-SPOOFING ALERT' : 'UPDATE FAILED'),
+                            message: data.message || "Failed to update face biometric."
+                        });
                         btn.disabled = false;
                         btn.innerHTML = `<i class="ph-bold ph-fingerprint"></i> Confirm New Identity`;
                     }
                 } catch(e) {
-                    alert("Network error.");
+                    showBiometricModal({
+                        type: 'error',
+                        title: 'NETWORK ERROR',
+                        message: 'A network error occurred while communicating with the campus server. Please try again.'
+                    });
                     btn.disabled = false;
+                    btn.innerHTML = `<i class="ph-bold ph-fingerprint"></i> Confirm New Identity`;
                 }
             };
 
         } catch (err) {
-            alert("Camera Error: " + err.message);
-            closeFaceUpdateModal();
+            showBiometricModal({
+                type: 'error',
+                title: 'CAMERA ERROR',
+                message: "Camera Error: " + err.message,
+                onConfirm: () => closeFaceUpdateModal()
+            });
         }
     }
 
@@ -355,8 +500,8 @@ let cropper = null;
             const formData = new FormData();
             formData.append('full_name', inputEditName.value);
             formData.append('year_level', yearSelect.value);
-            // birthdate is now fixed, but we keep it in formData for API compatibility
-            formData.append('birthdate', document.getElementById('birthInput').value);
+            const birthEl = document.getElementById('birthInput');
+            if (birthEl && birthEl.value) formData.append('birthdate', birthEl.value);
             
             const profileFile = document.getElementById('profileFileInput').files[0];
             const coverFile = document.getElementById('coverFileInput').files[0];
@@ -392,8 +537,14 @@ let cropper = null;
         }
     }
 
-    function openSettingsModal() { document.getElementById('settingsModal').classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
-    function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); document.body.style.overflow = ''; }
+    window.openSettingsModal = function() { 
+        document.getElementById('settingsModal').classList.remove('hidden'); 
+        document.body.style.overflow = 'hidden'; 
+    };
+    window.closeSettingsModal = function() { 
+        document.getElementById('settingsModal').classList.add('hidden'); 
+        document.body.style.overflow = ''; 
+    };
     
     function showPwToast(message, type='success') {
         const toast = document.createElement('div');
@@ -414,14 +565,17 @@ let cropper = null;
         }, 3000);
     }
 
-    function openPasswordModal() { 
+    window.openPasswordModal = function() { 
+        document.getElementById('settingsModal').classList.add('hidden');
         document.getElementById('passwordModal').classList.remove('hidden'); 
+        document.body.style.overflow = 'hidden';
         goToPhase1();
-    }
+    };
     
-    function closePasswordModal() {
+    window.closePasswordModal = function() {
         document.getElementById('passwordModal').classList.add('hidden');
-    }
+        document.body.style.overflow = '';
+    };
 
     function goToPhase2() {
         const newPw = document.getElementById('newPw').value;

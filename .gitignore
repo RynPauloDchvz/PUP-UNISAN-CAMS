@@ -22,3 +22,4 @@ GEMINI.md
 # Playwright Testing & Test Results
 system_test.py
 test_results/
+*.log
