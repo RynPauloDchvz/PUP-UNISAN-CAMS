@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static \'css/organizer/attendance_history.css\' %}">
+<link rel="stylesheet" href="{% static 'css/organizer/attendance_history.css' %}">
 {% endblock extra_head %}
 
 {% block skeleton %}
@@ -118,5 +118,5 @@
 
 {% block extra_js %}
 <script id="history-data" type="application/json">{{ history_data_json|safe }}</script>
-<script src="{% static \'js/organizer/attendance_history.js\' %}"></script>
+<script src="{% static 'js/organizer/attendance_history.js' %}"></script>
 {% endblock extra_js %}

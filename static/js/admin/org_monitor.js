@@ -1,5 +1,10 @@
-// 🟢 REAL DATA FROM BACKEND 🟢
-    const systemEvents = JSON.parse('{{ history_data_json|escapejs|default:"[]" }}');
+    let systemEvents = [];
+    try {
+        const el = document.getElementById('org-monitor-data');
+        if (el && el.textContent) systemEvents = JSON.parse(el.textContent);
+    } catch (e) {
+        console.error("Error parsing systemEvents:", e);
+    }
 
     // 🟢 Kunin ang Org parameter sa URL at I-set ang Variable 🟢
     const urlParams = new URLSearchParams(window.location.search);

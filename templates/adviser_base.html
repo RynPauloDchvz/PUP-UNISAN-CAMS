@@ -34,7 +34,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 
-<body class="bg-bglight dark:bg-pup-dark text-gray-800 dark:text-gray-200 font-sans antialiased transition-colors duration-300 sidebar-expanded min-h-screen">
+<body data-url-name="{{ request.resolver_match.url_name }}" class="bg-bglight dark:bg-pup-dark text-gray-800 dark:text-gray-200 font-sans antialiased transition-colors duration-300 sidebar-expanded min-h-screen">
 
     <!-- Global Shatter Loader -->
     <div id="global-shatter-loader" class="fixed inset-0 z-[99999] bg-[#f4f6f8] dark:bg-pup-dark flex flex-col items-center justify-center transition-opacity duration-500" style="opacity: 1; pointer-events: auto;">

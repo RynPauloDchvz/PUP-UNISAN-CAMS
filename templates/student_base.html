@@ -46,8 +46,7 @@
 
 
 
-</head>
-<body class="bg-[#f4f4f4] dark:bg-pup-darkbg text-gray-800 dark:text-gray-200 transition-colors duration-300 antialiased overflow-x-hidden max-w-[100vw]">
+<body data-student-num="{{ request.user.username }}" data-url-name="{{ request.resolver_match.url_name }}" class="bg-[#f4f4f4] dark:bg-pup-darkbg text-gray-800 dark:text-gray-200 transition-colors duration-300 antialiased overflow-x-hidden max-w-[100vw]">
 <!-- Global Shatter Loader -->
 <div id="global-shatter-loader" class="fixed inset-0 z-[99999] bg-[#f4f4f4] dark:bg-pup-darkbg flex flex-col items-center justify-center transition-opacity duration-500" style="opacity: 1; pointer-events: auto;">
     <img src="{% static 'images/loading_icon.png' %}" class="w-24 h-24 sm:w-32 sm:h-32 object-contain animate-logo-pop-pulse">

@@ -458,7 +458,7 @@ const { createApp } = Vue;
                     formData.append('email', this.email);
 
                     try {
-                        const targetRole = this.role || '{{ role }}' || 'organizer';
+                        const targetRole = this.role || 'organizer';
                         const response = await fetch(`/${targetRole}/api/force-change-send-otp/`, {
                             method: 'POST',
                             headers: { 'X-CSRFToken': tokenValue },
@@ -507,7 +507,7 @@ const { createApp } = Vue;
                     formData.append('is_live_verified', 'true');
 
                     try {
-                        const targetRole = this.role || '{{ role }}' || 'organizer';
+                        const targetRole = this.role || 'organizer';
                         const response = await fetch(`/${targetRole}/api/force-change-finalize/`, {
                             method: 'POST',
                             headers: { 'X-CSRFToken': tokenValue },

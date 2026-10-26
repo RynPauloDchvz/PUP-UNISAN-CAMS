@@ -9,8 +9,8 @@
                     isDark: false,
                     isLogoutModalOpen: false,
                     showProfileBubble: false,
-                    studentNum: "{{ request.user.username }}",
-                    currentUrl: "{{ request.resolver_match.url_name }}",
+                    studentNum: (document.body && document.body.dataset && document.body.dataset.studentNum) || "",
+                    currentUrl: (document.body && document.body.dataset && document.body.dataset.urlName) || window.location.pathname,
                     
                     // --- 📱 Bottom Nav Logic 📱 ---
                     navRefs: [],

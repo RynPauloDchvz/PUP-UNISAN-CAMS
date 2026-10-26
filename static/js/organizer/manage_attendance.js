@@ -1,4 +1,10 @@
-const attendanceData = {{ attendance_data_json|safe }};
+let attendanceData = [];
+try {
+    const el = document.getElementById('attendance-data');
+    if (el && el.textContent) attendanceData = JSON.parse(el.textContent);
+} catch (e) {
+    console.error("Error parsing attendanceData:", e);
+}
     let attendanceMap = null;
 
     function renderTable(data) {

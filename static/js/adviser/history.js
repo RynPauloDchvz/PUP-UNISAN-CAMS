@@ -5,11 +5,10 @@ window.DJANGO_HISTORY_DATA = (function() {
     } catch(e) { return []; }
 })();
 
-if (typeof Vue === 'undefined') {
+    if (typeof Vue === 'undefined') {
         document.write('<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"><\/script>');
     }
-</script>
-<script>
+
     document.addEventListener('DOMContentLoaded', () => {
         const { createApp, ref, computed, onMounted, nextTick } = Vue;
 

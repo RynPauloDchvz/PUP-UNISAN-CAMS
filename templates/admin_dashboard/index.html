@@ -6,6 +6,10 @@
 {% block page_title %}System Overview{% endblock %}
 {% block page_subtitle %}Welcome back, Administrator.{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/admin/index.css' %}">
+{% endblock %}
+
 {% block content %}
 <!-- 🟢 ACTUAL CONTENT (HIDDEN UNTIL LOADED) 🟢 -->
 <div id="main-content-area" class="fade-in">
@@ -31,8 +35,6 @@
             <i class="ph-bold ph-bounding-box stat-icon"></i>
         </div>
     </div>
-
-    <link rel="stylesheet" href="{% static 'css/admin/index.css' %}">
 
     <div class="charts-container">
         <div class="chart-box">

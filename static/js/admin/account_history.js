@@ -1,4 +1,10 @@
-let historyData = JSON.parse('{{ history_json|escapejs|default:"[]" }}');
+let historyData = [];
+try {
+    const el = document.getElementById('history-data');
+    if (el && el.textContent) historyData = JSON.parse(el.textContent);
+} catch (e) {
+    console.error("Error parsing historyData:", e);
+}
 
     function renderTable(data) {
         const tbody = document.getElementById('tableBody');

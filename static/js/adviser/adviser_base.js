@@ -27,7 +27,7 @@ const { createApp, reactive } = Vue;
                     showNotifications: false,
                     notificationBanners: [],
                     isFirstLoad: true,
-                    currentUrl: "{{ request.resolver_match.url_name }}",
+                    currentUrl: (document.body && document.body.dataset && document.body.dataset.urlName) || window.location.pathname,
                     navRefs: [], indicatorOffset: 0, indicatorWidth: 0, activeIndex: -1,
                     navItems: [
                         { name: 'Approvals', label: 'Approvals', icon: 'ph ph-check-circle', iconActive: 'ph-fill ph-check-circle', url: "/adviser/dashboard/" },

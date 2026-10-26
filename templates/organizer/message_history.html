@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static \'css/organizer/message_history.css\' %}">
+<link rel="stylesheet" href="{% static 'css/organizer/message_history.css' %}">
 {% endblock extra_head %}
 
 {% block skeleton %}
@@ -64,5 +64,5 @@
 <script id="django-notifs-data" type="application/json">
     {{ notifications_json|safe }}
 </script>
-<script src="{% static \'js/organizer/message_history.js\' %}"></script>
+<script src="{% static 'js/organizer/message_history.js' %}"></script>
 {% endblock extra_js %}

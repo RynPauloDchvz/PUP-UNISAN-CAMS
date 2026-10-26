@@ -40,8 +40,8 @@ function openLogout(e) {
             }, 300); // Slight delay to ensure Vue has rendered the list
         });
 
-        window.STATIC_IMAGES_BASE = "{% static 'images/' %}";
-        window.DEFAULT_LOGO = "{% static 'images/PUPLogo.png' %}";
+        window.STATIC_IMAGES_BASE = "/static/images/";
+        window.DEFAULT_LOGO = "/static/images/PUPLogo.png";
 
 document.addEventListener("DOMContentLoaded", () => {
       const shatterLoader = document.getElementById("global-shatter-loader");

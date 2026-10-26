@@ -1,5 +1,3 @@
-</script>
-<script>
     // 🟢 REAL DATA FROM BACKEND 🟢
     let eventHistoryData = [];
 try {

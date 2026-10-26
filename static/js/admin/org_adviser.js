@@ -1,5 +1,10 @@
-// 🟢 KUMUKUHA NG TUNAY NA DATA SA DATABASE 🟢
-    let usersData = JSON.parse('{{ advisers_json|escapejs|default:"[]" }}');
+    let usersData = [];
+    try {
+        const el = document.getElementById('advisers-data');
+        if (el && el.textContent) usersData = JSON.parse(el.textContent);
+    } catch (e) {
+        console.error("Error parsing advisersData:", e);
+    }
     
     let isBulkManageActive = false;
     let selectedUserIds = new Set();

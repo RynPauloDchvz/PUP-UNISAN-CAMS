@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static \'css/admin/notifications.css\' %}">
+<link rel="stylesheet" href="{% static 'css/admin/notifications.css' %}">
 {% endblock extra_head %}
 
 {% block skeleton %}
@@ -126,5 +126,5 @@
 <script id="django-notifs-data" type="application/json">
     {{ notifications_json|safe }}
 </script>
-<script src="{% static \'js/admin/notifications.js\' %}"></script>
+<script src="{% static 'js/admin/notifications.js' %}"></script>
 {% endblock extra_js %}

@@ -1,4 +1,10 @@
-let usersData = JSON.parse('{{ students_json|escapejs|default:"[]" }}');
+let usersData = [];
+try {
+    const el = document.getElementById('students-data');
+    if (el && el.textContent) usersData = JSON.parse(el.textContent);
+} catch (e) {
+    console.error("Error parsing studentsData:", e);
+}
     let isBulkManageActive = false;
     let selectedUserIds = new Set();
 

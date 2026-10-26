@@ -3,7 +3,7 @@
 
 {% block extra_head %}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static \'css/organizer/event_documents.css\' %}">
+<link rel="stylesheet" href="{% static 'css/organizer/event_documents.css' %}">
 {% endblock extra_head %}
 
 {% block skeleton %}
@@ -263,5 +263,5 @@
 <!-- Data Injected from Django Context -->
 <script type="application/json" id="pendingData">{{ pending_json|default:"[]"|safe }}</script>
 <script type="application/json" id="vaultData">{{ vault_json|default:"[]"|safe }}</script>
-<script src="{% static \'js/organizer/event_documents.js\' %}"></script>
+<script src="{% static 'js/organizer/event_documents.js' %}"></script>
 {% endblock extra_js %}
