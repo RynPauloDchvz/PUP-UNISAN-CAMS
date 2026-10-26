@@ -11,90 +11,9 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script>
-        // Automatic Device Dark/Light Theme Detection
-        function applySystemTheme() {
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-        }
-        applySystemTheme();
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystemTheme);
-        }
-
-        // Direct browser file:/// preview fallback (avoids net::ERR_FILE_NOT_FOUND when opened without Django)
-        if (window.location.protocol === 'file:') {
-            document.addEventListener('DOMContentLoaded', function() {
-                var logo = document.getElementById('cams-logo');
-                if (logo && (!logo.complete || logo.naturalWidth === 0 || logo.src.indexOf('%7B') !== -1)) {
-                    logo.src = '../static/images/loading_icon.png';
-                }
-                var fav = document.getElementById('cams-favicon');
-                if (fav) {
-                    fav.href = '../static/images/loading_icon.png';
-                }
-            });
-        }
-
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        pup: {
-                            maroon: '#800000',
-                            maroonDark: '#600000',
-                            maroonLight: '#990000',
-                            gold: '#D4AF37',
-                            goldLight: '#E5C158',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="{% static \'js/404.js\' %}"></script>
     
-    <style>
-        body {
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        /* Ambient background dot grid */
-        .bg-light-pattern {
-            background-color: #f8fafc;
-            background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
-            background-size: 24px 24px;
-        }
-        
-        .dark .bg-light-pattern {
-            background-color: #09090b;
-            background-image: radial-gradient(#27272a 1.2px, transparent 1.2px);
-            background-size: 24px 24px;
-        }
-
-        @keyframes floatSlow {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-6px); }
-        }
-
-        .animate-float {
-            animation: floatSlow 4s ease-in-out infinite;
-        }
-
-        .text-glow-maroon {
-            text-shadow: 0 0 30px rgba(128, 0, 0, 0.22);
-        }
-
-        .dark .text-glow-maroon {
-            text-shadow: 0 0 35px rgba(212, 175, 55, 0.25);
-        }
-    </style>
+    <link rel="stylesheet" href="{% static \'css/404.css\' %}">
 </head>
 <body class="min-h-screen bg-light-pattern text-slate-800 dark:text-slate-100 font-sans antialiased flex flex-col justify-between items-center px-4 py-8 sm:py-12 selection:bg-pup-gold selection:text-black relative overflow-x-hidden">
 

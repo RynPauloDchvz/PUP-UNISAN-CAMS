@@ -1,0 +1,33 @@
+body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Ambient background dot grid */
+        .bg-light-pattern {
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+            background-size: 24px 24px;
+        }
+        
+        .dark .bg-light-pattern {
+            background-color: #09090b;
+            background-image: radial-gradient(#27272a 1.2px, transparent 1.2px);
+            background-size: 24px 24px;
+        }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .animate-float {
+            animation: floatSlow 4s ease-in-out infinite;
+        }
+
+        .text-glow-maroon {
+            text-shadow: 0 0 30px rgba(128, 0, 0, 0.22);
+        }
+
+        .dark .text-glow-maroon {
+            text-shadow: 0 0 35px rgba(212, 175, 55, 0.25);
+        }
