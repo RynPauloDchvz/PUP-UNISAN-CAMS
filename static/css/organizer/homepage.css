@@ -1,0 +1,253 @@
+/* Reset and Core Styles */
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* Banner Mobile Optimization */
+  @media (max-width: 640px) {
+    .hero-container { border-radius: 0 !important; margin-left: -1.25rem !important; margin-right: -1.25rem !important; width: calc(100% + 2.5rem) !important; }
+  }
+
+  /* Stats Box Optimization */
+  @media (max-width: 640px) {
+    .stats-text-label { font-size: 8px !important; line-height: 1 !important; display: block !important; white-space: normal !important; }
+    .stats-text-value { font-size: 18px !important; }
+    .stats-icon-container { width: 36px !important; height: 36px !important; }
+    .stats-box { padding: 0.75rem !important; gap: 0.5rem !important; }
+  }
+
+  /* About Org - Layout & Slideshow Refinement */
+  .about-section {
+    background: white;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+  }
+  .dark .about-section { background: #151515; border: 1px solid #262626; }
+  
+  .slideshow-container {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    min-height: 250px;
+    background: #000;
+    border-top-left-radius: 1.5rem;
+    border-bottom-left-radius: 1.5rem;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+  @media (max-width: 1024px) {
+    .slideshow-container { 
+      aspect-ratio: 16/9; 
+      min-height: auto;
+      border-bottom-left-radius: 0;
+      border-top-right-radius: 1.5rem !important;
+    }
+  }
+
+  .slide {
+    display: none;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    inset: 0;
+    animation: fadeEffect 1s;
+  }
+  .logo-slide {
+    object-fit: contain !important;
+    background: white !important;
+    padding: 2.5rem;
+  }
+  @keyframes fadeEffect { from {opacity: 0.4;} to {opacity: 1;} }
+
+  /* Action Cards Fix */
+  .action-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    border: 1px solid #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    height: 100%;
+  }
+  .dark .action-card {
+    background: #111;
+    border-color: #222;
+    box-shadow: none;
+  }
+  .action-card:hover {
+    border-color: #800000;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  .dark .action-card:hover { border-color: #D4AF37; }
+
+  /* Date Icon Style (Calendar List) */
+  .date-icon {
+    width: 45px;
+    height: 45px;
+    background: #f9fafb;
+    border: 1px solid #f3f4f6;
+    border-radius: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .dark .date-icon { background: #111; border-color: #222; }
+  .date-month { font-size: 8px; font-weight: 900; color: #800000; text-transform: uppercase; line-height: 1; }
+  .dark .date-month { color: #D4AF37; }
+  .date-day { font-size: 14px; font-weight: 900; line-height: 1; margin-top: 2px; }
+
+  /* Activity Announcements - Responsive Layout */
+  .news-carousel {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 1.25rem;
+    padding: 1.5rem 1rem;
+    margin: -1.5rem -1rem;
+  }
+  .news-card {
+    flex: 0 0 85%;
+    scroll-snap-align: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0.6;
+    transform: scale(0.9);
+    border: none !important;
+  }
+  @media (max-width: 767px) {
+    .news-card.active-focus {
+      opacity: 1 !important;
+      transform: scale(1.02) !important;
+      box-shadow: 0 30px 40px -10px rgba(0, 0, 0, 0.25);
+      z-index: 10;
+    }
+  }
+  @media (min-width: 768px) {
+    .news-carousel { display: grid; grid-template-columns: repeat(2, 1fr); overflow: visible; padding: 0; margin: 0; }
+    .news-card { flex: none; opacity: 1; transform: scale(1); border: 1px solid #e5e7eb !important; }
+    .dark .news-card { border: 1px solid #262626 !important; }
+  }
+
+  /* Officers Carousel Focus Effect */
+  .officer-card-item {
+    opacity: 0.5;
+    transform: scale(0.9);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .officer-card-item.officer-active {
+    opacity: 1 !important;
+    transform: scale(1.05) !important;
+    border: 2px solid #800000 !important;
+    box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.2) !important;
+    z-index: 10;
+  }
+  .dark .officer-card-item.officer-active {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  /* Highlight for selected day in sidebar calendar */
+  .fc-daygrid-day.selected-day {
+    background-color: rgba(128, 0, 0, 0.1) !important;
+    border: 2px solid #800000 !important;
+  }
+  .dark .fc-daygrid-day.selected-day {
+    background-color: rgba(212, 175, 55, 0.1) !important;
+    border: 2px solid #D4AF37 !important;
+  }
+
+  /* Full Screen Modals on Mobile */
+  @media (max-width: 640px) {
+    .modal-content-container, #calendarModalContainer {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100% !important;
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    .modal-scroll-area { flex: 1; overflow-y: auto; padding-bottom: 7rem !important; }
+    .modal-header-img { height: 35vh !important; flex-shrink: 0; }
+    .fixed-modal-footer {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      background: linear-gradient(to top, white 80%, transparent);
+      padding: 1.5rem 2rem 2.5rem 2rem; z-index: 5020;
+    }
+    .dark .fixed-modal-footer { background: linear-gradient(to top, #151515 80%, transparent); }
+  }
+
+  /* Slideshow Train Effect */
+  .slide-track-container {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    transform: skewY(-3deg);
+    transform-origin: top left;
+    padding-bottom: 2rem;
+  }
+  .unskew-content {
+    transform: skewY(3deg) skewX(6deg);
+  }
+  .slide-track {
+    display: flex;
+    width: max-content;
+    animation: slideTrain 40s linear infinite;
+  }
+  .slide-track:hover {
+    animation-play-state: paused;
+  }
+  @keyframes slideTrain {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .train-card {
+    height: 250px;
+    transform: skewX(-6deg);
+  }
+  .train-card> img {
+    transform: skewX(6deg) scale(1.15);
+  }
+  @media (max-width: 640px) {
+    .train-card {
+      height: 180px;
+    }
+  }
+
+  /* Slanted Banner */
+  .hero-slanted {
+    clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+  }
+
+  /* iOS Pop Origin Animation */
+  :root {
+    --click-x: 50vw;
+    --click-y: 50vh;
+  }
+  .ios-pop-wrapper {
+    transform-origin: var(--click-x) var(--click-y);
+    animation: iosPopOrigin 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+  }
+  @keyframes iosPopOrigin {
+    0% { transform: scale(0.2); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .ios-pop-wrapper-close {
+    animation: iosPopClose 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+  @keyframes iosPopClose {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.2); opacity: 0; }
+  }

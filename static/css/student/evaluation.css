@@ -1,0 +1,51 @@
+/* Evaluation Styles for Student */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.evaluation-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.evaluation-card:hover { transform: translateY(-4px); }
+.btn-eval:disabled, .btn-eval[disabled] { pointer-events: none; }
+
+/* Mobile Fixed Modal Footer (Replicated from school_events.html) */
+@media (max-width: 640px) {
+    .fixed-modal-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: linear-gradient(to top, white 80%, transparent);
+        padding: 1.5rem 2rem 2.5rem 2rem;
+        z-index: 2020;
+    }
+    .dark .fixed-modal-footer {
+        background: linear-gradient(to top, #151515 80%, transparent);
+    }
+    .modal-scroll-area {
+        padding-bottom: 9rem !important;
+    }
+
+    .evaluation-card {
+        border-radius: 1.5rem !important;
+    }
+    .evaluation-card .card-image-container {
+        flex-shrink: 0;
+    }
+    .evaluation-card .card-content-container {
+        padding: 1rem !important;
+        justify-content: center;
+    }
+    .evaluation-card h3 {
+        font-size: 0.9rem !important;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        white-space: normal !important;
+        margin-bottom: 0.25rem !important;
+    }
+    .evaluation-card .btn-eval {
+        display: none !important; /* Hide button on mobile list view as per request */
+    }
+    #activeEvaluationsGrid {
+        gap: 1rem !important;
+    }
+}

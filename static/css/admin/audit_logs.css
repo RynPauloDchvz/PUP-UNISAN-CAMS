@@ -1,0 +1,20 @@
+[v-cloak] { display: none; }
+    /* Integration with base theme variables */
+    .audit-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+    }
+    .audit-text-muted { color: var(--text-muted); }
+    .audit-accent { color: var(--accent); }
+    
+    /* Custom Scrollbar for JSON */
+    .json-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
+    .json-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+
+    /* Fix for tailwind vs base theme conflicts */
+    #audit-app { font-family: 'Inter', sans-serif; }
+    
+    @media (max-width: 768px) {
+        .mobile-hide { display: none; }
+    }

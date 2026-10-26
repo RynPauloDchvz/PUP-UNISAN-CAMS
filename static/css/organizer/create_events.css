@@ -1,0 +1,146 @@
+#trackingMap { z-index: 10; }
+    .custom-popup .leaflet-popup-content-wrapper {
+        border-radius: 14px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+        padding: 4px;
+    }
+    .custom-popup .leaflet-popup-content {
+        margin: 6px 10px;
+    }
+    @keyframes pulse-red {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(128, 0, 0, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(128, 0, 0, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(128, 0, 0, 0); }
+    }
+
+    @media print {
+        .print-hide {
+            display: none !important;
+        }
+    }
+
+    /* Custom Select Arrow Hiding fallback */
+    select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+
+    /* iOS Pop Origin Animation */
+    :root {
+        --click-x: 50vw;
+        --click-y: 50vh;
+    }
+
+    .ios-pop-wrapper {
+        transform-origin: var(--click-x) var(--click-y);
+        animation: iosPopOrigin 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform, opacity;
+    }
+
+    @keyframes iosPopOrigin {
+        0% {
+            transform: scale(0.2);
+            opacity: 0;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .ios-pop-wrapper-close {
+        animation: iosPopClose 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+
+    @keyframes iosPopClose {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(0.2);
+            opacity: 0;
+        }
+    }
+
+    /* Reset animation for desktop */
+    @media (min-width: 1024px) {
+        .lg-no-anim {
+            animation: none !important;
+            transform: none !important;
+        }
+    }
+
+    /* Modal Maximization on Mobile */
+    @media (max-width: 640px) {
+        .mobile-fullscreen {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+        }
+
+        .fixed-close-btn {
+            position: fixed !important;
+            top: 1rem !important;
+            right: 1rem !important;
+            z-index: 5010 !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+            color: white !important;
+            width: 2.5rem !important;
+            height: 2.5rem !important;
+            border-radius: 9999px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            backdrop-filter: blur(4px) !important;
+        }
+    }
+
+    /* Mobile Phase Smooth Transitions */
+    @keyframes phaseFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .phase-slide-active {
+        animation: phaseFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+.document-preview-container {
+        opacity: 0;
+        max-height: 0;
+        overflow: hidden;
+        padding-top: 0;
+        padding-bottom: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.8s ease, max-height 0.8s ease-in-out, transform 0.8s ease-out, padding 0.8s ease-in-out;
+    }
+
+    .document-preview-container.active {
+        opacity: 1;
+        max-height: 3000px;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        transform: translateY(0);
+        overflow-y: auto;
+    }
+
+    @media (min-width: 640px) {
+        .document-preview-container.active {
+            padding-top: 3rem;
+            padding-bottom: 3rem;
+        }
+    }

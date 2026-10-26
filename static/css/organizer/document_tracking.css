@@ -1,0 +1,110 @@
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .doc-card { transition: all 0.2s ease-in-out; }
+    .doc-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+
+    /* 🟢 Legit Timeline Styling with Green Bar 🟢 */
+    .timeline-step::before {
+        content: '';
+        position: absolute;
+        left: 0.7rem; 
+        top: 1.5rem;
+        bottom: 0;
+        width: 2px;
+        background-color: #e5e7eb;
+        z-index: 0;
+    }
+    .dark .timeline-step::before {
+        background-color: #374151;
+    }
+    .timeline-step.completed::before {
+        background-color: #10b981; /* Green Bar */
+    }
+    .timeline-step:last-child::before {
+        display: none;
+    }
+    .timeline-step.completed .step-icon {
+        border-color: #10b981;
+        background-color: #10b981;
+        color: white;
+    }
+    .timeline-step.current .step-icon {
+        border-color: #f59e0b;
+        color: #f59e0b;
+        animation: pulse-amber 2s infinite;
+    }
+    .timeline-step.rejected .step-icon {
+        border-color: #ef4444;
+        background-color: #ef4444;
+        color: white;
+    }
+
+    @keyframes pulse-amber {
+        0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
+    /* Map Popup Customization */
+    .leaflet-popup-content-wrapper {
+        border-radius: 12px;
+        padding: 0;
+        overflow: hidden;
+    }
+    .leaflet-popup-content {
+        margin: 12px;
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Modal Maximization on Mobile */
+    @media (max-width: 640px) {
+        .mobile-fullscreen {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+        }
+        .fixed-close-btn {
+            position: fixed !important;
+            top: 1rem !important;
+            right: 1rem !important;
+            z-index: 5010 !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+            color: white !important;
+            width: 2.5rem !important;
+            height: 2.5rem !important;
+            border-radius: 9999px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            backdrop-filter: blur(4px) !important;
+        }
+    }
+
+    /* iOS Pop Origin Animation */
+    :root {
+        --click-x: 50vw;
+        --click-y: 50vh;
+    }
+
+    .ios-pop-wrapper {
+        transform-origin: var(--click-x) var(--click-y);
+        animation: iosPopOrigin 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes iosPopOrigin {
+        0% { transform: scale(0.2); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .ios-pop-wrapper-close {
+        animation: iosPopClose 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+
+    @keyframes iosPopClose {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(0.2); opacity: 0; }
+    }

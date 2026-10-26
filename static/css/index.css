@@ -1,0 +1,21 @@
+[v-cloak] { display: none; }
+:root {
+    --img-pup1: url("/static/images/PUP1.jpg");
+}
+/* Custom Scrollbar for the form side */
+.form-scroll::-webkit-scrollbar { width: 6px; }
+.form-scroll::-webkit-scrollbar-track { background: transparent; }
+.form-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+.dark .form-scroll::-webkit-scrollbar-thumb { background-color: #334155; }
+
+@keyframes scan {
+    0% { top: 0%; }
+    100% { top: 100%; }
+}
+.scan-line { animation: scan 2s linear infinite; }
+
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 8s linear infinite; }

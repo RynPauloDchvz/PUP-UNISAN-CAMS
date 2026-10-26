@@ -1,0 +1,44 @@
+#modalLeafletMap { z-index: 0; }
+.leaflet-popup-content-wrapper { border-radius: 12px; font-family: inherit; }
+.editable-field-active {
+    background-color: rgba(0, 0, 0, 0.04) !important;
+    border-color: rgba(128, 0, 0, 0.4) !important;
+    border-style: dashed !important;
+    border-width: 2px !important;
+}
+.dark .editable-field-active {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 215, 0, 0.4) !important;
+}
+.notif-read {
+    opacity: 0.6;
+    background-color: #f9fafb !important;
+    box-shadow: none !important;
+}
+.dark .notif-read {
+    background-color: #111111 !important;
+}
+
+/* HORIZONTAL SCROLLBAR (Hidden on mobile, slim on desktop) */
+@media (max-width: 768px) {
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+@media (min-width: 769px) {
+    .hide-scrollbar::-webkit-scrollbar { height: 8px; }
+    .hide-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .hide-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+    .dark .hide-scrollbar::-webkit-scrollbar-thumb { background: #374151; }
+    .hide-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    .dark .hide-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+}
+
+/* FACE SCAN ANIMATION */
+@keyframes scan {
+    0% { top: 10%; opacity: 0; }
+    50% { opacity: 1; }
+    100% { top: 90%; opacity: 0; }
+}
+.animate-scan {
+    animation: scan 2s linear infinite;
+}

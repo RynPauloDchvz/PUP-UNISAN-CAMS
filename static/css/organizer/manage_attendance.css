@@ -1,0 +1,49 @@
+/* Fullscreen Modal on Mobile */
+    @media (max-width: 640px) {
+        .mobile-fullscreen-modal {
+            max-width: 100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            border: none !important;
+            margin: 0 !important;
+        }
+    }
+
+    /* iOS Pop Origin Animation */
+    .ios-pop-wrapper, .ios-pop-wrapper-close {
+        transform-origin: var(--click-x, 50%) var(--click-y, 50%);
+    }
+    
+    .ios-pop-wrapper {
+        animation: iosPopOpen 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards;
+    }
+    
+    .ios-pop-wrapper-close {
+        animation: iosPopClose 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+    }
+    
+    @keyframes iosPopOpen {
+        0% { opacity: 0; transform: scale(0.3); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+    
+    @keyframes iosPopClose {
+        0% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(0.3); }
+    }
+
+    /* Dropdown Accordion */
+    .dropdown-content {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows 0.3s ease-out;
+    }
+    .dropdown-content.open {
+        grid-template-rows: 1fr;
+    }
+    .dropdown-inner {
+        overflow: hidden;
+    }

@@ -1,0 +1,868 @@
+if (typeof faceapi === 'undefined') {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
+    }
+</script>
+<script src="{% static 'js/face-liveness.js' %}"></script>
+<style>
+    .countdown-timer { font-variant-numeric: tabular-nums; }
+    .status-ongoing { background-color: #059669; }
+    .status-ended { background-color: #800000; }
+    .status-upcoming { background-color: #1e1e1e; }
+    .status-completed { background-color: #059669; }
+    
+    /* Dark Mode Badge Overrides */
+    .dark .status-ongoing { background-color: #D4AF37; color: #fff; }
+    .dark .status-ended { background-color: #D4AF37; color: #fff; opacity: 0.7; }
+    .dark .status-upcoming { background-color: #D4AF37; color: #fff; opacity: 0.5; }
+    .dark .status-completed { background-color: #10B981; color: #fff; }
+
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Participation Scanner Styles */
+    #attendanceScanner { position: relative; width: 100%; height: 300px; background: #000; border-radius: 2rem; overflow: hidden; }
+    #video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    #overlayCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; transform: scaleX(-1); }
+    
+    .scanner-glow { border: 2px solid #800000; box-shadow: 0 0 20px rgba(128, 0, 0, 0.4); }
+    .scanner-active { border-color: #fbbf24 !important; box-shadow: 0 0 30px rgba(251, 191, 36, 0.6) !important; }
+
+    @keyframes scan {
+        0% { top: 0%; }
+        100% { top: 100%; }
+    }
+    .scan-line { animation: scan 2s linear infinite; }
+
+    /* iOS Pop Origin Animation */
+    .ios-pop-wrapper {
+      animation: iosPopOrigin 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
+    @keyframes iosPopOrigin {
+      0% { transform: scale(0.2); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .ios-pop-wrapper-close {
+      animation: iosPopClose 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+    @keyframes iosPopClose {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.2); opacity: 0; }
+    }
+</style>
+
+{% endblock extra_head %}
+
+{% block content %}
+<div v-pre>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full font-sans">
+
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
+        <div class="text-center md:text-left flex flex-col items-center md:items-start w-full md:w-auto">
+            <h1 class="font-black text-3xl sm:text-5xl text-gray-900 dark:text-white uppercase leading-none mb-4">Campus Activities</h1>
+            <div class="max-w-xl">
+                <p class="text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase mb-4">Real-time monitoring of institutional activities</p>
+                <p class="text-gray-400 dark:text-gray-500 text-xs leading-relaxed font-medium">
+                    Manage and monitor organizational events through the central activities hub. Track live status, verify attendance windows, and ensure all activities are synchronized with the university calendar.
+                </p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3 w-full md:w-auto">
+            <a href="{% url 'organizer_attendance_history' %}" class="shrink-0 flex items-center justify-center gap-2 bg-pup-maroon dark:bg-pup-gold text-white dark:text-black p-3.5 md:px-5 md:py-3.5 rounded-2xl shadow-sm hover:shadow-md hover:opacity-90 active:scale-95 transition-all font-black uppercase text-[10px] tracking-[0.2em]">
+                <i class="ph-bold ph-clock-counter-clockwise text-lg"></i>
+                <span class="hidden md:inline">Attendance History</span>
+            </a>
+            <div class="relative w-full md:w-80">
+                <input type="text" id="eventSearch" placeholder="Search event records..." class="w-full bg-white dark:bg-pup-darkcard border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-pup-maroon dark:focus:border-pup-gold shadow-sm text-xs font-black uppercase tracking-tight">
+                <i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🟢 EVENTS GRID 🟢 -->
+    <div id="eventsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
+        <!-- Rendered by JS -->
+    </div>
+
+    <div id="noResults" class="hidden text-center py-20">
+        <div class="w-20 h-20 bg-gray-50 dark:bg-pup-darkcard rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="ph-bold ph-calendar-x text-3xl text-gray-300"></i>
+        </div>
+        <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest">No matching event records found</p>
+    </div>
+
+</div>
+
+<!-- 🟢 EVENT DETAILS MODAL 🟢 -->
+<div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[2000] hidden items-center justify-center p-0 sm:p-10">
+    <div id="eventModal" class="relative bg-white dark:bg-pup-darkcard rounded-none sm:rounded-[3rem] shadow-2xl w-full max-w-2xl mx-auto flex flex-col h-full sm:h-auto sm:max-h-[90vh] border-0 sm:border border-gray-100 dark:border-gray-800 overflow-hidden">
+        
+        <button id="btnClose" class="absolute top-6 right-6 z-[2010] w-10 h-10 flex items-center justify-center bg-black/50 text-white rounded-full text-lg hover:bg-black/70 transition-colors">
+            <i class="ph-bold ph-x"></i>
+        </button>
+
+        <div class="flex-grow flex flex-col overflow-hidden h-full min-h-0">
+            <div class="flex-grow overflow-y-auto hide-scrollbar min-h-0">
+                <div class="h-56 sm:h-72 w-full relative shrink-0 bg-gray-900">
+                    <img id="modalImg" src="" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                    <div class="absolute bottom-6 left-6 sm:left-8 right-6 sm:right-8">
+                        <div id="modalDate" class="text-pup-gold text-[10px] font-black uppercase tracking-[0.2em] mb-1"></div>
+                        <h2 id="modalTitle" class="text-2xl sm:text-4xl font-black text-white leading-tight uppercase tracking-tighter"></h2>
+                    </div>
+                </div>
+                
+                <div class="p-6 sm:p-10">
+                    <div id="countdownContainer" class="hidden mb-6 sm:mb-8 p-5 bg-pup-maroon dark:bg-pup-gold rounded-2xl flex items-center justify-between shadow-xl">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-black text-white/80 dark:text-black/80 uppercase tracking-[0.3em] mb-1">Verification Window</span>
+                            <div id="modalCountdown" class="text-2xl font-black text-white dark:text-black countdown-timer tabular-nums tracking-tighter">00:00:00</div>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 dark:bg-black/10 rounded-xl flex items-center justify-center text-white dark:text-black shadow-inner">
+                            <i class="ph-fill ph-clock text-2xl"></i>
+                        </div>
+                    </div>
+                    
+                    <div id="endedStatus" class="hidden mb-6 sm:mb-8 p-5 bg-gray-50 dark:bg-[#0a0a0a] border border-gray-200 dark:border-gray-900 rounded-2xl flex items-center justify-between shadow-sm">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1">Activity Concluded</span>
+                            <div class="text-xl font-black text-gray-900 dark:text-white tracking-tighter uppercase">Authorization Expired</div>
+                        </div>
+                        <div class="w-12 h-12 bg-gray-100 dark:bg-black/30 rounded-xl flex items-center justify-center text-gray-400 shadow-inner">
+                            <i class="ph-fill ph-lock-key text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                        <div class="flex items-center gap-4 p-5 bg-gray-50 dark:bg-[#0a0a0a] rounded-2xl border border-gray-100 dark:border-gray-900 shadow-sm h-[85px]">
+                            <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-pup-maroon dark:text-pup-gold shrink-0 border border-red-100 dark:border-red-900/30">
+                                <i class="ph-fill ph-calendar text-xl"></i>
+                            </div>
+                            <div class="min-w-0 flex-grow text-left">
+                                <span class="block text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Schedule</span>
+                                <span id="modalTime" class="font-black text-gray-900 dark:text-white uppercase tracking-tight text-[10px] block break-words line-clamp-2 leading-tight"></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 p-5 bg-gray-50 dark:bg-[#0a0a0a] rounded-2xl border border-gray-100 dark:border-gray-900 shadow-sm h-[85px]">
+                            <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-pup-maroon dark:text-pup-gold shrink-0 border border-red-100 dark:border-red-900/30">
+                                <i class="ph-fill ph-map-pin text-xl"></i>
+                            </div>
+                            <div class="min-w-0 flex-grow text-left">
+                                <span class="block text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Venue</span>
+                                <span id="modalVenue" class="font-black text-gray-900 dark:text-white uppercase tracking-tight text-[10px] block break-words line-clamp-2 leading-tight"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="font-black text-[9px] text-gray-400 uppercase tracking-[0.4em] mb-4 border-b border-gray-100 dark:border-gray-800 pb-3">Activity Description</h3>
+                    <p id="modalDesc" class="text-gray-500 dark:text-gray-400 text-xs leading-relaxed mb-6 font-medium text-justify"></p>
+                </div>
+            </div>
+            
+            <div id="btnParticipateWrapper" class="hidden shrink-0 p-6 sm:p-8 bg-white dark:bg-pup-darkcard border-t border-gray-100 dark:border-gray-800 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] z-[2020]">
+                <button id="btnParticipate" class="w-full bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black py-5 px-6 rounded-2xl text-[10px] flex items-center justify-center gap-3 transition-all shadow-2xl hover:opacity-90 active:scale-95 uppercase tracking-[0.4em]">
+                    <i class="ph-bold ph-scan text-xl"></i> Participate Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🟢 PARTICIPATION SCANNER MODAL 🟢 -->
+<div id="participationModal" style="display: none;" class="fixed inset-0 z-[3000] flex items-center justify-center p-0 sm:p-4 font-sans">
+    <div class="fixed inset-0 bg-black/90 backdrop-blur-sm"></div>
+    <div class="relative bg-white dark:bg-[#050505] w-full h-full sm:h-auto sm:max-h-[90vh] sm:rounded-[3rem] sm:max-w-[400px] shadow-2xl flex flex-col overflow-hidden border-0 sm:border border-gray-100 dark:border-gray-900 transition-all duration-500">
+        
+        <!-- View: Scanner -->
+        <div id="viewScanner" class="flex-col items-center justify-start w-full h-full p-8 m-auto overflow-y-auto hide-scrollbar flex">
+            <div id="qualityMeter" class="w-full max-w-md mb-4 space-y-1.5 mx-auto hidden">
+                <div class="flex justify-between items-end">
+                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Signal Quality</span>
+                    <span id="qualityText" class="text-[10px] font-bold text-amber-500 uppercase">ADJUSTING...</span>
+                </div>
+                <div class="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div id="qualityBar" class="h-full bg-green-500 transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div id="cameraContainer" class="relative bg-black rounded-[2.5rem] overflow-hidden w-full max-w-md h-[320px] border-4 border-gray-100 dark:border-gray-800 transition-all shadow-2xl mx-auto mb-6 shrink-0 group">
+                <video id="video" class="w-full h-full object-cover transform -scale-x-100" autoplay playsinline></video>
+                
+                <div id="biometricOverlay" class="absolute inset-0 pointer-events-none">
+                    <div id="corner-tl" class="absolute top-8 left-8 w-6 h-6 border-t-4 border-l-4 border-pup-gold/60 rounded-tl-lg transition-all duration-300"></div>
+                    <div id="corner-tr" class="absolute top-8 right-8 w-6 h-6 border-t-4 border-r-4 border-pup-gold/60 rounded-tr-lg transition-all duration-300"></div>
+                    <div id="corner-bl" class="absolute bottom-8 left-8 w-6 h-6 border-b-4 border-l-4 border-pup-gold/60 rounded-bl-lg transition-all duration-300"></div>
+                    <div id="corner-br" class="absolute bottom-8 right-8 w-6 h-6 border-b-4 border-r-4 border-pup-gold/60 rounded-br-lg transition-all duration-300"></div>
+
+                    <div class="absolute inset-16 border border-white/10 rounded-full flex items-center justify-center">
+                        <div class="w-2 h-2 bg-pup-gold/40 rounded-full animate-ping"></div>
+                    </div>
+
+                    <div class="absolute inset-x-6 bottom-12 flex flex-col items-center gap-2">
+                        <div id="alert-obstructed" class="hidden bg-red-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl animate-bounce backdrop-blur-md">
+                            <i class="ph-bold ph-warning-circle"></i> Detection Blocked
+                        </div>
+                        <div id="alert-tooDark" class="hidden bg-amber-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md">
+                            <i class="ph-bold ph-moon"></i> Increase Lighting
+                        </div>
+                        <div id="alert-noFaceDetail" class="hidden bg-pup-maroon text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md">
+                            <i class="ph-bold ph-user-focus"></i> Position Face Clearly
+                        </div>
+                        <div id="alert-ready" class="hidden bg-green-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md animate-pulse">
+                            <i class="ph-bold ph-fingerprint"></i> Identity Ready
+                        </div>
+                    </div>
+
+                    <div class="absolute top-0 left-0 w-full h-[2px] bg-pup-gold/40 blur-sm scan-line"></div>
+                </div>
+
+                <div id="scanStatus" class="absolute top-6 left-6 right-6 bg-black/80 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center border border-white/10 shadow-2xl">
+                    Warming Up AI Core...
+                </div>
+            </div>
+
+            <div class="w-full max-w-md mx-auto space-y-5 flex flex-col flex-grow">
+                <div id="physicalAudit" class="bg-gray-50 dark:bg-[#0a0a0a] border border-gray-100 dark:border-gray-900 rounded-2xl p-4 flex items-start gap-4 shadow-sm">
+                    <div class="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-600">
+                        <i class="ph-bold ph-eyeglasses text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-tight">Physical Audit Required</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5">Please remove <span class="text-pup-maroon dark:text-pup-gold font-bold">glasses, masks, or hats</span> for valid biometric synchronization.</p>
+                    </div>
+                </div>
+
+                <p id="locStatus" class="text-[9px] font-black uppercase tracking-[0.2em] flex items-center justify-center w-full gap-3 text-center text-gray-400 bg-gray-50 dark:bg-[#0a0a0a] py-3 rounded-full border border-gray-100 dark:border-gray-900">
+                    <i class="ph-bold ph-spinner animate-spin text-lg"></i> Secure Geofence Check...
+                </p>
+
+                <div class="flex gap-2 w-full mt-4">
+                    <button id="btnCancelScan" class="w-1/3 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 font-black py-5 rounded-2xl text-[10px] flex items-center justify-center transition-all shadow-md hover:bg-gray-200 uppercase tracking-widest">
+                        Abort
+                    </button>
+                    <button id="btnSubmitScan" disabled class="w-2/3 bg-pup-maroon text-white dark:bg-pup-gold dark:text-black font-black py-5 px-6 rounded-2xl text-[10px] flex items-center justify-center gap-3 transition-all shadow-2xl disabled:opacity-10 uppercase tracking-[0.2em]">
+                        <i class="ph-bold ph-bounding-box text-xl"></i> Authorize
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Success Confirmation -->
+        <div id="viewSuccess" style="display: none;" class="flex-col items-center justify-center w-full h-full p-10 text-center m-auto min-h-[400px]">
+            <div class="w-24 h-24 mx-auto bg-green-500 rounded-full flex items-center justify-center mb-8 shrink-0 shadow-[0_0_50px_rgba(34,197,94,0.4)] border-4 border-white/20">
+                <i class="ph-fill ph-check-circle text-7xl text-white"></i>
+            </div>
+            <h2 class="text-3xl font-black text-gray-900 dark:text-white mb-3 uppercase tracking-tighter">Verified!</h2>
+            <p class="text-gray-500 dark:text-gray-400 mb-12 text-xs leading-relaxed max-w-xs mx-auto font-medium uppercase tracking-tight">Your attendance has been cryptographically logged. Entry authorized.</p>
+            <button id="btnSuccessClose" class="w-full max-w-xs mx-auto border-2 border-gray-100 dark:border-gray-800 text-gray-700 dark:text-gray-300 font-black py-4 px-8 rounded-2xl hover:bg-gray-50 dark:hover:bg-[#0a0a0a] transition-all text-[10px] uppercase tracking-[0.4em]">
+                Proceed
+            </button>
+        </div>
+
+    </div>
+</div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<!-- SAFE DATA INJECTION (Outside of Vue app) -->
+<script id="events-data" type="application/json">{{ events_json|safe }}</script>
+<script id="organizer-data" type="application/json">{{ organizer_json|safe }}</script>
+
+<script>
+    const eventsText = document.getElementById('events-data').textContent;
+    const EVENTS_DATA = eventsText ? JSON.parse(eventsText) : [];
+    
+    const organizerText = document.getElementById('organizer-data').textContent;
+    const ORGANIZER_DATA = organizerText ? JSON.parse(organizerText) : { face_encoding: null };
+    
+    const DEFAULT_IMG = "/static/images/PUPLogo.png";
+    const CAMPUS_COORDS = [13.84615, 121.96955];
+
+    function initSchoolEventsLogic() {
+        const eventsGrid = document.getElementById('eventsGrid');
+        const noResults = document.getElementById('noResults');
+        const searchInput = document.getElementById('eventSearch');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const participationModal = document.getElementById('participationModal');
+        const btnParticipate = document.getElementById('btnParticipate');
+        
+        let currentEvent = null;
+        let videoStream = null;
+        let scanInterval = null;
+        let faceMatcher = null;
+        let isFaceVerified = false;
+        let isLocationVerified = false;
+        let userLat = null;
+        let userLng = null;
+        let modelsLoaded = false;
+        const livenessDetector = new FaceLivenessDetector();
+
+        let qualityStatus = { tooDark: false, tooBright: false, obstructed: false, noFaceDetail: false, isReady: false };
+        let qualityScore = 0;
+        let validationInterval = null;
+
+        function renderEvents(query = '') {
+            if (!eventsGrid) return;
+            eventsGrid.innerHTML = '';
+            const filtered = EVENTS_DATA.filter(e => e.title.toLowerCase().includes(query.toLowerCase()));
+            if (filtered.length === 0) { if(noResults) noResults.style.display = 'block'; return; }
+            if(noResults) noResults.style.display = 'none';
+
+            filtered.forEach(e => {
+                const card = document.createElement('div');
+                card.className = "bg-white dark:bg-pup-darkcard rounded-2xl sm:rounded-[2rem] overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-row sm:flex-col cursor-pointer group shadow-sm hover:shadow-2xl transition-all duration-700 h-full relative";
+                card.innerHTML = `
+                    <div class="w-24 h-24 sm:h-40 sm:w-full shrink-0 relative overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center border-r sm:border-r-0 sm:border-b border-gray-100 dark:border-gray-800">
+                        <img src="${e.image}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" onerror="this.src=DEFAULT_IMG; this.classList.remove('object-cover'); this.classList.add('object-contain', 'p-6 sm:p-8');">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent hidden sm:block"></div>
+                    </div>
+                    <!-- 🟢 DUAL STATUS BADGES (TIME IN & TIME OUT) 🟢 -->
+                    <div class="absolute top-2 left-2 z-10 flex flex-col gap-1 max-w-[90%] pointer-events-none">
+                        <span class="badge-time-in text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md" data-event-id="${e.id}">
+                            <i class="ph-bold ph-sign-in shrink-0"></i><span class="truncate">IN • --:--:--</span>
+                        </span>
+                        <span class="badge-time-out text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md" data-event-id="${e.id}">
+                            <i class="ph-bold ph-sign-out shrink-0"></i><span class="truncate">OUT • --:--:--</span>
+                        </span>
+                    </div>
+                    <div class="p-3 sm:p-5 flex flex-col flex-grow min-w-0">
+                        <div class="text-[7px] sm:text-[8px] font-black text-pup-maroon dark:text-pup-gold mb-0.5 sm:mb-1 uppercase tracking-[0.2em]">${e.date_display}</div>
+                        <h3 class="font-black text-xs sm:text-base text-gray-900 dark:text-white leading-tight mb-1 sm:mb-3 uppercase tracking-tighter truncate">${e.title}</h3>
+                        <div class="flex items-center justify-between pt-2 sm:pt-4 border-t border-gray-50 dark:border-gray-800 mt-auto">
+                             <div class="flex items-center gap-1 sm:gap-1.5 text-gray-400 font-bold text-[7px] sm:text-[8px] uppercase tracking-widest truncate">
+                                <i class="ph-fill ph-map-pin text-pup-maroon dark:text-pup-gold"></i> <span class="truncate">${e.venue}</span>
+                             </div>
+                             <div class="flex items-center gap-2">
+                                ${e.has_timed_out ? '<i class="ph-fill ph-check-circle text-green-500 text-xs sm:text-base" title="Attendance Completed"></i>' : (e.already_attended ? '<i class="ph-bold ph-clock-countdown text-amber-500 text-xs sm:text-base" title="Time In Recorded"></i>' : '<i class="ph-bold ph-arrow-right text-gray-200 group-hover:text-pup-maroon dark:group-hover:text-pup-gold transition-all group-hover:translate-x-1 text-xs sm:text-base"></i>')}
+                             </div>
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', (event) => openModal(e, event));
+                eventsGrid.appendChild(card);
+            });
+            updateAllCountdowns();
+        }
+
+        function updateAllCountdowns() {
+            const now = new Date();
+
+            // 1. UPDATE TIME IN BADGES (Start time + 1 hour grace)
+            document.querySelectorAll('.badge-time-in').forEach(el => {
+                const e = EVENTS_DATA.find(evt => evt && evt.id == el.dataset.eventId);
+                if (!e) return;
+                const start = new Date(`${e.date}T${e.start_time_iso}`);
+                const timeInClose = new Date(start.getTime() + (60 * 60 * 1000));
+
+                if (e.already_attended) {
+                    el.innerHTML = `<i class="ph-fill ph-check-circle shrink-0"></i><span class="truncate">TIME IN SUCCESS</span>`;
+                    el.className = "badge-time-in text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md bg-green-600/90 border border-green-400/40 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else if (now < start) {
+                    const diffStart = start - now;
+                    el.innerHTML = `<i class="ph-bold ph-clock shrink-0"></i><span class="truncate">TIME IN • IN ${formatTimeDiff(diffStart)}</span>`;
+                    el.className = "badge-time-in text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md bg-black/60 border border-white/20 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else if (now <= timeInClose) {
+                    const diffClose = timeInClose - now;
+                    el.innerHTML = `<i class="ph-fill ph-broadcast animate-pulse text-green-300 shrink-0"></i><span class="truncate">TIME IN OPEN • ${formatTimeDiff(diffClose)}</span>`;
+                    el.className = "badge-time-in text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md bg-green-700/90 border border-green-400/50 animate-pulse flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else {
+                    el.innerHTML = `<i class="ph-bold ph-x-circle text-red-300 shrink-0"></i><span class="truncate">TIME IN EXPIRED</span>`;
+                    el.className = "badge-time-in text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md bg-red-700/80 border border-red-400/40 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                }
+            });
+
+            // 2. UPDATE TIME OUT BADGES (15 mins before end time up to 1 hour after end time)
+            document.querySelectorAll('.badge-time-out').forEach(el => {
+                const e = EVENTS_DATA.find(evt => evt && evt.id == el.dataset.eventId);
+                if (!e) return;
+                const start = new Date(`${e.date}T${e.start_time_iso}`);
+                const end = e.end_time_iso ? new Date(`${e.date}T${e.end_time_iso}`) : new Date(start.getTime() + (4 * 3600000));
+                const timeoutStart = new Date(end.getTime() - (15 * 60 * 1000));
+                const timeoutExpiry = new Date(end.getTime() + (60 * 60 * 1000));
+
+                if (e.has_timed_out) {
+                    el.innerHTML = `<i class="ph-fill ph-check-circle shrink-0"></i><span class="truncate">TIME OUT SUCCESS</span>`;
+                    el.className = "badge-time-out text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md bg-green-600/90 border border-green-400/40 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else if (now < timeoutStart) {
+                    const diffOutStart = timeoutStart - now;
+                    el.innerHTML = `<i class="ph-bold ph-hourglass shrink-0"></i><span class="truncate">TIME OUT • IN ${formatTimeDiff(diffOutStart)}</span>`;
+                    el.className = "badge-time-out text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md bg-black/60 border border-white/20 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else if (now <= timeoutExpiry) {
+                    const diffOutExpiry = timeoutExpiry - now;
+                    el.innerHTML = `<i class="ph-fill ph-broadcast animate-pulse text-green-300 shrink-0"></i><span class="truncate">TIME OUT OPEN • ${formatTimeDiff(diffOutExpiry)}</span>`;
+                    el.className = "badge-time-out text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md bg-emerald-700/90 border border-emerald-400/50 animate-pulse flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                } else {
+                    el.innerHTML = `<i class="ph-bold ph-lock text-red-300 shrink-0"></i><span class="truncate">TIME OUT CLOSED</span>`;
+                    el.className = "badge-time-out text-white text-[6px] sm:text-[8px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-black uppercase tracking-wider shadow-md bg-red-700/80 border border-red-400/40 flex items-center gap-1 whitespace-nowrap overflow-hidden backdrop-blur-md";
+                }
+            });
+
+            // 3. UPDATE MODAL STATE
+            if (currentEvent) {
+                const start = new Date(`${currentEvent.date}T${currentEvent.start_time_iso}`);
+                const timeInClose = new Date(start.getTime() + (60 * 60 * 1000));
+                const end = currentEvent.end_time_iso ? new Date(`${currentEvent.date}T${currentEvent.end_time_iso}`) : new Date(start.getTime() + (4 * 3600000));
+                const timeoutStart = new Date(end.getTime() - (15 * 60 * 1000));
+                const timeoutExpiry = new Date(end.getTime() + (60 * 60 * 1000));
+
+                const cdContainer = document.getElementById('countdownContainer');
+                const endedStatus = document.getElementById('endedStatus');
+                const btnWrapper = document.getElementById('btnParticipateWrapper');
+                const modalCD = document.getElementById('modalCountdown');
+                const btnPart = document.getElementById('btnParticipate');
+
+                if (currentEvent.has_timed_out) {
+                    cdContainer.classList.add('hidden');
+                    endedStatus.classList.remove('hidden');
+                    btnWrapper.classList.add('hidden');
+                    endedStatus.querySelector('span').innerText = "ATTENDANCE STATUS";
+                    endedStatus.querySelector('div').innerText = "RECORD FINALIZED";
+                } else if (now >= timeoutStart && now <= timeoutExpiry) {
+                    // Time Out Window Active
+                    cdContainer.classList.remove('hidden');
+                    endedStatus.classList.add('hidden');
+                    btnWrapper.classList.remove('hidden');
+                    cdContainer.querySelector('span').innerText = "TIME OUT PORTAL OPEN";
+                    modalCD.innerText = formatTimeDiff(timeoutExpiry - now);
+                    if (btnPart) btnPart.innerHTML = `<i class="ph-bold ph-sign-out text-xl"></i> Initialize Time Out`;
+                } else if (now >= start && now <= timeInClose) {
+                    // Time In Window Active
+                    if (currentEvent.already_attended) {
+                        cdContainer.classList.remove('hidden');
+                        endedStatus.classList.add('hidden');
+                        btnWrapper.classList.add('hidden');
+                        cdContainer.querySelector('span').innerText = "TIME IN RECORDED";
+                        modalCD.innerText = `TIME OUT IN ${formatTimeDiff(timeoutStart - now)}`;
+                    } else {
+                        cdContainer.classList.remove('hidden');
+                        endedStatus.classList.add('hidden');
+                        btnWrapper.classList.remove('hidden');
+                        cdContainer.querySelector('span').innerText = "TIME IN PORTAL OPEN";
+                        modalCD.innerText = formatTimeDiff(timeInClose - now);
+                        if (btnPart) btnPart.innerHTML = `<i class="ph-bold ph-scan text-xl"></i> Initialize Biometric Scanner`;
+                    }
+                } else if (now < start) {
+                    // Before event starts
+                    cdContainer.classList.remove('hidden');
+                    endedStatus.classList.add('hidden');
+                    btnWrapper.classList.add('hidden');
+                    cdContainer.querySelector('span').innerText = "TIME IN OPENS IN";
+                    modalCD.innerText = formatTimeDiff(start - now);
+                } else if (now > timeInClose && now < timeoutStart) {
+                    // Between time in and time out
+                    cdContainer.classList.remove('hidden');
+                    endedStatus.classList.add('hidden');
+                    btnWrapper.classList.add('hidden');
+                    cdContainer.querySelector('span').innerText = currentEvent.already_attended ? "WAITING FOR TIME OUT" : "TIME IN EXPIRED";
+                    modalCD.innerText = `TIME OUT IN ${formatTimeDiff(timeoutStart - now)}`;
+                } else {
+                    // After timeoutExpiry
+                    cdContainer.classList.add('hidden');
+                    endedStatus.classList.remove('hidden');
+                    btnWrapper.classList.add('hidden');
+                    endedStatus.querySelector('span').innerText = "ACTIVITY CONCLUDED";
+                    endedStatus.querySelector('div').innerText = "PORTAL CLOSED";
+                }
+            }
+        }
+
+        function formatTimeDiff(ms) {
+            if (ms <= 0) return '00:00:00';
+            const totalSecs = Math.floor(ms / 1000);
+            const d = Math.floor(totalSecs / 86400);
+            const h = Math.floor((totalSecs % 86400) / 3600);
+            const m = Math.floor((totalSecs % 3600) / 60);
+            const s = totalSecs % 60;
+            if (d > 0) {
+                return `${d}d ${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`;
+            }
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        setInterval(updateAllCountdowns, 1000);
+
+        function openModal(e, clickEvent) {
+            const wrapper = document.getElementById('eventModal');
+            if (wrapper && clickEvent) {
+                wrapper.style.transformOrigin = `${clickEvent.clientX}px ${clickEvent.clientY}px`;
+                wrapper.classList.remove('ios-pop-wrapper-close');
+                wrapper.classList.add('ios-pop-wrapper');
+            }
+            currentEvent = e;
+            document.getElementById('modalImg').src = e.image;
+            document.getElementById('modalTitle').innerText = e.title;
+            document.getElementById('modalDate').innerText = e.date_display;
+            document.getElementById('modalVenue').innerText = e.venue;
+            document.getElementById('modalTime').innerText = `${e.date_display} @ ${e.time}`;
+            document.getElementById('modalDesc').innerText = e.description || "No description provided.";
+            updateAllCountdowns();
+            modalOverlay.style.display = 'flex';
+        }
+
+        function closeEventDetailsModal() { 
+            const wrapper = document.getElementById('eventModal');
+            if (wrapper) {
+                wrapper.classList.add('ios-pop-wrapper-close');
+                setTimeout(() => {
+                    modalOverlay.style.display = 'none';
+                    wrapper.classList.remove('ios-pop-wrapper');
+                    wrapper.classList.remove('ios-pop-wrapper-close');
+                }, 350);
+            } else {
+                modalOverlay.style.display = 'none'; 
+            }
+        }
+        function resetCurrentEvent() { currentEvent = null; }
+
+        if (btnParticipate) {
+            btnParticipate.addEventListener('click', () => { 
+                closeEventDetailsModal(); 
+                startParticipationScanner(); 
+            });
+        }
+        const btnCancelScan = document.getElementById('btnCancelScan');
+        if (btnCancelScan) {
+            btnCancelScan.addEventListener('click', () => { 
+                participationModal.style.display = 'none'; 
+                stopScanner(); 
+                resetCurrentEvent(); 
+            });
+        }
+
+        async function loadModels() {
+            if (typeof faceapi === 'undefined' || !faceapi.nets) {
+                console.warn("faceapi library is not loaded yet.");
+                return;
+            }
+            const MODEL_PATH = "/static/models";
+            const CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+            try {
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_PATH),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_PATH),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_PATH)
+                ]);
+                modelsLoaded = true;
+            } catch (err) {
+                console.warn("Local static load warning, falling back to CDN:", err);
+                try {
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(CDN_FALLBACK),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(CDN_FALLBACK),
+                        faceapi.nets.faceRecognitionNet.loadFromUri(CDN_FALLBACK)
+                    ]);
+                    modelsLoaded = true;
+                } catch(e) {
+                    console.error("FaceAPI model load error:", e);
+                }
+            }
+        }
+
+        if (typeof faceapi !== 'undefined') {
+            loadModels().then(() => {
+                if (ORGANIZER_DATA.face_encoding) console.log("Organizer Biometrics loaded.");
+            }).catch(e => console.warn(e));
+        }
+
+
+        function switchParticipationView(viewId) {
+            document.getElementById('viewScanner').style.display = 'none';
+            document.getElementById('viewSuccess').style.display = 'none';
+            document.getElementById(viewId).style.display = 'flex';
+        }
+
+        let autoSubmitted = false;
+        function startQualityValidation(v) {
+            if (validationInterval) clearInterval(validationInterval);
+            const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            validationInterval = setInterval(() => {
+                if (!videoStream || !v || v.videoWidth === 0) return;
+                canvas.width = 64; canvas.height = 64; ctx.drawImage(v, 0, 0, 64, 64);
+                const data = ctx.getImageData(0, 0, 64, 64).data;
+                let b = 0;
+                let glareCount = 0;
+                const total = 64 * 64;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], bP = data[i+2];
+                    b += (r + g + bP) / 3;
+                    if (r > 248 && g > 248 && bP > 248) glareCount++;
+                }
+                const avg = b / total;
+                const isTooDark = avg < 40;
+                const isTooBright = avg > 230;
+                const isGlare = (glareCount / total) > 0.12;
+
+                qualityStatus.tooDark = isTooDark;
+                qualityStatus.tooBright = isTooBright;
+                qualityStatus.glare = isGlare;
+                qualityStatus.isReady = !isTooDark && !isTooBright && !isGlare;
+            }, 200);
+        }
+
+        async function startParticipationScanner() {
+            participationModal.style.display = 'flex';
+            switchParticipationView('viewScanner');
+            autoSubmitted = false;
+            const status = document.getElementById('scanStatus');
+            status.innerText = "AUTHENTICATING SENSORS...";
+            isFaceVerified = false; 
+            isLocationVerified = false;
+            updateSubmitButton();
+
+            try {
+                livenessDetector.reset();
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } } });
+                const v = document.getElementById('video');
+                v.srcObject = videoStream;
+                v.onloadedmetadata = () => {
+                    v.play();
+                    startQualityValidation(v);
+                    startGeofenceWatch();
+                    const partScanLoop = async () => {
+                        if (!videoStream) return;
+                        
+                        try {
+                            const detections = await faceapi
+                                .detectAllFaces(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.65 }))
+                                .withFaceLandmarks();
+
+                            if (!qualityStatus.isReady) { 
+                                livenessDetector.reset();
+                                status.innerText = "OPTIMIZING SENSOR QUALITY..."; 
+                                status.className = "absolute top-6 left-6 right-6 bg-amber-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
+                            } else if (detections.length === 0) {
+                                livenessDetector.reset();
+                                status.innerText = "NO FACE DETECTED"; 
+                                status.className = "absolute top-6 left-6 right-6 bg-amber-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
+                            } else if (detections.length > 1) {
+                                livenessDetector.reset();
+                                status.innerText = "MULTIPLE FACES DETECTED — SINGLE PERSON ONLY"; 
+                                status.className = "absolute top-6 left-6 right-6 bg-red-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
+                            } else {
+                                const livenessRes = livenessDetector.processFrame(detections[0], v.videoWidth, v.videoHeight);
+                                status.innerText = livenessRes.message;
+                                if (livenessRes.isLive) {
+                                    status.className = "absolute top-6 left-6 right-6 bg-green-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl border border-green-400/50 shadow-green-500/30";
+                                } else if (livenessRes.status === 'STATIC_PHOTO_DETECTED') {
+                                    status.className = "absolute top-6 left-6 right-6 bg-red-700/95 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-bounce border border-red-400";
+                                } else if (livenessRes.status === 'SPOOF_REJECTED') {
+                                    status.className = "absolute top-6 left-6 right-6 bg-red-800/95 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl border border-red-500";
+                                } else {
+                                    status.className = "absolute top-6 left-6 right-6 bg-cyan-700/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse border border-cyan-400/40";
+                                }
+                            }
+                        } catch (err) {
+                            console.warn("Organizer liveness tick error:", err);
+                        }
+
+                        updateSubmitButton();
+
+                        if (videoStream) scanInterval = setTimeout(partScanLoop, 150);
+                    };
+                    partScanLoop();
+                };
+            } catch (e) { alert("Camera Error (Participation): " + e.message); participationModal.style.display = 'none'; }
+        }
+
+        function startGeofenceWatch() {
+            const isOutsideAllowed = currentEvent && (currentEvent.allow_outside_campus || currentEvent.attendance_scope === 'OUTSIDE_CAMPUS');
+            
+            if (isOutsideAllowed) {
+                isLocationVerified = true; 
+                document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500 text-lg"></i> OUTSIDE CAMPUS ALLOWED`;
+                updateSubmitButton();
+            }
+
+            navigator.geolocation.watchPosition((pos) => {
+                userLat = pos.coords.latitude; userLng = pos.coords.longitude;
+                
+                if (isOutsideAllowed) {
+                    isLocationVerified = true; 
+                    document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500 text-lg"></i> OUTSIDE CAMPUS ALLOWED`;
+                } else {
+                    const targetLat = currentEvent && currentEvent.target_lat ? currentEvent.target_lat : CAMPUS_COORDS[0];
+                    const targetLng = currentEvent && currentEvent.target_lng ? currentEvent.target_lng : CAMPUS_COORDS[1];
+                    const dist = calculateDistance(userLat, userLng, targetLat, targetLng);
+                    if (dist <= 300) {
+                        isLocationVerified = true; 
+                        document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-check-circle text-green-500 text-lg"></i> GEOFENCE VERIFIED`;
+                    } else {
+                        isLocationVerified = false; 
+                        document.getElementById('locStatus').innerHTML = `<i class="ph-bold ph-warning text-red-500 text-lg"></i> OUTSIDE (${Math.round(dist)}m)`;
+                    }
+                }
+                updateSubmitButton();
+            }, null, { enableHighAccuracy: true });
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180; const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180; const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        let isSubmitting = false;
+
+        function updateSubmitButton() {
+            if (isSubmitting) return;
+            const btn = document.getElementById('btnSubmitScan');
+            if (!btn) return;
+            const isLive = livenessDetector && livenessDetector.isLive;
+            if (qualityStatus.isReady && isLocationVerified && isLive) {
+                btn.disabled = false; btn.classList.add('bg-green-600');
+                btn.innerHTML = `<i class="ph-bold ph-check-circle text-xl"></i> Finalize Entry`;
+                // 🟢 AUTOMATIC INSTANT ATTENDANCE MATCH 🟢
+                if (!autoSubmitted) {
+                    autoSubmitted = true;
+                    setTimeout(() => {
+                        if (!isSubmitting && livenessDetector && livenessDetector.isLive) {
+                            btn.click();
+                        }
+                    }, 350);
+                }
+            } else if (!isLive && qualityStatus.isReady) {
+                btn.disabled = true; btn.classList.remove('bg-green-600');
+                btn.innerHTML = `<i class="ph-bold ph-scan text-xl"></i> Detecting Full Face...`;
+            } else {
+                btn.disabled = true; btn.classList.remove('bg-green-600');
+                btn.innerHTML = `<i class="ph-bold ph-bounding-box text-xl"></i> Syncing Sensors...`;
+            }
+        }
+
+        const btnSubmitScan = document.getElementById('btnSubmitScan');
+        if (btnSubmitScan) {
+            btnSubmitScan.addEventListener('click', async () => {
+                if (isSubmitting) return;
+                if (!livenessDetector.isLive) {
+                    alert("Anti-Spoofing: Full live face verification required. Static photos and gallery images are strictly prohibited.");
+                    return;
+                }
+                isSubmitting = true;
+                
+                // ADD LOADING STATE TO BUTTON
+                const originalText = btnSubmitScan.innerHTML;
+                btnSubmitScan.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-xl"></i> VERIFYING IDENTITY...`;
+                btnSubmitScan.classList.add('opacity-80', 'cursor-not-allowed');
+
+                try {
+                    const v = document.getElementById('video');
+                    const canvas = document.createElement('canvas');
+                    // Downscale to max 640px to prevent payload issues
+                    const MAX_WIDTH = 640;
+                    const scale = Math.min(1, MAX_WIDTH / v.videoWidth);
+                    canvas.width = v.videoWidth * scale;
+                    canvas.height = v.videoHeight * scale;
+                    canvas.getContext('2d', { willReadFrequently: true }).drawImage(v, 0, 0, canvas.width, canvas.height);
+                    const faceImage = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    let detection = null;
+                    try {
+                        detection = await faceapi
+                            .detectSingleFace(v, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                            .withFaceLandmarks()
+                            .withFaceDescriptor();
+                    } catch (err) {
+                        console.warn("Attendance detection error:", err);
+                    }
+
+                    if (!detection || !detection.descriptor) {
+                        alert("Face not clearly detected. Please align your face inside the frame.");
+                        isSubmitting = false; 
+                        btnSubmitScan.innerHTML = originalText;
+                        btnSubmitScan.classList.remove('opacity-80', 'cursor-not-allowed');
+                        return;
+                    }
+
+                    const descriptorArray = Array.from(detection.descriptor);
+                    const fd = new FormData();
+                    fd.append('event_id', currentEvent.id);
+                    fd.append('face_descriptor', JSON.stringify(descriptorArray));
+                    fd.append('face_image', faceImage);
+                    fd.append('is_valid_location', isLocationVerified);
+                    fd.append('is_live_verified', 'true');
+                    fd.append('latitude', userLat || '');
+                    fd.append('longitude', userLng || '');
+                    
+                    let csrf = '';
+                    const csrfMatch = document.cookie.match(/csrftoken=([^;]+)/);
+                    if (csrfMatch) csrf = csrfMatch[1];
+                    
+                    const res = await fetch('/record-attendance/', { method: 'POST', headers: { 'X-CSRFToken': csrf }, body: fd });
+                    if (!res.ok) throw new Error("Server returned " + res.status);
+                    const data = await res.json();
+                    if (data.status === 'success' || data.status === 'issue') {
+                        switchParticipationView('viewSuccess');
+                    } else { 
+                        alert(data.message); 
+                        isSubmitting = false; 
+                        btnSubmitScan.innerHTML = originalText;
+                        btnSubmitScan.classList.remove('opacity-80', 'cursor-not-allowed');
+                    }
+                } catch (e) { 
+                    alert("Submission failed: " + e.message); 
+                    isSubmitting = false; 
+                    btnSubmitScan.innerHTML = originalText;
+                    btnSubmitScan.classList.remove('opacity-80', 'cursor-not-allowed');
+                }
+            });
+        }
+        document.getElementById('btnSuccessClose').addEventListener('click', () => {
+            location.reload();
+        });
+
+        function stopScanner() {
+            if (videoStream) { videoStream.getTracks().forEach(track => track.stop()); videoStream = null; }
+            if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+            if (validationInterval) { clearInterval(validationInterval); validationInterval = null; }
+            const qMeter = document.getElementById('qualityMeter');
+            if (qMeter) qMeter.classList.add('hidden');
+        }
+
+        function startQualityValidation(video) {
+            if (validationInterval) clearInterval(validationInterval);
+            const canvas = document.createElement('canvas'); 
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const meter = document.getElementById('qualityMeter');
+            if (meter) meter.classList.remove('hidden');
+            validationInterval = setInterval(() => {
+                if (!videoStream || !video || video.videoWidth === 0) return;
+                canvas.width = 64; canvas.height = 64; ctx.drawImage(video, 0, 0, 64, 64);
+                const data = ctx.getImageData(0, 0, 64, 64).data;
+                let brightness = 0;
+                for (let i = 0; i < data.length; i += 4) brightness += (data[i] + data[i+1] + data[i+2]) / 3;
+                const avg = brightness / (64 * 64);
+                qualityStatus.isReady = avg > 40 && avg < 230;
+                const bar = document.getElementById('qualityBar');
+                const text = document.getElementById('qualityText');
+                if (bar && text) {
+                    if (qualityStatus.isReady) {
+                        bar.style.width = '100%'; bar.className = "h-full bg-green-500 transition-all";
+                        text.innerText = "OPTIMIZED"; text.className = "text-[10px] font-bold text-green-500 uppercase";
+                    } else {
+                        bar.style.width = '30%'; bar.className = "h-full bg-amber-500 transition-all";
+                        text.innerText = "ADJUSTING..."; text.className = "text-[10px] font-bold text-amber-500 uppercase";
+                    }
+                }
+            }, 200);
+        }
+
+        if(searchInput) searchInput.addEventListener('input', () => renderEvents(searchInput.value));
+        const overlay = document.getElementById('modalOverlay');
+        if(overlay) overlay.addEventListener('click', (e) => { 
+            if (e.target === overlay) {
+                closeEventDetailsModal(); 
+                resetCurrentEvent(); 
+            }
+        });
+        const closeBtn = document.getElementById('btnClose');
+        if(closeBtn) closeBtn.addEventListener('click', () => { closeEventDetailsModal(); resetCurrentEvent(); });
+
+        renderEvents();
+        setInterval(updateAllCountdowns, 1000);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(initSchoolEventsLogic, 100); });

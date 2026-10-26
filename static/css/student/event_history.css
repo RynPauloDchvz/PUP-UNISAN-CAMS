@@ -1,0 +1,3 @@
+/* Event History Styles for Student */
+#modalLeafletMap { z-index: 0; }
+.leaflet-popup-content-wrapper { border-radius: 12px; font-family: inherit; }

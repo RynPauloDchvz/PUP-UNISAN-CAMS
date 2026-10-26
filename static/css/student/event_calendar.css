@@ -1,0 +1,37 @@
+/* Event Calendar Styles for Student */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Mobile Fixed Modal Footer */
+@media (max-width: 640px) {
+    .fixed-modal-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 1rem 1.5rem 2rem 1.5rem;
+        z-index: 2020;
+    }
+    .modal-scroll-area {
+        padding-bottom: 7rem !important;
+    }
+    
+    /* Mobile FullCalendar Optimization */
+    .fc .fc-toolbar {
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: space-between;
+    }
+    .fc .fc-toolbar-chunk:nth-child(2) {
+        order: -1;
+        width: 100%;
+        text-align: center;
+    }
+    .fc .fc-toolbar-title {
+        font-size: 1.2rem !important;
+    }
+    .fc .fc-button {
+        padding: 6px 10px !important;
+        font-size: 0.75rem !important;
+    }
+}

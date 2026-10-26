@@ -1,0 +1,50 @@
+/* Modal Maximization on Mobile */
+    @media (max-width: 640px) {
+        .mobile-fullscreen {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 100% !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+        }
+        .fixed-close-btn {
+            position: fixed !important;
+            top: 1rem !important;
+            right: 1rem !important;
+            z-index: 5010 !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+            color: white !important;
+            width: 2.5rem !important;
+            height: 2.5rem !important;
+            border-radius: 9999px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            backdrop-filter: blur(4px) !important;
+        }
+    }
+
+    /* iOS Pop Origin Animation */
+    .ios-pop-wrapper, .ios-pop-wrapper-close {
+        transform-origin: var(--click-x, 50%) var(--click-y, 50%);
+    }
+    
+    .ios-pop-wrapper {
+        animation: iosPopOpen 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1) forwards;
+    }
+    
+    .ios-pop-wrapper-close {
+        animation: iosPopClose 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+    }
+    
+    @keyframes iosPopOpen {
+        0% { opacity: 0; transform: scale(0.3); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+    
+    @keyframes iosPopClose {
+        0% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(0.3); }
+    }

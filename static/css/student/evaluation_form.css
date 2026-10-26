@@ -1,0 +1,14 @@
+/* Evaluation Form Styles for Student */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.star-btn { transition: transform 0.1s ease, color 0.2s ease; }
+.star-btn:hover { transform: scale(1.2); }
+.star-active { color: #D4AF37 !important; }
+[v-cloak] { display: none; }
+
+/* Success Modal Animations */
+.animate-success-in { animation: modalIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+@keyframes modalIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}

@@ -1,0 +1,87 @@
+/* Homepage Styles for Student */
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Date Icon Style (Calendar List) */
+.date-icon {
+    width: 45px;
+    height: 45px;
+    background: #f9fafb;
+    border: 1px solid #f3f4f6;
+    border-radius: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.dark .date-icon { background: #111; border-color: #222; }
+.date-month { font-size: 8px; font-weight: 900; color: #800000; text-transform: uppercase; }
+.dark .date-month { color: #D4AF37; }
+.date-day { font-size: 14px; font-weight: 900; line-height: 1; }
+
+/* FullCalendar UI Refinement */
+.fc .fc-toolbar-title { font-size: 0.9rem !important; font-weight: 900 !important; text-transform: uppercase; color: #800000; }
+.dark .fc .fc-toolbar-title { color: #D4AF37; }
+.fc .fc-button { 
+    background: #800000 !important; 
+    border: none !important; 
+    font-size: 0.7rem !important; 
+    font-weight: bold !important; 
+    padding: 6px 12px !important; 
+    transition: all 0.2s ease;
+}
+.fc .fc-button:hover { opacity: 0.9; transform: scale(1.05); }
+.dark .fc .fc-button { background: #D4AF37 !important; color: black !important; }
+
+/* Highlight for selected day in sidebar calendar */
+.fc-daygrid-day.selected-day {
+    background-color: rgba(128, 0, 0, 0.1) !important;
+    border: 2px solid #800000 !important;
+}
+.dark .fc-daygrid-day.selected-day {
+    background-color: rgba(212, 175, 55, 0.1) !important;
+    border: 2px solid #D4AF37 !important;
+}
+
+/* Slideshow Train Effect */
+.slide-track-container {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    transform: skewY(-3deg);
+    transform-origin: top left;
+    padding-bottom: 2rem;
+}
+.unskew-content {
+    transform: skewY(3deg) skewX(6deg);
+}
+.slide-track {
+    display: flex;
+    width: max-content;
+    animation: slideTrain 40s linear infinite;
+}
+.slide-track:hover {
+    animation-play-state: paused;
+}
+@keyframes slideTrain {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.train-card {
+    height: 250px;
+    transform: skewX(-6deg);
+}
+.train-card > img {
+    transform: skewX(6deg) scale(1.15);
+}
+@media (max-width: 640px) {
+    .train-card {
+        height: 180px;
+    }
+}
+
+/* Slanted Banner */
+.hero-slanted {
+    clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+}

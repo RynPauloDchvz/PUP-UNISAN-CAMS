@@ -1,0 +1,47 @@
+/* Modal Animation: Slide Up/Down (Matched with Analytics) */
+    #studentDetailModal.hidden {
+        display: none;
+    }
+    
+    #modalContainer {
+        transition: transform 0.3s ease-out;
+    }
+    
+    .modal-slide-up {
+        transform: translateY(0);
+    }
+    
+    .modal-slide-down {
+        transform: translateY(100%);
+    }
+
+    /* Stylized UI Elements */
+    .cheesecake-title {
+        font-family: 'Arial Black', Gadget, sans-serif;
+        letter-spacing: -2px;
+        opacity: 0.1;
+        user-select: none;
+        pointer-events: none;
+    }
+
+    .name-tag {
+        background-color: #2a211a;
+        border: 2px solid #5a3a2a;
+        color: #e5c7b3;
+        box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+    }
+
+    /* 2x2 Grid Styling (Matched with Profile.html) */
+    .info-box {
+        background-color: #ffffff;
+        border: 1px solid #e5e7eb;
+        transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    .dark .info-box {
+        background-color: #151515;
+        border-color: #1f2937;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

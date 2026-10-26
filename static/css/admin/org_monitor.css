@@ -1,0 +1,67 @@
+/* Custom Styling para sa Event List */
+    .event-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--border); transition: 0.2s; cursor: pointer; }
+    .event-row:last-child { border-bottom: none; }
+    .event-row:hover { background: var(--hover-bg); border-radius: 12px; padding: 20px 15px; margin: 0 -15px; }
+    
+    .event-info { display: flex; align-items: center; gap: 20px; width: calc(100% - 40px); }
+    .event-icon { width: 55px; height: 55px; flex-shrink: 0; border-radius: 14px; background: var(--card-bg); display: flex; align-items: center; justify-content: center; font-size: 1rem; color: var(--accent); border: 2px solid var(--border); font-weight: 900; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .event-info-text { min-width: 0; flex: 1; }
+    
+    .event-title { font-size: 1.15rem; font-weight: 800; color: var(--text-main); margin-bottom: 5px; display: block; transition: 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-row:hover .event-title { color: var(--accent); }
+    
+    .event-meta { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: flex; gap: 20px; }
+    .event-meta span { display: flex; align-items: center; gap: 6px; }
+    
+    .event-action i { font-size: 1.8rem; color: var(--border); transition: 0.2s; }
+    .event-row:hover .event-action i { color: var(--accent); transform: translateX(5px); }
+
+    /* Modal Analytics Styles */
+    .modal-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; }
+    .modal-stat-box { background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; text-align: center; }
+    .modal-stat-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 5px; display: block; letter-spacing: 0.5px;}
+    .modal-stat-value { font-size: 2rem; font-weight: 800; color: var(--text-main); line-height: 1;}
+    .chart-panel { background: var(--input-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+    .chart-panel h4 { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 15px; letter-spacing: 0.5px;}
+
+    @media(max-width: 900px) {
+        .modal-charts { grid-template-columns: 1fr; }
+        .event-meta { flex-direction: column; gap: 5px; }
+        .stat-card { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 15px 10px; }
+        .stat-label { white-space: nowrap; font-size: 0.7rem; }
+        
+        .event-row { border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; }
+        .event-row:last-child { border-bottom: 1px solid var(--border); }
+        .event-row:hover { margin: 0 0 12px 0; padding: 15px; }
+    }
+
+    /* Custom Styling for Search Integration */
+    .table-header-flex { display: flex; justify-content: space-between; align-items: center; gap: 15px; position: relative; }
+    .table-title-container { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: all 0.4s ease; }
+    .mobile-search-toggle { display: none; }
+    .close-search-mobile { display: none; }
+
+    @media(max-width: 900px) {
+        .table-title { font-size: 1.15rem; }
+        .mobile-search-toggle {
+            display: flex; align-items: center; justify-content: center;
+            width: 42px; height: 42px; border-radius: 10px; cursor: pointer;
+            flex-shrink: 0; transition: 0.3s;
+            border: 2px solid maroon; background: maroon; color: white; font-size: 1.2rem;
+        }
+        
+        .search-box-wrapper {
+            position: absolute; right: 0; width: 0; opacity: 0; overflow: hidden;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; z-index: 10;
+        }
+        .search-box-wrapper.active { width: 100%; opacity: 1; overflow: visible; }
+        .search-box-wrapper .search-box { width: 100%; display: flex; align-items: center; }
+        .search-box-wrapper .search-box input { width: 100%; }
+        .close-search-mobile { display: block !important; }
+        .table-header-flex.search-active .table-title-container { opacity: 0; transform: translateX(-20px); }
+        .desktop-only-skeleton { display: none; }
+    }
+    
+    html[data-theme="dark"] .mobile-search-toggle, body.dark-mode .mobile-search-toggle, .dark-mode .mobile-search-toggle {
+        border: 2px solid gold !important; background: gold !important; color: black !important;
+    }

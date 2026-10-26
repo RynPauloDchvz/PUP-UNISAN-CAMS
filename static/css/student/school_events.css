@@ -1,0 +1,24 @@
+/* School Events Styles for Student */
+.countdown-timer { font-variant-numeric: tabular-nums; }
+.event-card-img { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.js-event-card:hover .event-card-img { transform: scale(1.1); }
+.status-ongoing { background-color: #059669; }
+.status-ended { background-color: #800000; }
+.status-upcoming { background-color: #1e1e1e; }
+
+/* Dark Mode Badge Overrides */
+.dark .status-ongoing { background-color: #D4AF37; color: #fff; }
+.dark .status-ended { background-color: #D4AF37; color: #fff; opacity: 0.7; }
+.dark .status-upcoming { background-color: #D4AF37; color: #fff; opacity: 0.5; }
+
+.status-completed { background-color: #059669; }
+.dark .status-completed { background-color: #10B981; color: #fff; }
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@keyframes scan {
+    0% { top: 0%; }
+    100% { top: 100%; }
+}
+.scan-line { animation: scan 2s linear infinite; }

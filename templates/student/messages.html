@@ -2,35 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<style>
-    /* Malambot na transition para sa Hover Effects */
-    .notif-card-transition { 
-        transition: all 0.2s ease-in-out; 
-    }
-    .notif-card-transition:hover { 
-        transform: translateX(5px); 
-        box-shadow: 0 6px 15px rgba(0,0,0,0.05); 
-    }
-    
-    /* Pumuputol sa mahabang text para hindi lumaki ang box */
-    .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        -webkit-box-orient: vertical;  
-        overflow: hidden;
-    }
-
-    .notif-read {
-        opacity: 0.6;
-        background-color: #f9fafb !important;
-        border-color: #e5e7eb !important;
-    }
-    .dark .notif-read {
-        background-color: #111111 !important;
-        border-color: #262626 !important;
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/student/messages.css' %}">
 {% endblock extra_head %}
 
 {% block content %}
@@ -114,88 +86,5 @@
         {{ notifications_json|safe }}
     </script>
 
-    <script>
-    (function() {
-        let allNotifsFromDjango = [];
-        try {
-            const rawData = document.getElementById('django-notifs-data').textContent;
-            if (rawData && rawData.trim() !== '') {
-                allNotifsFromDjango = JSON.parse(rawData.trim());
-            }
-        } catch (error) {
-            console.error("Error loading notifications:", error);
-        }
-
-        const notifData = {
-            allNotifs: allNotifsFromDjango,
-            filteredNotifs: allNotifsFromDjango,
-            readNotifs: JSON.parse(localStorage.getItem('student_read_notifs') || '[]')
-        };
-
-        window.VUE_APP_DATA = window.VUE_APP_DATA || {};
-        Object.assign(window.VUE_APP_DATA, notifData);
-
-        window.VUE_APP_METHODS = window.VUE_APP_METHODS || {};
-        Object.assign(window.VUE_APP_METHODS, {
-            filterNotifications(event) {
-                const query = event.target.value.toLowerCase().trim();
-                this.filteredNotifs = this.allNotifs.filter(n => 
-                    (n.title || '').toLowerCase().includes(query) || 
-                    (n.sender || '').toLowerCase().includes(query) || 
-                    (n.message || '').toLowerCase().includes(query)
-                );
-            },
-            isRead(id) {
-                return this.readNotifs.includes(id);
-            },
-            markAllAsRead() {
-                const allIds = this.allNotifs.map(n => n.id);
-                this.readNotifs = [...new Set([...this.readNotifs, ...allIds])];
-                localStorage.setItem('student_read_notifs', JSON.stringify(this.readNotifs));
-            },
-            handleNotifClick(notif) {
-                // 1. Mark as read
-                if (!this.readNotifs.includes(notif.id)) {
-                    this.readNotifs.push(notif.id);
-                    localStorage.setItem('student_read_notifs', JSON.stringify(this.readNotifs));
-                }
-
-                // 2. Logic-based redirection (Matching Banner/Icon Standard)
-                const title = notif.title || "";
-                const type = notif.type || "";
-                
-                // Patterns for Events
-                if (type === 'event' || type === 'new' || type === 'update' || type === 'alert' || 
-                    title.includes('Upcoming: ') || title.includes('Attendance Issue: ') || 
-                    title.includes('NEW EVENT') || title.includes('RESCHEDULED')) {
-                    
-                    let searchTitle = title
-                        .replace('Upcoming: ', '')
-                        .replace('Attendance Issue: ', '')
-                        .replace('🔥 NEW EVENT: ', '')
-                        .replace('📅 RESCHEDULED: ', '');
-
-                    sessionStorage.setItem('eventSearchQuery', searchTitle.trim());
-                    window.location.href = "{% url 'student_school_events' %}";
-                    return;
-                }
-
-                // Patterns for Evaluations
-                if (type === 'evaluation' || title.toLowerCase().includes('evaluation') || title.toLowerCase().includes('feedback')) {
-                    window.location.href = "{% url 'student_evaluation' %}";
-                    return;
-                }
-
-                // Default Patterns
-                if (title.includes('Welcome')) {
-                    window.location.href = "{% url 'student_homepage' %}";
-                    return;
-                }
-
-                // Fallback to School Events (Participation Hub)
-                window.location.href = "{% url 'student_school_events' %}";
-            }
-        });
-    })();
-    </script>
+    <script src="{% static 'js/student/messages.js' %}"></script>
 {% endblock extra_js %}

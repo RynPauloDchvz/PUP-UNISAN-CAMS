@@ -1,0 +1,137 @@
+.user-cell { display: flex; align-items: center; gap: 12px; }
+    .user-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
+    .user-name { font-weight: 700; color: var(--text-main); display: block; }
+    .user-username { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* Stylized UI Elements for Modal */
+    .cheesecake-title { font-family: 'Arial Black', Gadget, sans-serif; letter-spacing: -2px; opacity: 0.1; user-select: none; pointer-events: none; }
+    .name-tag { background-color: #2a211a; border: 2px solid #5a3a2a; color: #e5c7b3; box-shadow: 4px 4px 0px rgba(0,0,0,0.2); }
+    .info-box { background-color: #ffffff; border: 1px solid #e5e7eb; transition: background-color 0.3s, border-color 0.3s; }
+    [data-theme="dark"] .info-box { background-color: #151515; border-color: #1f2937; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 🟢 ACCOUNT HISTORY RESPONSIVENESS 🟢 */
+    .manage-accounts-control { display: flex; gap: 10px; align-items: flex-start; flex-wrap: nowrap; justify-content: flex-start; }
+    .manage-accounts-control .search-box { flex-grow: 1; min-width: 150px; margin-left: auto; }
+    .manage-accounts-control .history-btn { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; height: 42px; border-radius: 8px; padding: 0 15px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+    
+    /* Animated Custom Dropdown & Year Hide Animation */
+    #yearFilterContainer { transition: max-width 0.4s ease, min-width 0.4s ease, opacity 0.4s ease, padding 0.4s ease, margin 0.4s ease, border-width 0.4s ease; max-width: 300px; opacity: 1; overflow: hidden; }
+    body.hide-year #yearFilterContainer { max-width: 0 !important; min-width: 0 !important; padding-left: 0 !important; padding-right: 0 !important; margin: 0 !important; border-width: 0 !important; opacity: 0; pointer-events: none; }
+
+    .custom-dropdown {
+        position: relative;
+        background: var(--input-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        min-width: 160px;
+        transition: border-color 0.2s;
+        flex-shrink: 0;
+    }
+    .custom-dropdown.active {
+        border-color: var(--accent);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .custom-dropdown-summary {
+        padding: 10px 15px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-main);
+        transition: background 0.2s;
+        height: 42px;
+    }
+    .custom-dropdown-summary:hover { background: var(--hover-bg); }
+    .custom-dropdown-menu {
+        display: flex;
+        flex-direction: column;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: var(--card-bg);
+        border-radius: 0 0 8px 8px;
+    }
+    .custom-dropdown-summary span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+        max-width: 90%;
+    }
+    .search-box { 
+        display: flex; 
+        align-items: center; 
+        background: var(--input-bg); 
+        border: 1px solid var(--border); 
+        border-radius: 8px; 
+        padding: 0 15px; 
+        height: 42px; 
+        gap: 10px; 
+        transition: flex-grow 0.4s ease;
+    }
+    .search-input { 
+        border: none; 
+        background: transparent; 
+        outline: none; 
+        font-size: 0.9rem; 
+        color: var(--text-main); 
+        width: 100%;
+    }
+    .custom-dropdown.active .custom-dropdown-menu {
+        max-height: 350px;
+        border: 1px solid var(--border);
+        border-top: none;
+        overflow-y: auto;
+    }
+    .dropdown-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: 0.2s;
+        border-bottom: 1px solid var(--border);
+    }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: var(--hover-bg); color: var(--accent); }
+    .dropdown-item.active { background: rgba(128,0,0,0.05); color: var(--accent); font-weight: 700; }
+
+    /* Hidden Select Inputs */
+    .hidden-input { display: none; }
+
+    .mobile-search-box { display: none; }
+    
+    /* Mobile Cards */
+    .mobile-card-list { display: none; flex-direction: column; gap: 15px; }
+    .history-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+
+    @media (max-width: 900px) {
+        .manage-accounts-control { display: flex; flex-wrap: wrap; gap: 10px; }
+        
+        .manage-accounts-control .history-btn { width: 42px; padding: 0 !important; margin: 0; justify-content: center; }
+        .manage-accounts-control .history-btn-text { display: none; }
+        
+        #orgFilterContainer { flex: 1; min-width: 0; }
+        .mobile-break { flex-basis: 100%; height: 0; margin: 0; display: block !important; }
+        #typeFilterContainer { flex: 1; min-width: 0; }
+        #yearFilterContainer { flex: 1; min-width: 0; }
+        
+        body.hide-year #yearFilterContainer { max-width: 0 !important; min-width: 0 !important; margin: 0 !important; border-width: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
+        
+        .manage-accounts-control .search-box { display: none; }
+        .mobile-search-box { display: flex; margin-bottom: 15px; }
+        
+        #historyTable { display: none; }
+        .mobile-card-list { display: flex; }
+
+        /* Slide-up Bottom Sheet Modal for Profile details on Mobile */
+        #profileModal { align-items: flex-end; padding: 0; }
+        #profileModalBox { 
+            width: 100%; max-width: 100%; border-radius: 24px 24px 0 0 !important; 
+            transform: translateY(100%) !important; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            margin: 0; max-height: 85vh; overflow-y: auto;
+        }
+        #profileModal.active #profileModalBox { transform: translateY(0) !important; }
+    }
