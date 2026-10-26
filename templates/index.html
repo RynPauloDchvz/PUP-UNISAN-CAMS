@@ -762,8 +762,8 @@
                     currentView: 'login', 
                     
                     // LOCKOUT STATE
-                    isLocked: {% if is_locked %}true{% else %}false{% endif %},
-                    lockoutTime: {{ remaining|default:0 }},
+                    isLocked: "{% if is_locked %}true{% else %}false{% endif %}" === "true",
+                    lockoutTime: Number("{{ remaining|default:0 }}"),
                     lockoutInterval: null,
                     showAttemptModal: false,
                     showWaitModal: false,
@@ -888,6 +888,9 @@
                     const formData = new FormData();
                     formData.append('username', this.loginData.username);
                     formData.append('password', this.loginData.password);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const nextParam = urlParams.get('next');
+                    if (nextParam) formData.append('next', nextParam);
                     
                     // Improved CSRF Token Retrieval
                     let tokenValue = '';
@@ -933,6 +936,9 @@
                     formData.append('username', this.loginData.username);
                     formData.append('password', this.loginData.password);
                     formData.append('selected_org', orgCode);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const nextParam = urlParams.get('next');
+                    if (nextParam) formData.append('next', nextParam);
 
                     let tokenValue = '';
                     const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));

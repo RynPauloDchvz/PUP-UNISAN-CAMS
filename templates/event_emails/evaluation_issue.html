@@ -3,36 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evaluation Form Issue</title>
+    <title>PUP UNISAN CAMS STUDENT ORG - Evaluation Window Expired</title>
 </head>
 <body style="margin: 0; padding: 30px 15px; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
     <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px 28px; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
         
+        <!-- HEADER -->
         <div style="text-align: center; margin-bottom: 24px;">
-            <h2 style="margin: 0 0 6px 0; font-size: 20px; font-weight: 800; color: #800000; letter-spacing: -0.02em;">PUP UNISAN CAMS</h2>
-            <p style="margin: 0; font-size: 13px; color: #64748b;">Event Feedback System Notice</p>
+            <h2 style="margin: 0 0 6px 0; font-size: 20px; font-weight: 800; color: #800000; letter-spacing: -0.02em;">PUP UNISAN CAMS STUDENT ORG</h2>
+            <p style="margin: 0; font-size: 13px; color: #64748b;">Attendance Verification Notice</p>
         </div>
 
+        <!-- SALUTATION & MESSAGE -->
         <p style="margin: 0 0 12px 0; font-size: 15px; color: #1e293b; line-height: 1.6;">
             Hello <strong>{{ full_name }}</strong>,
         </p>
         <p style="margin: 0 0 20px 0; font-size: 14px; color: #475569; line-height: 1.6;">
-            We noticed that your evaluation form for the event <strong>{{ event_title }}</strong> was not submitted successfully.
+            We noticed that you were unable to submit your evaluation for <strong>{{ event_title }}</strong> within the required 1-hour window following your Time Out.
         </p>
 
+        <!-- WARNING NOTICE BOX -->
+        <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 18px 20px; margin: 20px 0;">
+            <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 700; color: #991b1b;">
+                Attendance Status: Incomplete / Absent
+            </p>
+            <p style="margin: 0; font-size: 13px; color: #7f1d1d; line-height: 1.6;">
+                Because completing post-event feedback is mandatory under student organization policy, your attendance record for this activity cannot be validated and has been flagged as Incomplete.
+            </p>
+        </div>
+
+        <!-- DETAILS BOX -->
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px 20px; margin: 20px 0;">
-            <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 700; color: #b45309;">Submission Failed</p>
-            <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.5;">
-                Possible reasons: Connection timeout, session expiry, or form validation issues. Please try submitting your feedback again through the portal.
+            {% if student_number %}
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
+                <strong style="color: #0f172a;">Student ID:</strong> {{ student_number }}
+            </p>
+            {% endif %}
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
+                <strong style="color: #0f172a;">Organization:</strong> {{ organization }}
+            </p>
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #334155;">
+                <strong style="color: #0f172a;">Event:</strong> {{ event_title }}
+            </p>
+            <p style="margin: 0; font-size: 14px; color: #334155;">
+                <strong style="color: #0f172a;">Evaluation Window:</strong> 
+                <span style="font-weight: 700; color: #dc2626;">Expired (1-Hour Limit Exceeded)</span>
             </p>
         </div>
 
         <p style="margin: 0 0 24px 0; font-size: 13px; color: #64748b; line-height: 1.6;">
-            Your feedback is valuable to us and helps organizations improve their future activities.
+            If you encountered connectivity problems or technical difficulties during the event, please coordinate promptly with your student organization officers or adviser.
         </p>
 
+        <!-- CTA LOGIN BUTTON -->
+        <div style="text-align: center; margin: 28px 0 20px 0;">
+            <a href="{{ login_url|default:'https://pup-unisan-cams.onrender.com/' }}" style="display: inline-block; background-color: #800000; color: #ffffff !important; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.02em; box-shadow: 0 2px 4px rgba(128,0,0,0.25);">
+                Go to Student Portal
+            </a>
+        </div>
+
+        <!-- FOOTER -->
         <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f1f5f9; text-align: center; font-size: 12px; color: #94a3b8; line-height: 1.6;">
-            <p style="margin: 0 0 4px 0;">This is an automated message from the PUP Campus Activity Management System.</p>
+            <p style="margin: 0 0 4px 0;">This is an automated message from PUP UNISAN CAMS STUDENT ORG. Please do not reply directly to this email.</p>
             <p style="margin: 0;">&copy; 2026 PUP UNISAN CAMS. All rights reserved.</p>
         </div>
 

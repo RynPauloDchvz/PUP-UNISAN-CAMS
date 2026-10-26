@@ -121,6 +121,10 @@ def reset_account_lockout(identifier):
     LoginLockout.objects.filter(identifier=identifier).update(failed_attempts=0, lockout_until=None)
 
 def index(request):
+    if request.user.is_authenticated and Student.objects.filter(user=request.user).exists():
+        next_url = request.GET.get('next', '').strip()
+        if next_url and next_url.startswith('/student/') and not next_url.startswith('//'):
+            return redirect(next_url)
     is_locked, remaining = check_lockout(request, type='portal')
     return render(request, 'index.html', {'is_locked': is_locked, 'remaining': remaining})
 
@@ -250,7 +254,13 @@ def portal_login_view(request):
 
                     login(request, user)
                     log_audit_event(request, 'LOGIN_SUCCESS', status='Success', changes={'role': 'Student', 'active_org': active_org}, actor=user)
-                    return JsonResponse({"status": "success", "redirect_url": "/student/dashboard"})
+                    
+                    next_url = request.POST.get('next', '').strip()
+                    redirect_target = "/student/dashboard"
+                    if next_url and next_url.startswith('/student/') and not next_url.startswith('//'):
+                        redirect_target = next_url
+                        
+                    return JsonResponse({"status": "success", "redirect_url": redirect_target})
             else:
                 log_audit_event(request, 'LOGIN_FAILED', status='Denied', changes={'reason': 'Account role not identified', 'username': username})
                 return JsonResponse({"status": "error", "message": "Account is neither a registered Student nor an Organizer."})
@@ -874,6 +884,7 @@ def update_student_profile(request):
 
 @user_passes_test(is_student_strictly, login_url='/')
 def student_homepage(request):
+    check_and_send_event_reminders()
     try:
         student = Student.objects.get(user=request.user)
     except Student.DoesNotExist:
@@ -1117,6 +1128,7 @@ def student_homepage(request):
 
 @user_passes_test(is_student_strictly, login_url='/')
 def student_school_events(request):
+    check_and_send_event_reminders()
     try:
         student = Student.objects.get(user=request.user)
     except Student.DoesNotExist:
@@ -2329,18 +2341,28 @@ def send_student_email(student, email_type, context_data=None):
     
     subject = "PUP UNISAN CAMS Notification"
     template_name = ""
+    event_title = context_data.get('event_title', 'Campus Activity')
     
     if email_type == 'welcome':
         subject = f"Account Approved - {student.organization} Student Portal"
         template_name = "system_emails/welcome_email.html"
     elif email_type == 'event_alert':
-        subject = f"New Event: {context_data.get('event_title')}"
+        subject = f"New Campus Activity: {event_title}"
         template_name = "event_emails/event_alert.html"
+    elif email_type == 'event_reminder':
+        subject = f"Reminder: Tomorrow is {event_title}!"
+        template_name = "event_emails/event_reminder.html"
     elif email_type == 'attendance':
-        subject = f"Attendance Issue: {context_data.get('event_title')}"
+        subject = f"Attendance Verified: {event_title} - Time-Out Reminder"
         template_name = "event_emails/attendance_status.html"
+    elif email_type == 'evaluation_reminder':
+        subject = f"Action Required: Submit Evaluation for {event_title}"
+        template_name = "event_emails/evaluation_reminder.html"
+    elif email_type == 'evaluation_success':
+        subject = f"Evaluation Received: {event_title} - Thank You!"
+        template_name = "event_emails/evaluation_success.html"
     elif email_type == 'evaluation':
-        subject = f"Evaluation Issue: {context_data.get('event_title')}"
+        subject = f"Notice: Evaluation Window Expired for {event_title}"
         template_name = "event_emails/evaluation_issue.html"
     elif email_type == 'reject':
         subject = "Registration Declined - Action Required"
@@ -2352,10 +2374,17 @@ def send_student_email(student, email_type, context_data=None):
     context_data['full_name'] = student.full_name
     context_data['email_address'] = student.email_address
     context_data['student_number'] = getattr(student, 'student_number', '') or (student.user.username if student.user else '')
-    context_data['organization'] = student.organization
+    context_data['organization'] = getattr(student, 'organization', '') or context_data.get('organization', '')
     base_site_url = getattr(settings, 'SITE_URL', 'https://pup-unisan-cams.onrender.com').rstrip('/')
     context_data['site_url'] = f"{base_site_url}/"
-    context_data['login_url'] = f"{base_site_url}/"
+    
+    # Dynamic post-login redirect via next_url
+    next_url = context_data.get('next_url', '')
+    if next_url:
+        context_data['login_url'] = f"{base_site_url}/?next={next_url}"
+    else:
+        context_data['login_url'] = f"{base_site_url}/"
+
     if 'org_selection_url' not in context_data:
         context_data['org_selection_url'] = f"{base_site_url}/org-selection/"
 
@@ -2366,7 +2395,7 @@ def send_student_email(student, email_type, context_data=None):
         send_mail(
             subject,
             plain_message,
-            f'"{ "PUP UNISAN CAMS STUDENT ORG" if email_type == "welcome" else "PUP UNISAN CAMS" }" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>',
+            f'"PUP UNISAN CAMS STUDENT ORG" <{getattr(settings, "DEFAULT_FROM_EMAIL", settings.EMAIL_HOST_USER)}>',
             [student.email_address],
             html_message=html_message,
             fail_silently=True
@@ -2374,6 +2403,56 @@ def send_student_email(student, email_type, context_data=None):
         return True
     except:
         return False
+
+# ==========================================
+# 🟢 AUTOMATIC 1-DAY PRE-EVENT REMINDER
+# ==========================================
+_last_event_reminder_check = None
+
+def check_and_send_event_reminders():
+    global _last_event_reminder_check
+    now = timezone.now()
+    if _last_event_reminder_check and (now - _last_event_reminder_check).total_seconds() < 900:
+        return
+    _last_event_reminder_check = now
+
+    try:
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        upcoming_events = Event.objects.filter(
+            event_status='Approved',
+            event_date=tomorrow
+        )
+
+        for event in upcoming_events:
+            already_sent = AuditLog.objects.filter(
+                action='EVENT_1DAY_REMINDER',
+                target_id=str(event.id)
+            ).exists()
+
+            if not already_sent:
+                students = Student.objects.filter(is_verified=True, email_notifications=True)
+                if event.org_id:
+                    students = students.filter(organization__iexact=event.org_id)
+
+                for s in students:
+                    send_student_email(s, 'event_reminder', {
+                        'event_title': event.event_title,
+                        'org_name': ORG_FULL_NAMES.get(event.org_id, event.org_id),
+                        'event_date': event.event_date.strftime('%B %d, %Y'),
+                        'start_time': event.start_time.strftime('%I:%M %p') if event.start_time else 'TBA',
+                        'venue': event.venue,
+                        'next_url': '/student/school-events',
+                    })
+
+                AuditLog.objects.create(
+                    action='EVENT_1DAY_REMINDER',
+                    target_model='Event',
+                    target_id=str(event.id),
+                    status='Success',
+                    changes={'event_title': event.event_title, 'event_date': str(event.event_date)}
+                )
+    except Exception as e:
+        print(f"Error checking event reminders: {e}")
 
 @user_passes_test(is_student_strictly, login_url='/')
 def update_notification_preference(request):
@@ -3559,6 +3638,14 @@ def record_attendance(request):
                         'location_zone': location_name,
                         'location_valid': is_valid_location
                     })
+
+                    if student and getattr(event, 'has_evaluation', True):
+                        send_student_email(student, 'evaluation_reminder', {
+                            'event_title': event.event_title,
+                            'time_out': timezone.localtime(attendance.time_out).strftime('%I:%M %p') if attendance.time_out else timezone.localtime().strftime('%I:%M %p'),
+                            'next_url': '/student/evaluation',
+                        })
+
                     return JsonResponse({'status': 'success', 'message': f'Mission Complete: Time Out verified at {location_name}. You now have 1 hour to submit your evaluation.'})
                 else:
                     # Late student who missed Time In
@@ -3591,6 +3678,14 @@ def record_attendance(request):
                         'location_zone': location_name,
                         'location_valid': False
                     })
+
+                    if student and getattr(event, 'has_evaluation', True):
+                        send_student_email(student, 'evaluation_reminder', {
+                            'event_title': event.event_title,
+                            'time_out': timezone.localtime(attendance.time_out).strftime('%I:%M %p') if attendance.time_out else timezone.localtime().strftime('%I:%M %p'),
+                            'next_url': '/student/evaluation',
+                        })
+
                     return JsonResponse({'status': 'success', 'message': f'Time Out recorded at {location_name}. Note: Missed Time In window. You may proceed to submit your evaluation within 1 hour.'})
 
             # 🟢 HANDLE TIME IN 🟢
@@ -3647,6 +3742,25 @@ def record_attendance(request):
             msg = f"Time In verified at {location_name}."
             if not face_matched:
                 msg += " Note: Biometric mismatch detected; record flagged for review."
+            elif student:
+                timeout_window_str = ""
+                end_time_str = event.end_time.strftime("%I:%M %p") if event.end_time else "Event Conclusion"
+                if event.end_time:
+                    try:
+                        dummy_dt = datetime.combine(datetime.today(), event.end_time) - timedelta(minutes=15)
+                        timeout_window_str = dummy_dt.strftime("%I:%M %p")
+                    except Exception:
+                        timeout_window_str = end_time_str
+
+                send_student_email(student, 'attendance', {
+                    'event_title': event.event_title,
+                    'event_date': event.event_date.strftime('%B %d, %Y'),
+                    'time_in': timezone.localtime(attendance.time_in).strftime('%I:%M %p') if attendance.time_in else timezone.localtime().strftime('%I:%M %p'),
+                    'location_zone': location_name,
+                    'end_time': end_time_str,
+                    'timeout_window_opens': timeout_window_str,
+                    'next_url': '/student/school-events',
+                })
 
             return JsonResponse({'status': 'success' if face_matched else 'issue', 'message': msg})
         except Exception as e:
@@ -3719,6 +3833,10 @@ def submit_evaluation(request):
             now = timezone.now()
             eval_expiry = attendance.time_out + timedelta(hours=24)
             if now > eval_expiry:
+                send_student_email(student, 'evaluation', {
+                    'event_title': event.event_title,
+                    'next_url': '/student/dashboard'
+                })
                 return JsonResponse({'status': 'error', 'message': 'Evaluation window has expired. You had 24 hours after Time Out to evaluate.'})
 
             # 🟢 PREVENT DUPLICATE EVALUATION
@@ -3763,6 +3881,13 @@ def submit_evaluation(request):
                 changes['total_raw_score'] = total_raw_score
 
             log_audit_event(request, 'EVALUATION', target_model='Event', target_id=str(event_id), status='Success', changes=changes)
+
+            send_student_email(student, 'evaluation_success', {
+                'event_title': event_title,
+                'rating': rating,
+                'next_url': '/student/event-history'
+            })
+
             return JsonResponse({'status': 'success', 'message': 'Evaluation submitted successfully!'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -3830,7 +3955,8 @@ def admin_api_action(request):
                         'org_name': ORG_FULL_NAMES.get(final_event_to_announce.org_id, final_event_to_announce.org_id),
                         'event_date': final_event_to_announce.event_date.strftime('%B %d, %Y'),
                         'start_time': final_event_to_announce.start_time.strftime('%I:%M %p'),
-                        'venue': final_event_to_announce.venue
+                        'venue': final_event_to_announce.venue,
+                        'next_url': '/student/school-events',
                     })
 
                 # Cleanup if swap happened
