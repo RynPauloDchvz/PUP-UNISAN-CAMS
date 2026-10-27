@@ -10,7 +10,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const app = createApp({
         delimiters: ['[[', ']]'],
         data() {
-            const urls = window.VUE_APP_DATA?.urls || {};
+            const defaultUrls = {
+                homepage: '/organizer/homepage',
+                school_events: '/organizer/school-events',
+                create_events: '/organizer/create-events',
+                manage_students: '/organizer/manage-students',
+                manage_attendance: '/organizer/attendance-hub',
+                analytics: '/organizer/analytics',
+                profile: '/organizer/profile',
+                messages: '/organizer/message-history',
+                document_tracking: '/organizer/document-tracking'
+            };
+            const configUrls = (function() {
+                try {
+                    const el = document.getElementById('organizer-base-config');
+                    const parsed = el ? JSON.parse(el.textContent) : {};
+                    return Object.assign({}, parsed.urls || {}, parsed.profileUrl ? { profile: parsed.profileUrl } : {});
+                } catch(e) { return {}; }
+            })();
+            const urls = Object.assign({}, defaultUrls, configUrls, window.VUE_APP_DATA?.urls || {});
             return {
                 isDark: false,
                 isLoading: true,

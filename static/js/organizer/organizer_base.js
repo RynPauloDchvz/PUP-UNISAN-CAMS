@@ -1,24 +1,42 @@
-window.VUE_APP_DATA = Object.assign(window.VUE_APP_DATA || {}, {
-    currentUrl: (function() {
-        try {
-            const el = document.getElementById('organizer-base-config');
-            return el ? JSON.parse(el.textContent).currentUrl : '';
-        } catch(e) { return ''; }
-    })(),
-    urls: Object.assign({
-        profile: (function() {
-            try {
-                const el = document.getElementById('organizer-base-config');
-                return el && JSON.parse(el.textContent).profileUrl ? JSON.parse(el.textContent).profileUrl : '/organizer/profile/';
-            } catch(e) { return '/organizer/profile/'; }
-        })()
-    }, (window.VUE_APP_DATA && window.VUE_APP_DATA.urls) || {}),
-    unreadNotifCount: 0,
-    showNotifDropdown: false,
-    notifications: [],
-    showMobileDrawer: false,
-    showLogoutModal: false
-});
+(function() {
+    let parsedConfig = {};
+    try {
+        const el = document.getElementById('organizer-base-config');
+        if (el && el.textContent) {
+            parsedConfig = JSON.parse(el.textContent);
+        }
+    } catch(e) {
+        console.error("Error reading organizer-base-config:", e);
+    }
+
+    const defaultUrls = {
+        homepage: '/organizer/homepage',
+        school_events: '/organizer/school-events',
+        create_events: '/organizer/create-events',
+        manage_students: '/organizer/manage-students',
+        manage_attendance: '/organizer/attendance-hub',
+        analytics: '/organizer/analytics',
+        profile: '/organizer/profile',
+        messages: '/organizer/message-history',
+        document_tracking: '/organizer/document-tracking'
+    };
+
+    window.VUE_APP_DATA = Object.assign(window.VUE_APP_DATA || {}, {
+        currentUrl: parsedConfig.currentUrl || '',
+        urls: Object.assign(
+            {},
+            defaultUrls,
+            parsedConfig.urls || {},
+            parsedConfig.profileUrl ? { profile: parsedConfig.profileUrl } : {},
+            (window.VUE_APP_DATA && window.VUE_APP_DATA.urls) || {}
+        ),
+        unreadNotifCount: 0,
+        showNotifDropdown: false,
+        notifications: [],
+        showMobileDrawer: false,
+        showLogoutModal: false
+    });
+})();
 
 function openLogout(e) {
             if(e) e.preventDefault();

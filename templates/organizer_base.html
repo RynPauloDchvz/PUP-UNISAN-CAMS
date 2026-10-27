@@ -42,7 +42,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
     <link rel="stylesheet" href="{% static 'css/organizer/organizer_base.css' %}">
-    <script id="organizer-base-config" type="application/json">{"currentUrl": "{{ request.resolver_match.url_name }}", "profileUrl": "{% url 'organizer_profile' %}"}</script>
+    <script id="organizer-base-config" type="application/json">{"currentUrl": "{{ request.resolver_match.url_name }}", "profileUrl": "{% url 'organizer_profile' %}", "urls": {"homepage": "{% url 'organizer_homepage' %}", "school_events": "{% url 'organizer_school_events' %}", "create_events": "{% url 'organizer_create_events' %}", "manage_students": "{% url 'organizer_manage_students' %}", "manage_attendance": "{% url 'organizer_attendance_events' %}", "analytics": "{% url 'organizer_analytics' %}", "profile": "{% url 'organizer_profile' %}", "messages": "{% url 'organizer_message_history' %}", "document_tracking": "{% url 'organizer_document_tracking' %}"}}</script>
     {% block extra_head %}{% endblock extra_head %}
 
 
@@ -476,6 +476,7 @@
     </div>
 
     
+    <script src="{% static 'js/organizer/organizer_base.js' %}"></script>
     <script src="{% static 'js/organizer/organizer.js' %}?v={% now 'U' %}"></script>
     {% block extra_js %}{% endblock extra_js %}
 
@@ -483,7 +484,5 @@
 
 <!-- 🟢 FLOATING CAMS AI ASSISTANT & HELPDESK WIDGET 🟢 -->
 {% include 'includes/cams_ai_widget.html' %}
-
-<script src="{% static 'js/organizer/organizer_base.js' %}"></script>
 </body>
 </html>
