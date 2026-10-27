@@ -113,10 +113,35 @@ const updatePasswordUrl = "/student/update-password";
     let capturedDescriptor = null;
     const livenessDetector = new FaceLivenessDetector();
 
+    function setFaceProgress(percent, isSuccess = false) {
+        const circle = document.getElementById('scanProgressCircle');
+        if (!circle) return;
+        const circumference = 276.46;
+        const p = Math.min(Math.max(percent, 0), 100);
+        circle.style.strokeDashoffset = circumference * (1 - p / 100);
+        const dot = document.getElementById('scanCenterDot');
+        if (isSuccess) {
+            circle.classList.remove('stroke-[#800000]', 'dark:stroke-[#D4AF37]');
+            circle.classList.add('stroke-green-500', 'dark:stroke-green-400');
+            if (dot) {
+                dot.classList.remove('bg-[#800000]', 'dark:bg-[#D4AF37]', 'animate-ping');
+                dot.classList.add('bg-green-500', 'scale-125');
+            }
+        } else {
+            circle.classList.remove('stroke-green-500', 'dark:stroke-green-400');
+            circle.classList.add('stroke-[#800000]', 'dark:stroke-[#D4AF37]');
+            if (dot) {
+                dot.classList.remove('bg-green-500', 'scale-125');
+                dot.classList.add('bg-[#800000]', 'dark:bg-[#D4AF37]', 'animate-ping');
+            }
+        }
+    }
+
     window.openFaceUpdateModal = function() {
         document.getElementById('settingsModal').classList.add('hidden');
         document.getElementById('faceUpdateModal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        setFaceProgress(0);
         startFaceUpdateScanner();
     }
 
@@ -131,6 +156,7 @@ const updatePasswordUrl = "/student/update-password";
             clearInterval(updateInterval);
             updateInterval = null;
         }
+        setFaceProgress(0);
         document.getElementById('faceUpdateModal').classList.add('hidden');
         document.body.style.overflow = '';
     }
@@ -214,18 +240,21 @@ const updatePasswordUrl = "/student/update-password";
                         if (!isValidLighting) {
                             livenessDetector.reset();
                             btn.disabled = true;
+                            setFaceProgress(0);
                             status.innerText = "ADJUSTING LIGHTING...";
                             status.className = "absolute top-4 left-4 right-4 bg-amber-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
                             updateQuality(false);
                         } else if (detections.length === 0) {
                             livenessDetector.reset();
                             btn.disabled = true;
+                            setFaceProgress(0);
                             status.innerText = "NO FACE DETECTED";
                             status.className = "absolute top-4 left-4 right-4 bg-amber-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
                             updateQuality(false);
                         } else if (detections.length > 1) {
                             livenessDetector.reset();
                             btn.disabled = true;
+                            setFaceProgress(0);
                             status.innerText = "MULTIPLE FACES DETECTED — SINGLE PERSON ONLY";
                             status.className = "absolute top-4 left-4 right-4 bg-red-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20";
                             updateQuality(false);
@@ -234,18 +263,22 @@ const updatePasswordUrl = "/student/update-password";
                             status.innerText = livenessRes.message;
                             if (livenessRes.isLive) {
                                 btn.disabled = false;
+                                setFaceProgress(50);
                                 status.className = "absolute top-4 left-4 right-4 bg-green-600/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20 border border-green-400/50 shadow-green-500/30";
                                 updateQuality(true);
                             } else if (livenessRes.status === 'STATIC_PHOTO_DETECTED') {
                                 btn.disabled = true;
+                                setFaceProgress(0);
                                 status.className = "absolute top-4 left-4 right-4 bg-red-700/95 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20 animate-bounce border border-red-400";
                                 updateQuality(false);
                             } else if (livenessRes.status === 'SPOOF_REJECTED') {
                                 btn.disabled = true;
+                                setFaceProgress(0);
                                 status.className = "absolute top-4 left-4 right-4 bg-red-800/95 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20 border border-red-500";
                                 updateQuality(false);
                             } else {
                                 btn.disabled = true;
+                                setFaceProgress(Math.min((livenessDetector.stableFrames || 1) * 15, 40));
                                 status.className = "absolute top-4 left-4 right-4 bg-cyan-700/90 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20 animate-pulse border border-cyan-400/40";
                                 updateQuality(false);
                             }
@@ -270,7 +303,17 @@ const updatePasswordUrl = "/student/update-password";
                     return;
                 }
                 btn.disabled = true;
-                btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> SAVING...`;
+                btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> SAVING RECORD...`;
+                
+                // Animate progress on the scan circle while saving
+                setFaceProgress(65);
+                let currentProgress = 65;
+                const progressTimer = setInterval(() => {
+                    if (currentProgress < 92) {
+                        currentProgress += 5;
+                        setFaceProgress(currentProgress);
+                    }
+                }, 200);
 
                 const canvas = document.createElement('canvas');
                 canvas.width = video.videoWidth; 
@@ -289,6 +332,8 @@ const updatePasswordUrl = "/student/update-password";
                 }
 
                 if (!detection || !detection.descriptor) {
+                    clearInterval(progressTimer);
+                    setFaceProgress(0);
                     showBiometricModal({
                         type: 'warning',
                         title: 'FACE NOT RECOGNIZED',
@@ -312,7 +357,10 @@ const updatePasswordUrl = "/student/update-password";
                         body: fd
                     });
                     const data = await resp.json();
+                    clearInterval(progressTimer);
+                    
                     if (data.status === 'success') {
+                        setFaceProgress(100, true);
                         showBiometricToast("Biometric identity updated successfully!", "success");
                         showBiometricModal({
                             type: 'success',
@@ -325,6 +373,7 @@ const updatePasswordUrl = "/student/update-password";
                             }
                         });
                     } else {
+                        setFaceProgress(0);
                         const isConflict = data.message && (data.message.includes('Conflict') || data.message.includes('already registered'));
                         const isSpoof = data.message && (data.message.includes('spoof') || data.message.includes('Live'));
                         showBiometricModal({
@@ -336,6 +385,8 @@ const updatePasswordUrl = "/student/update-password";
                         btn.innerHTML = `<i class="ph-bold ph-fingerprint"></i> Confirm New Identity`;
                     }
                 } catch(e) {
+                    clearInterval(progressTimer);
+                    setFaceProgress(0);
                     showBiometricModal({
                         type: 'error',
                         title: 'NETWORK ERROR',

@@ -212,14 +212,14 @@ class FaceLivenessDetector {
             if (frameCheck.reason === 'FACE_TOO_SMALL') {
                 return {
                     status: 'FACE_TOO_SMALL',
-                    message: '⚠️ MOVE CLOSER TO CAMERA (LUMAPIT KAUNTI)',
+                    message: 'MOVE CLOSER TO CAMERA',
                     isLive: false,
                     colorClass: 'amber'
                 };
             }
             return {
                 status: 'FACE_CUT_OFF',
-                message: '⚠️ SHOW FULL FACE (IPAKITA ANG BUONG MUKHA)',
+                message: 'SHOW FULL FACE IN FRAME',
                 isLive: false,
                 colorClass: 'amber'
             };
@@ -231,7 +231,7 @@ class FaceLivenessDetector {
             this.stableFrames = 0;
             return {
                 status: 'SPOOF_REJECTED',
-                message: '⚠️ NON-HUMAN FACE REJECTED (BAWAL ANG HAYOP/OBJECT)',
+                message: 'NON-HUMAN FACE REJECTED',
                 isLive: false,
                 colorClass: 'red'
             };
@@ -243,7 +243,7 @@ class FaceLivenessDetector {
             this.isLive = false;
             return {
                 status: 'STATIC_PHOTO_DETECTED',
-                message: '⚠️ STATIC PHOTO DETECTED (BAWAL ANG LITRATO)',
+                message: 'STATIC PHOTO DETECTED',
                 isLive: false,
                 colorClass: 'red'
             };
@@ -256,7 +256,7 @@ class FaceLivenessDetector {
             } else {
                 return {
                     status: 'VERIFIED',
-                    message: '✓ FACE VERIFIED (KUMPIRMADO)',
+                    message: 'FACE VERIFIED',
                     isLive: true,
                     colorClass: 'green'
                 };
@@ -270,7 +270,7 @@ class FaceLivenessDetector {
             this.verifiedAt = now;
             return {
                 status: 'VERIFIED',
-                message: '✓ FACE VERIFIED (KUMPIRMADO)',
+                message: 'FACE VERIFIED',
                 isLive: true,
                 colorClass: 'green'
             };
@@ -278,7 +278,7 @@ class FaceLivenessDetector {
 
         return {
             status: 'ANALYZING',
-            message: '🔍 SCANNING BIOMETRIC IDENTITY...',
+            message: 'SCANNING BIOMETRIC IDENTITY...',
             isLive: false,
             colorClass: 'cyan'
         };

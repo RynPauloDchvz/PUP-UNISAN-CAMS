@@ -652,18 +652,17 @@
                                 <!-- 🟢 REAL-TIME STATUS ALERTS & LIVENESS 🟢 -->
                                 <div class="absolute inset-x-6 bottom-12 flex flex-col items-center gap-2">
                                     <div v-if="qualityStatus.obstructed" class="bg-red-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl animate-bounce backdrop-blur-md">
-                                        <i class="ph-bold ph-warning-circle"></i> Detection Blocked
+                                        Detection Blocked
                                     </div>
                                     <div v-else-if="qualityStatus.tooDark" class="bg-amber-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md">
-                                        <i class="ph-bold ph-moon"></i> Increase Lighting
+                                        Increase Lighting
                                     </div>
                                     <div v-else-if="qualityStatus.noFaceDetail" class="bg-pup-maroon text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md">
-                                        <i class="ph-bold ph-user-focus"></i> Position Face Clearly
+                                        Position Face Clearly
                                     </div>
                                     <div v-else class="text-center w-full px-2">
                                         <div :class="{'bg-green-600 border-green-400/50 shadow-green-500/30': isLiveVerified, 'bg-red-700 animate-bounce border-red-400': isStaticPhoto, 'bg-cyan-700 animate-pulse border-cyan-400/40': !isLiveVerified && !isStaticPhoto}" 
-                                             class="text-white text-[8px] font-black uppercase px-3.5 py-1.5 rounded-full shadow-2xl backdrop-blur-md border flex items-center gap-1.5 justify-center">
-                                            <i :class="isLiveVerified ? 'ph-bold ph-check-circle' : (isStaticPhoto ? 'ph-bold ph-warning-circle' : 'ph-bold ph-eye')"></i>
+                                             class="text-white text-[8px] font-black uppercase px-3.5 py-1.5 rounded-full shadow-2xl backdrop-blur-md border flex items-center justify-center">
                                             <span v-text="livenessMessage"></span>
                                         </div>
                                     </div>

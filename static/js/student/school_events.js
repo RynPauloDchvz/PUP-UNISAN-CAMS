@@ -12,6 +12,30 @@ function initSchoolEventsLogic() {
     let qualityScore = 0;
     let validationInterval = null;
 
+    function setFaceProgress(percent, isSuccess = false) {
+        const circle = document.getElementById('scanProgressCircle');
+        if (!circle) return;
+        const circumference = 276.46;
+        const p = Math.min(Math.max(percent, 0), 100);
+        circle.style.strokeDashoffset = circumference * (1 - p / 100);
+        const dot = document.getElementById('scanCenterDot');
+        if (isSuccess) {
+            circle.classList.remove('stroke-[#800000]', 'dark:stroke-[#D4AF37]');
+            circle.classList.add('stroke-green-500', 'dark:stroke-green-400');
+            if (dot) {
+                dot.classList.remove('bg-[#800000]', 'dark:bg-[#D4AF37]', 'animate-ping');
+                dot.classList.add('bg-green-500', 'scale-125');
+            }
+        } else {
+            circle.classList.remove('stroke-green-500', 'dark:stroke-green-400');
+            circle.classList.add('stroke-[#800000]', 'dark:stroke-[#D4AF37]');
+            if (dot) {
+                dot.classList.remove('bg-green-500', 'scale-125');
+                dot.classList.add('bg-[#800000]', 'dark:bg-[#D4AF37]', 'animate-ping');
+            }
+        }
+    }
+
     // --- BIOMETRIC MODAL & TOAST SYSTEM (FORCE-CHANGE UI STYLE) ---
     function showBiometricModal({
         type = 'error',
@@ -361,6 +385,7 @@ function initSchoolEventsLogic() {
             if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
             if (validationInterval) { clearInterval(validationInterval); validationInterval = null; }
             currentEvent = null; isFaceVerified = isLocationVerified = false;
+            setFaceProgress(0);
             document.getElementById('qualityMeter').classList.add('hidden');
         }, 350);
     }
@@ -378,6 +403,7 @@ function initSchoolEventsLogic() {
         status.innerText = "INITIALIZING SENSORS...";
         isLocationVerified = false;
         livenessDetector.reset();
+        setFaceProgress(0);
 
         if (!modelsLoaded) {
             const MODEL_PATH = "/static/models";
@@ -490,7 +516,7 @@ function initSchoolEventsLogic() {
             } else if (isTooBright) {
                 document.getElementById('qualityText').innerText = 'TOO BRIGHT';
             } else if (isGlare) {
-                document.getElementById('qualityText').innerText = 'GLARE/SALAMIN';
+                document.getElementById('qualityText').innerText = 'GLARE DETECTED';
             } else {
                 document.getElementById('qualityText').innerText = 'OPTIMAL';
             }
@@ -510,26 +536,33 @@ function initSchoolEventsLogic() {
 
                 if (!qualityStatus.isReady) { 
                     livenessDetector.reset();
+                    setFaceProgress(0);
                     status.innerText = "OPTIMIZING SENSOR QUALITY..."; 
                     status.className = "absolute top-6 left-6 right-6 bg-amber-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
                 } else if (detections.length === 0) {
                     livenessDetector.reset();
+                    setFaceProgress(0);
                     status.innerText = "NO FACE DETECTED"; 
                     status.className = "absolute top-6 left-6 right-6 bg-amber-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
                 } else if (detections.length > 1) {
                     livenessDetector.reset();
+                    setFaceProgress(0);
                     status.innerText = "MULTIPLE FACES DETECTED — SINGLE PERSON ONLY"; 
                     status.className = "absolute top-6 left-6 right-6 bg-red-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse";
                 } else {
                     const livenessRes = livenessDetector.processFrame(detections[0], video.videoWidth, video.videoHeight);
                     status.innerText = livenessRes.message;
                     if (livenessRes.isLive) {
+                        setFaceProgress(60);
                         status.className = "absolute top-6 left-6 right-6 bg-green-600/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl border border-green-400/50 shadow-green-500/30";
                     } else if (livenessRes.status === 'STATIC_PHOTO_DETECTED') {
+                        setFaceProgress(0);
                         status.className = "absolute top-6 left-6 right-6 bg-red-700/95 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-bounce border border-red-400";
                     } else if (livenessRes.status === 'SPOOF_REJECTED') {
+                        setFaceProgress(0);
                         status.className = "absolute top-6 left-6 right-6 bg-red-800/95 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl border border-red-500";
                     } else {
+                        setFaceProgress(Math.min((livenessDetector.stableFrames || 1) * 15, 45));
                         status.className = "absolute top-6 left-6 right-6 bg-cyan-700/90 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center shadow-2xl animate-pulse border border-cyan-400/40";
                     }
                 }
@@ -582,6 +615,17 @@ function initSchoolEventsLogic() {
         isSubmitting = true;
         const btn = document.getElementById('btnSubmitScan');
         btn.disabled = true; btn.innerText = "COMMITTING TO SECURE LEDGER...";
+
+        // Animate circular progress smoothly while committing record
+        setFaceProgress(65);
+        let currentProgress = 65;
+        const saveProgressInterval = setInterval(() => {
+            if (currentProgress < 94) {
+                currentProgress += 5;
+                setFaceProgress(currentProgress);
+            }
+        }, 180);
+
         const canvas = document.createElement('canvas'); const video = document.getElementById('videoFeed');
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         canvas.getContext('2d', { willReadFrequently: true }).drawImage(video, 0, 0);
@@ -597,6 +641,8 @@ function initSchoolEventsLogic() {
         }
 
         if (!detection || !detection.descriptor) {
+            clearInterval(saveProgressInterval);
+            setFaceProgress(0);
             showBiometricModal({
                 type: 'warning',
                 title: 'FACE NOT CLEARLY DETECTED',
@@ -619,10 +665,15 @@ function initSchoolEventsLogic() {
         try {
             const res = await fetch('/student/record-attendance', { method: 'POST', headers: { 'X-CSRFToken': csrf }, body: fd });
             const data = await res.json();
+            clearInterval(saveProgressInterval);
             if (data.status === 'success' || data.status === 'issue') {
+                setFaceProgress(100, true);
                 showBiometricToast("Attendance verified and securely logged!", "success");
-                switchView('viewSuccess');
+                setTimeout(() => {
+                    switchView('viewSuccess');
+                }, 400);
             } else { 
+                setFaceProgress(0);
                 const msg = data.message || "Attendance validation failed.";
                 const isMismatch = msg.includes("does not match") || msg.includes("Biometric") || msg.includes("mismatch");
                 const isLocation = msg.includes("geofence") || msg.includes("outside") || msg.includes("premises") || msg.includes("campus");
@@ -638,6 +689,8 @@ function initSchoolEventsLogic() {
                 checkAllVerified();
             }
         } catch (e) { 
+            clearInterval(saveProgressInterval);
+            setFaceProgress(0);
             showBiometricModal({
                 type: 'error',
                 title: 'INSTITUTIONAL SYNC ERROR',

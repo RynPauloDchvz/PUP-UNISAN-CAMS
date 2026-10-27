@@ -42,7 +42,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
     <link rel="stylesheet" href="{% static 'css/organizer/organizer_base.css' %}">
-    <script id="organizer-base-config" type="application/json">{"currentUrl": "{{ request.resolver_match.url_name }}"}</script>
+    <script id="organizer-base-config" type="application/json">{"currentUrl": "{{ request.resolver_match.url_name }}", "profileUrl": "{% url 'organizer_profile' %}"}</script>
     {% block extra_head %}{% endblock extra_head %}
 
 
@@ -172,9 +172,9 @@
                     <div v-if="showNotifDropdown" @click="showNotifDropdown = false" class="fixed inset-0 z-[4999]"></div>
                 </div>
 
-                <!-- ?? Profile Icon ?? -->
+                <!-- 👤 Profile Icon 👤 -->
                 <div class="relative">
-                    <button {% if request.resolver_match.url_name != 'organizer_profile' %}@click="handleHeaderProfileClick"{% endif %} class="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 transition-all overflow-hidden flex items-center justify-center {% if request.resolver_match.url_name == 'organizer_profile' %}bg-pup-maroon/10 dark:bg-pup-gold/10 border-pup-maroon dark:border-pup-gold cursor-default{% else %}bg-gray-100 dark:bg-gray-800 border-transparent hover:border-pup-maroon dark:hover:border-pup-gold cursor-pointer{% endif %}" title="My Profile">
+                    <button @click="handleHeaderProfileClick" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 transition-all overflow-hidden flex items-center justify-center cursor-pointer active:scale-95 {% if request.resolver_match.url_name == 'organizer_profile' %}border-pup-maroon dark:border-pup-gold shadow-md{% else %}border-transparent hover:border-pup-maroon dark:hover:border-pup-gold bg-gray-100 dark:bg-gray-800{% endif %}" title="My Profile">
                         {% if request.user.orgprofile.profile_picture %}
                             <img src="{{ request.user.orgprofile.profile_picture.url }}" class="w-full h-full object-cover">
                         {% else %}

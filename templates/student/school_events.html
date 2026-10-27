@@ -55,7 +55,7 @@
 
 <!-- Participation Modal -->
 <div id="participationModal" style="display: none;" class="fixed inset-0 z-[2000] items-center justify-center overflow-hidden p-0 sm:p-10 font-sans">
-    <div class="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-300" id="bgOverlayClose"></div>
+    <div class="fixed inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-md transition-opacity duration-300" id="bgOverlayClose"></div>
     
     <div id="modalContentWrapper" class="ios-pop-wrapper relative bg-white dark:bg-pup-darkcard rounded-none sm:rounded-[3rem] shadow-2xl w-full max-w-2xl mx-auto flex flex-col h-full sm:h-auto sm:max-h-[90vh] border-0 sm:border border-gray-100 dark:border-gray-800 overflow-hidden">
         
@@ -153,7 +153,7 @@
                     </div>
                 </div>
 
-                <div id="cameraContainer" class="relative bg-black rounded-[2.5rem] overflow-hidden w-full max-w-md h-[320px] border-4 border-gray-100 dark:border-gray-800 transition-all shadow-2xl mx-auto mb-6 shrink-0 group">
+                <div id="cameraContainer" class="relative bg-gray-100 dark:bg-black rounded-[2.5rem] overflow-hidden w-full max-w-md h-[320px] border-4 border-gray-200 dark:border-gray-800 transition-all shadow-2xl mx-auto mb-6 shrink-0 group">
                     <video id="videoFeed" class="w-full h-full object-cover transform -scale-x-100" autoplay playsinline></video>
                     
                     <div id="biometricOverlay" class="absolute inset-0 pointer-events-none">
@@ -162,29 +162,45 @@
                         <div id="corner-bl" class="absolute bottom-8 left-8 w-6 h-6 border-b-4 border-l-4 border-pup-gold/60 rounded-bl-lg transition-all duration-300"></div>
                         <div id="corner-br" class="absolute bottom-8 right-8 w-6 h-6 border-b-4 border-r-4 border-pup-gold/60 rounded-br-lg transition-all duration-300"></div>
 
-                        <div class="absolute inset-16 border border-white/10 rounded-full flex items-center justify-center">
-                            <div class="w-2 h-2 bg-pup-gold/40 rounded-full animate-ping"></div>
+                        <!-- Center Circular Progress Guide Ring -->
+                        <div class="absolute inset-12 sm:inset-14 rounded-full flex items-center justify-center pointer-events-none">
+                            <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                                <!-- Background Track -->
+                                <circle cx="50" cy="50" r="44" 
+                                        class="stroke-gray-300/60 dark:stroke-white/15 transition-colors" 
+                                        stroke-width="3" 
+                                        fill="none" />
+                                <!-- Animated Progress Ring -->
+                                <circle id="scanProgressCircle" cx="50" cy="50" r="44" 
+                                        class="stroke-[#800000] dark:stroke-[#D4AF37] transition-all duration-300 ease-out" 
+                                        stroke-width="4.5" 
+                                        stroke-linecap="round" 
+                                        stroke-dasharray="276.46" 
+                                        stroke-dashoffset="276.46" 
+                                        fill="none" />
+                            </svg>
+                            <div id="scanCenterDot" class="w-2.5 h-2.5 rounded-full bg-[#800000] dark:bg-[#D4AF37] animate-ping transition-colors"></div>
                         </div>
 
                         <div class="absolute inset-x-6 bottom-12 flex flex-col items-center gap-2">
                             <div id="alert-obstructed" class="hidden bg-red-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl animate-bounce backdrop-blur-md">
-                                <i class="ph-bold ph-warning-circle"></i> Detection Blocked
+                                Detection Blocked
                             </div>
                             <div id="alert-tooDark" class="hidden bg-amber-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md">
-                                <i class="ph-bold ph-moon"></i> Increase Lighting
+                                Increase Lighting
                             </div>
                             <div id="alert-noFaceDetail" class="hidden bg-pup-maroon text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md">
-                                <i class="ph-bold ph-user-focus"></i> Position Face Clearly
+                                Position Face Clearly
                             </div>
                             <div id="alert-ready" class="hidden bg-green-600 text-white text-[8px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-md animate-pulse">
-                                <i class="ph-bold ph-fingerprint"></i> Identity Ready
+                                Identity Ready
                             </div>
                         </div>
 
                         <div class="absolute top-0 left-0 w-full h-[2px] bg-pup-gold/40 blur-sm scan-line"></div>
                     </div>
 
-                    <div id="scanStatus" class="absolute top-6 left-6 right-6 bg-black/80 backdrop-blur-2xl px-4 py-3 rounded-full text-white text-[9px] font-black uppercase tracking-[0.25em] text-center border border-white/10 shadow-2xl">
+                    <div id="scanStatus" class="absolute top-6 left-6 right-6 bg-white/90 dark:bg-black/80 backdrop-blur-2xl px-4 py-3 rounded-full text-gray-900 dark:text-white text-[9px] font-black uppercase tracking-[0.25em] text-center border border-gray-200/50 dark:border-white/10 shadow-2xl">
                         Warming Up AI Core...
                     </div>
                 </div>
@@ -231,7 +247,7 @@
 </div>
 
     <!-- 🔴 BIOMETRIC ATTENDANCE FEEDBACK / CONFLICT / ALERT MODAL (FORCE-CHANGE UI STYLE) 🔴 -->
-    <div id="biometricFeedbackModal" class="hidden fixed inset-0 z-[10002] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
+    <div id="biometricFeedbackModal" class="hidden fixed inset-0 z-[10002] flex items-center justify-center p-3 sm:p-4 bg-white/70 dark:bg-black/80 backdrop-blur-md">
         <div class="relative w-full max-w-sm rounded-3xl bg-white dark:bg-[#181818] border border-gray-200 dark:border-white/10 p-5 sm:p-6 shadow-2xl text-center max-h-[90dvh] overflow-y-auto">
             <div id="bioModalIconContainer" class="w-16 h-16 mx-auto rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 transition-colors">
                 <i id="bioModalIcon" class="ph-bold ph-shield-warning text-3xl"></i>

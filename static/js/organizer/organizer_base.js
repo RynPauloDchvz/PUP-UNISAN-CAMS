@@ -5,6 +5,14 @@ window.VUE_APP_DATA = Object.assign(window.VUE_APP_DATA || {}, {
             return el ? JSON.parse(el.textContent).currentUrl : '';
         } catch(e) { return ''; }
     })(),
+    urls: Object.assign({
+        profile: (function() {
+            try {
+                const el = document.getElementById('organizer-base-config');
+                return el && JSON.parse(el.textContent).profileUrl ? JSON.parse(el.textContent).profileUrl : '/organizer/profile/';
+            } catch(e) { return '/organizer/profile/'; }
+        })()
+    }, (window.VUE_APP_DATA && window.VUE_APP_DATA.urls) || {}),
     unreadNotifCount: 0,
     showNotifDropdown: false,
     notifications: [],

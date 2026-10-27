@@ -325,8 +325,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800';
             },
             handleHeaderProfileClick() {
-                if (window.innerWidth >= 1024) {
-                    window.location.href = window.VUE_APP_DATA?.urls?.profile || '#';
+                const profileUrl = (window.VUE_APP_DATA && window.VUE_APP_DATA.urls && window.VUE_APP_DATA.urls.profile) ? window.VUE_APP_DATA.urls.profile : '/organizer/profile/';
+                if (window.innerWidth >= 768) {
+                    window.location.href = profileUrl;
                 } else {
                     this.showProfileBubble = !this.showProfileBubble;
                 }

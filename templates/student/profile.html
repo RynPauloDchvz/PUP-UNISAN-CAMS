@@ -470,68 +470,83 @@
 </div>
 
     <!-- Biometric Face Update Scanner Modal -->
-    <div id="faceUpdateModal" class="hidden fixed inset-0 z-[2020] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md">
-        <div class="fixed inset-0 bg-black/70" onclick="closeFaceUpdateModal()"></div>
-        <div class="relative bg-[#161616] text-white rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/10 w-full max-w-md z-10 flex flex-col max-h-[96dvh] overflow-hidden">
+    <div id="faceUpdateModal" class="hidden fixed inset-0 z-[2020] flex items-center justify-center p-3 sm:p-6 bg-white/70 dark:bg-black/80 backdrop-blur-md">
+        <div class="fixed inset-0 bg-black/20 dark:bg-black/70" onclick="closeFaceUpdateModal()"></div>
+        <div class="relative bg-white dark:bg-[#161616] text-gray-900 dark:text-white rounded-3xl p-5 sm:p-7 shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-md z-10 flex flex-col max-h-[96dvh] overflow-hidden transition-colors">
             
             <!-- Header -->
-            <div class="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-white/10 shrink-0">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-full bg-[#800000]/30 dark:bg-[#D4AF37]/30 border border-[#800000]/40 dark:border-[#D4AF37]/40 flex items-center justify-center text-[#800000] dark:text-[#D4AF37] text-lg">
+                    <div class="w-9 h-9 rounded-full bg-[#800000]/10 dark:bg-[#D4AF37]/20 border border-[#800000]/20 dark:border-[#D4AF37]/40 flex items-center justify-center text-[#800000] dark:text-[#D4AF37] text-lg">
                         <i class="ph-fill ph-user-focus"></i>
                     </div>
                     <div>
-                        <h3 class="text-sm font-black uppercase tracking-wider text-white">Update Face Identity</h3>
-                        <p class="text-[10px] text-gray-400">Position face centered inside the frame</p>
+                        <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">Update Face Identity</h3>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Position face centered inside the frame</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeFaceUpdateModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white flex items-center justify-center transition-colors">
+                <button type="button" onclick="closeFaceUpdateModal()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center justify-center transition-colors">
                     <i class="ph-bold ph-x text-base"></i>
                 </button>
             </div>
 
             <!-- Quality Meter -->
             <div id="updateQualityMeter" class="mt-3 flex items-center justify-between px-1 opacity-0 transition-opacity duration-300 shrink-0">
-                <span class="text-[9px] font-bold uppercase tracking-wider text-gray-400">Signal Quality</span>
+                <span class="text-[9px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Signal Quality</span>
                 <div class="flex items-center gap-2">
-                    <span id="updateQualityLabel" class="text-[8px] font-black text-white uppercase tracking-widest leading-none">SCANNING...</span>
+                    <span id="updateQualityLabel" class="text-[8px] font-black text-gray-900 dark:text-white uppercase tracking-widest leading-none">SCANNING...</span>
                     <div class="flex items-end gap-1 h-3.5">
-                        <div id="bar1" class="w-1 bg-white/20 rounded-full transition-all duration-300" style="height: 20%;"></div>
-                        <div id="bar2" class="w-1 bg-white/20 rounded-full transition-all duration-300" style="height: 20%;"></div>
-                        <div id="bar3" class="w-1 bg-white/20 rounded-full transition-all duration-300" style="height: 20%;"></div>
+                        <div id="bar1" class="w-1 bg-gray-300 dark:bg-white/20 rounded-full transition-all duration-300" style="height: 20%;"></div>
+                        <div id="bar2" class="w-1 bg-gray-300 dark:bg-white/20 rounded-full transition-all duration-300" style="height: 20%;"></div>
+                        <div id="bar3" class="w-1 bg-gray-300 dark:bg-white/20 rounded-full transition-all duration-300" style="height: 20%;"></div>
                     </div>
                 </div>
             </div>
 
             <!-- Big Biometric Scanner Viewport -->
-            <div class="relative w-64 h-64 sm:w-72 sm:h-72 rounded-[2.5rem] overflow-hidden bg-black border-4 border-white/20 shadow-2xl mx-auto my-3 shrink-0">
+            <div class="relative w-64 h-64 sm:w-72 sm:h-72 rounded-[2.5rem] overflow-hidden bg-gray-100 dark:bg-black border-4 border-gray-200 dark:border-white/20 shadow-2xl mx-auto my-3 shrink-0 transition-colors">
                 <video id="faceUpdateVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
                 
                 <!-- Biometric Overlay -->
                 <div class="absolute inset-0 pointer-events-none">
                     <!-- 4 Corner Brackets -->
-                    <div class="absolute top-4 left-4 w-7 h-7 border-t-4 border-l-4 border-amber-400 rounded-tl-xl"></div>
-                    <div class="absolute top-4 right-4 w-7 h-7 border-t-4 border-r-4 border-amber-400 rounded-tr-xl"></div>
-                    <div class="absolute bottom-4 left-4 w-7 h-7 border-b-4 border-l-4 border-amber-400 rounded-bl-xl"></div>
-                    <div class="absolute bottom-4 right-4 w-7 h-7 border-b-4 border-r-4 border-amber-400 rounded-br-xl"></div>
+                    <div class="absolute top-4 left-4 w-7 h-7 border-t-4 border-l-4 border-pup-maroon dark:border-pup-gold rounded-tl-xl transition-colors"></div>
+                    <div class="absolute top-4 right-4 w-7 h-7 border-t-4 border-r-4 border-pup-maroon dark:border-pup-gold rounded-tr-xl transition-colors"></div>
+                    <div class="absolute bottom-4 left-4 w-7 h-7 border-b-4 border-l-4 border-pup-maroon dark:border-pup-gold rounded-bl-xl transition-colors"></div>
+                    <div class="absolute bottom-4 right-4 w-7 h-7 border-b-4 border-r-4 border-pup-maroon dark:border-pup-gold rounded-br-xl transition-colors"></div>
 
-                    <!-- Center Ring -->
-                    <div class="absolute inset-8 border-2 border-dashed border-white/30 rounded-full flex items-center justify-center">
-                        <div class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></div>
+                    <!-- Center Circular Progress Guide Ring -->
+                    <div class="absolute inset-8 sm:inset-10 rounded-full flex items-center justify-center">
+                        <svg class="absolute inset-0 w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                            <!-- Background Track -->
+                            <circle cx="50" cy="50" r="44" 
+                                    class="stroke-gray-300/60 dark:stroke-white/15 transition-colors" 
+                                    stroke-width="3" 
+                                    fill="none" />
+                            <!-- Animated Progress Ring -->
+                            <circle id="scanProgressCircle" cx="50" cy="50" r="44" 
+                                    class="stroke-[#800000] dark:stroke-[#D4AF37] transition-all duration-300 ease-out" 
+                                    stroke-width="4.5" 
+                                    stroke-linecap="round" 
+                                    stroke-dasharray="276.46" 
+                                    stroke-dashoffset="276.46" 
+                                    fill="none" />
+                        </svg>
+                        <div id="scanCenterDot" class="w-2.5 h-2.5 rounded-full bg-[#800000] dark:bg-[#D4AF37] animate-ping transition-colors"></div>
                     </div>
 
-                    <!-- Status Banner -->
-                    <div id="faceUpdateStatus" class="absolute top-4 left-4 right-4 bg-black/80 backdrop-blur-2xl px-3 py-2 rounded-full text-white text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-2xl z-20">
+                    <!-- Status Banner (Pure text, no icons) -->
+                    <div id="faceUpdateStatus" class="absolute top-4 left-4 right-4 bg-white/90 dark:bg-black/80 text-gray-900 dark:text-white backdrop-blur-2xl px-3 py-2 rounded-full text-[8px] font-black uppercase tracking-[0.2em] text-center shadow-xl z-20 border border-gray-200/50 dark:border-white/10">
                         SEARCHING FOR FACE...
                     </div>
 
                     <!-- Laser Scan Line -->
-                    <div class="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent blur-[1px] scan-line animate-scan"></div>
+                    <div class="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#800000] dark:via-[#D4AF37] to-transparent blur-[1px] scan-line animate-scan"></div>
                 </div>
             </div>
 
             <!-- Notice -->
-            <p class="text-[10px] text-gray-400 text-center leading-snug shrink-0 mb-3">
+            <p class="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-snug shrink-0 mb-3">
                 Please remove glasses, face masks, or hats and face the camera directly in good lighting.
             </p>
 
@@ -540,7 +555,7 @@
                 <button type="button" id="btnConfirmUpdateFace" disabled class="w-full py-4 rounded-2xl bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black font-black text-sm flex justify-center items-center gap-2 transition-all shadow-xl disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider">
                     <i class="ph-bold ph-fingerprint text-xl"></i> Confirm New Identity
                 </button>
-                <button type="button" onclick="closeFaceUpdateModal()" class="w-full py-2 text-xs font-bold text-gray-400 hover:text-white uppercase tracking-wider transition-colors">
+                <button type="button" onclick="closeFaceUpdateModal()" class="w-full py-2 text-xs font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white uppercase tracking-wider transition-colors">
                     Cancel
                 </button>
             </div>
@@ -548,7 +563,7 @@
     </div>
 
     <!-- 🔴 BIOMETRIC FEEDBACK / CONFLICT / ALERT MODAL (FORCE-CHANGE UI STYLE) 🔴 -->
-    <div id="biometricFeedbackModal" class="hidden fixed inset-0 z-[10002] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
+    <div id="biometricFeedbackModal" class="hidden fixed inset-0 z-[10002] flex items-center justify-center p-3 sm:p-4 bg-white/70 dark:bg-black/80 backdrop-blur-md">
         <div class="relative w-full max-w-sm rounded-3xl bg-white dark:bg-[#181818] border border-gray-200 dark:border-white/10 p-5 sm:p-6 shadow-2xl text-center max-h-[90dvh] overflow-y-auto">
             <div id="bioModalIconContainer" class="w-16 h-16 mx-auto rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center mb-4 transition-colors">
                 <i id="bioModalIcon" class="ph-bold ph-shield-warning text-3xl"></i>
