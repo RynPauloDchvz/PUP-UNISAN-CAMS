@@ -2859,12 +2859,71 @@ def save_org_officers_api(request):
         org_profile = OrgProfile.objects.get(user=request.user)
         org_acronym = org_profile.organization.strip()
 
+        action_mode = (request.POST.get('action_mode') or 'append').strip().lower()
         officers_meta_raw = request.POST.get('officers_meta', '[]')
         officers_meta = json.loads(officers_meta_raw)
         if not isinstance(officers_meta, list):
             return JsonResponse({"status": "error", "message": "Invalid officers data format."})
 
         valid_years = {'1st Year', '2nd Year', '3rd Year', '4th Year'}
+
+        if action_mode == 'append':
+            if len(officers_meta) == 0:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Please fill in at least one officer to add."
+                })
+
+            existing_officers = list(OrgOfficer.objects.filter(organization__iexact=org_acronym).order_by('order', 'id'))
+            start_order = len(existing_officers)
+            added_count = 0
+
+            for idx, item in enumerate(officers_meta):
+                name = (item.get('name') or '').strip()
+                position = (item.get('position') or '').strip()
+                year_level = (item.get('year_level') or '1st Year').strip()
+                if year_level not in valid_years:
+                    year_level = '1st Year'
+
+                if not name or not position:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"Officer #{idx + 1}: Please provide both Officer Name and Position."
+                    })
+
+                existing_img = (item.get('existing_image_url') or '').strip()
+                file_key = item.get('file_key')
+                uploaded_file = request.FILES.get(file_key) if file_key else None
+
+                new_off = OrgOfficer(
+                    organization=org_acronym,
+                    name=name,
+                    year_level=year_level,
+                    position=position,
+                    order=start_order + idx,
+                    static_image_url=existing_img if (existing_img and not existing_img.startswith('blob:') and not existing_img.startswith('data:')) else '/static/images/student.jpg'
+                )
+                if uploaded_file:
+                    new_off.image = uploaded_file
+                new_off.save()
+                added_count += 1
+
+            updated_officers = get_org_officers_data(org_acronym)
+            log_audit_event(
+                request,
+                'CREATE',
+                target_model='OrgOfficer',
+                target_id=org_acronym,
+                status='Success',
+                changes={'organization': org_acronym, 'added_count': added_count, 'total_officers': len(updated_officers)}
+            )
+            return JsonResponse({
+                "status": "success",
+                "message": f"Added {added_count} new officer(s) to Meet the Officers!",
+                "officers": updated_officers
+            })
+
+        # action_mode == 'replace' (Replace or update existing officers)
         kept_ids = []
 
         existing_map = {
@@ -2919,9 +2978,10 @@ def save_org_officers_api(request):
                 new_off.save()
                 kept_ids.append(new_off.id)
 
-        # Remove any deleted officers for this org
+        # Remove any deleted/replaced officers for this org
         OrgOfficer.objects.filter(organization__iexact=org_acronym).exclude(id__in=kept_ids).delete()
 
+        updated_officers = get_org_officers_data(org_acronym)
         log_audit_event(
             request,
             'UPDATE',
@@ -2933,8 +2993,8 @@ def save_org_officers_api(request):
 
         return JsonResponse({
             "status": "success",
-            "message": "Meet the Officers lineup updated successfully!",
-            "officers": get_org_officers_data(org_acronym)
+            "message": "Officers lineup replaced and updated successfully!",
+            "officers": updated_officers
         })
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})

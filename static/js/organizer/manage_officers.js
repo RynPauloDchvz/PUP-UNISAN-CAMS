@@ -2,33 +2,14 @@
     const YEAR_LEVEL_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
     const DEFAULT_OFFICER_IMAGE = '/static/images/student.jpg';
 
+    let savedOfficersList = [];
     let officersState = [];
+    let currentActionMode = 'append'; // 'append' (Add Officers) | 'replace' (Replace Officers)
     let nextTempId = 1;
 
-    function loadInitialOfficers() {
-        try {
-            const rawEl = document.getElementById('initial-org-officers-data');
-            const parsed = rawEl && rawEl.textContent ? JSON.parse(rawEl.textContent) : [];
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                officersState = parsed.map((item, idx) => ({
-                    uid: 'off_' + idx + '_' + (nextTempId++),
-                    id: item.id !== undefined ? item.id : null,
-                    name: item.name || '',
-                    year_level: YEAR_LEVEL_OPTIONS.includes(item.year_level) ? item.year_level : '1st Year',
-                    position: item.position || '',
-                    imagePreview: item.image || DEFAULT_OFFICER_IMAGE,
-                    existingImageUrl: item.image || DEFAULT_OFFICER_IMAGE,
-                    file: null,
-                    drawerOpen: false
-                }));
-                return;
-            }
-        } catch (err) {
-            console.error('Error parsing initial officers data:', err);
-        }
-
-        officersState = [{
-            uid: 'off_init_' + (nextTempId++),
+    function createBlankSlot() {
+        return {
+            uid: 'off_slot_' + (nextTempId++),
             id: null,
             name: '',
             year_level: '1st Year',
@@ -37,7 +18,57 @@
             existingImageUrl: DEFAULT_OFFICER_IMAGE,
             file: null,
             drawerOpen: false
-        }];
+        };
+    }
+
+    function mapServerOfficersToSlots(list) {
+        if (!Array.isArray(list) || list.length === 0) {
+            return [createBlankSlot()];
+        }
+        return list.map((item, idx) => ({
+            uid: 'off_' + idx + '_' + (nextTempId++),
+            id: item.id !== undefined ? item.id : null,
+            name: item.name || '',
+            year_level: YEAR_LEVEL_OPTIONS.includes(item.year_level) ? item.year_level : '1st Year',
+            position: item.position || '',
+            imagePreview: item.image || DEFAULT_OFFICER_IMAGE,
+            existingImageUrl: item.image || DEFAULT_OFFICER_IMAGE,
+            file: null,
+            drawerOpen: false
+        }));
+    }
+
+    function loadInitialOfficersFromDOM() {
+        try {
+            const rawEl = document.getElementById('initial-org-officers-data');
+            const parsed = rawEl && rawEl.textContent ? JSON.parse(rawEl.textContent) : [];
+            if (Array.isArray(parsed)) {
+                savedOfficersList = parsed;
+            }
+        } catch (err) {
+            console.error('Error parsing initial officers data:', err);
+            savedOfficersList = [];
+        }
+        officersState = [createBlankSlot()];
+        updateCountsAndModeUI();
+    }
+
+    async function refreshSavedOfficersFromServer() {
+        try {
+            const resp = await fetch('/organizer/api/get-officers/');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data.status === 'success' && Array.isArray(data.officers)) {
+                savedOfficersList = data.officers;
+                updateCountsAndModeUI();
+                if (currentActionMode === 'replace') {
+                    officersState = mapServerOfficersToSlots(savedOfficersList);
+                    renderOfficersFormList();
+                }
+            }
+        } catch (err) {
+            // Silent fallback to existing DOM data
+        }
     }
 
     function escapeHtml(str) {
@@ -49,18 +80,79 @@
             .replace(/'/g, '&#39;');
     }
 
-    function updateBadgeCount() {
-        const badge = document.getElementById('officersTotalBadge');
-        if (badge) {
-            badge.textContent = officersState.length;
+    function updateCountsAndModeUI() {
+        const totalBadge = document.getElementById('officersTotalBadge');
+        if (totalBadge) {
+            totalBadge.textContent = savedOfficersList.length + ' Saved';
+        }
+
+        const savedCountEl = document.getElementById('savedOfficersCountText');
+        if (savedCountEl) {
+            savedCountEl.textContent = savedOfficersList.length;
+        }
+
+        const btnAppend = document.getElementById('officersModeBtnAppend');
+        const btnReplace = document.getElementById('officersModeBtnReplace');
+        const descEl = document.getElementById('officersModeDescription');
+        const resetAllBtn = document.getElementById('btnResetReplaceAll');
+        const saveBtn = document.getElementById('btnSaveOfficers');
+
+        const activeClasses = 'py-2 px-3 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black shadow-sm';
+        const inactiveClasses = 'py-2 px-3 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white';
+
+        if (currentActionMode === 'append') {
+            if (btnAppend) btnAppend.className = activeClasses;
+            if (btnReplace) btnReplace.className = inactiveClasses;
+            if (descEl) {
+                descEl.textContent = savedOfficersList.length > 0
+                    ? `New officers below will be added to your ${savedOfficersList.length} existing officer(s) on the homepage.`
+                    : 'New officers below will be added to the Meet the Officers section on the homepage.';
+            }
+            if (resetAllBtn) resetAllBtn.classList.add('hidden');
+            if (saveBtn && !saveBtn.disabled) {
+                saveBtn.innerHTML = '<i class="ph-bold ph-user-plus text-base sm:text-lg"></i> <span>Add to Officers</span>';
+            }
+        } else {
+            if (btnAppend) btnAppend.className = inactiveClasses;
+            if (btnReplace) btnReplace.className = activeClasses;
+            if (descEl) {
+                descEl.textContent = 'Changes below will replace or remove the existing officers currently displayed on the homepage.';
+            }
+            if (resetAllBtn) {
+                resetAllBtn.classList.toggle('hidden', savedOfficersList.length === 0);
+            }
+            if (saveBtn && !saveBtn.disabled) {
+                saveBtn.innerHTML = '<i class="ph-bold ph-floppy-disk text-base sm:text-lg"></i> <span>Save Replacements</span>';
+            }
         }
     }
+
+    window.switchOfficersModalMode = function(mode) {
+        if (mode !== 'append' && mode !== 'replace') return;
+        currentActionMode = mode;
+
+        if (mode === 'append') {
+            officersState = [createBlankSlot()];
+        } else {
+            officersState = mapServerOfficersToSlots(savedOfficersList);
+        }
+
+        updateCountsAndModeUI();
+        renderOfficersFormList();
+    };
+
+    window.resetForFreshReplacement = function() {
+        currentActionMode = 'replace';
+        officersState = [createBlankSlot()];
+        updateCountsAndModeUI();
+        renderOfficersFormList();
+    };
 
     function renderOfficersFormList() {
         const container = document.getElementById('officersFormContainer');
         if (!container) return;
 
-        updateBadgeCount();
+        updateCountsAndModeUI();
 
         container.innerHTML = officersState.map((off, idx) => {
             const optionsHtml = YEAR_LEVEL_OPTIONS.map(yr => {
@@ -79,6 +171,10 @@
                 `;
             }).join('');
 
+            const slotLabel = currentActionMode === 'append'
+                ? `New Officer Slot #${idx + 1}`
+                : `Officer Slot #${idx + 1}`;
+
             return `
                 <div id="officer-card-${off.uid}" class="officer-entry-card bg-white dark:bg-[#151515] rounded-2xl border border-gray-200 dark:border-gray-800 p-3 sm:p-4 shadow-sm transition-colors">
                     <!-- Card Top Bar -->
@@ -88,7 +184,7 @@
                                 ${idx + 1}
                             </span>
                             <span class="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Officer Slot #${idx + 1}
+                                ${slotLabel}
                             </span>
                         </div>
                         <button type="button" onclick="removeOfficerFormCard('${off.uid}')" class="text-[10px] font-bold text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer" title="Remove Officer">
@@ -229,7 +325,6 @@
         target.year_level = yearValue;
         target.drawerOpen = false;
 
-        // Smoothly close the drawer first, then refresh active checkmark state
         const cardEl = document.getElementById('year-card-' + uid);
         const labelEl = document.getElementById('year-label-' + uid);
         if (labelEl) labelEl.textContent = yearValue;
@@ -267,22 +362,12 @@
     });
 
     window.addOfficerFormCard = function() {
-        const newUid = 'off_new_' + (nextTempId++);
-        officersState.push({
-            uid: newUid,
-            id: null,
-            name: '',
-            year_level: '1st Year',
-            position: '',
-            imagePreview: DEFAULT_OFFICER_IMAGE,
-            existingImageUrl: DEFAULT_OFFICER_IMAGE,
-            file: null,
-            drawerOpen: false
-        });
+        const newSlot = createBlankSlot();
+        officersState.push(newSlot);
         renderOfficersFormList();
 
         setTimeout(() => {
-            const newCard = document.getElementById('officer-card-' + newUid);
+            const newCard = document.getElementById('officer-card-' + newSlot.uid);
             if (newCard) {
                 newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 const firstInput = newCard.querySelector('input[type="text"]');
@@ -293,17 +378,7 @@
 
     window.removeOfficerFormCard = function(uid) {
         if (officersState.length <= 1) {
-            officersState = [{
-                uid: 'off_reset_' + (nextTempId++),
-                id: null,
-                name: '',
-                year_level: '1st Year',
-                position: '',
-                imagePreview: DEFAULT_OFFICER_IMAGE,
-                existingImageUrl: DEFAULT_OFFICER_IMAGE,
-                file: null,
-                drawerOpen: false
-            }];
+            officersState = [createBlankSlot()];
             renderOfficersFormList();
             return;
         }
@@ -315,10 +390,12 @@
         const settingsModal = document.getElementById('settingsModal');
         if (settingsModal) settingsModal.classList.add('hidden');
 
-        if (officersState.length === 0) {
-            loadInitialOfficers();
-        }
+        // Default to 'append' (Add Officers) mode with a fresh blank slot so existing officers are preserved
+        currentActionMode = 'append';
+        officersState = [createBlankSlot()];
+        updateCountsAndModeUI();
         renderOfficersFormList();
+        refreshSavedOfficersFromServer();
 
         const modal = document.getElementById('manageOfficersModal');
         if (modal) {
@@ -339,14 +416,14 @@
         const btn = document.getElementById('btnSaveOfficers');
         if (!btn) return;
 
-        // Allow clearing all officers if there is only 1 blank slot
-        const isSingleBlankSlot = officersState.length === 1 &&
+        // In 'replace' mode, allow clearing all officers if there is only 1 completely blank slot
+        const isSingleBlankReplace = (currentActionMode === 'replace') &&
+            officersState.length === 1 &&
             !officersState[0].name.trim() &&
             !officersState[0].position.trim() &&
             !officersState[0].file;
 
-        if (!isSingleBlankSlot) {
-            // Validate all officer entries
+        if (!isSingleBlankReplace) {
             for (let i = 0; i < officersState.length; i++) {
                 const o = officersState[i];
                 if (!o.name.trim() || !o.position.trim()) {
@@ -367,13 +444,15 @@
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-base sm:text-lg"></i> <span>Saving...</span>';
 
         const formData = new FormData();
-        const metaList = isSingleBlankSlot ? [] : officersState.map((o, idx) => {
+        formData.append('action_mode', currentActionMode);
+
+        const metaList = isSingleBlankReplace ? [] : officersState.map((o, idx) => {
             const fileKey = o.file ? `officer_image_${idx}` : null;
             if (o.file && fileKey) {
                 formData.append(fileKey, o.file);
             }
             return {
-                id: o.id,
+                id: currentActionMode === 'replace' ? o.id : null,
                 name: o.name.trim(),
                 year_level: o.year_level,
                 position: o.position.trim(),
@@ -397,31 +476,18 @@
             const data = await resp.json();
 
             if (data.status === 'success') {
-                if (Array.isArray(data.officers) && data.officers.length > 0) {
-                    officersState = data.officers.map((item, idx) => ({
-                        uid: 'off_' + idx + '_' + (nextTempId++),
-                        id: item.id,
-                        name: item.name || '',
-                        year_level: YEAR_LEVEL_OPTIONS.includes(item.year_level) ? item.year_level : '1st Year',
-                        position: item.position || '',
-                        imagePreview: item.image || DEFAULT_OFFICER_IMAGE,
-                        existingImageUrl: item.image || DEFAULT_OFFICER_IMAGE,
-                        file: null,
-                        drawerOpen: false
-                    }));
-                } else {
-                    officersState = [{
-                        uid: 'off_init_' + (nextTempId++),
-                        id: null,
-                        name: '',
-                        year_level: '1st Year',
-                        position: '',
-                        imagePreview: DEFAULT_OFFICER_IMAGE,
-                        existingImageUrl: DEFAULT_OFFICER_IMAGE,
-                        file: null,
-                        drawerOpen: false
-                    }];
+                if (Array.isArray(data.officers)) {
+                    savedOfficersList = data.officers;
                 }
+
+                // Reset form state cleanly for next open
+                if (currentActionMode === 'append') {
+                    officersState = [createBlankSlot()];
+                } else {
+                    officersState = mapServerOfficersToSlots(savedOfficersList);
+                }
+                updateCountsAndModeUI();
+                renderOfficersFormList();
 
                 if (typeof showPwToast === 'function') {
                     showPwToast(data.message || 'Officers updated successfully!', 'success');
@@ -443,11 +509,11 @@
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;
+            updateCountsAndModeUI();
         }
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        loadInitialOfficers();
+        loadInitialOfficersFromDOM();
     });
 })();
-

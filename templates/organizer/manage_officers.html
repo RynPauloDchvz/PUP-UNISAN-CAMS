@@ -37,6 +37,29 @@
             </div>
         </div>
 
+        <!-- Mode Selector Bar: Add to Existing vs. Replace Existing -->
+        <div class="px-4 py-2.5 sm:px-6 sm:py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#151515] shrink-0 space-y-2 transition-colors">
+            <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-gray-100 dark:bg-[#0d0d0d] border border-gray-200 dark:border-gray-800">
+                <button type="button" id="officersModeBtnAppend" onclick="switchOfficersModalMode('append')" class="py-2 px-3 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black shadow-sm">
+                    <i class="ph-bold ph-user-plus text-xs sm:text-sm"></i>
+                    <span>Add Officers</span>
+                </button>
+                <button type="button" id="officersModeBtnReplace" onclick="switchOfficersModalMode('replace')" class="py-2 px-3 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <i class="ph-bold ph-arrows-clockwise text-xs sm:text-sm"></i>
+                    <span>Replace Officers (<span id="savedOfficersCountText">0</span>)</span>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 px-1">
+                <p id="officersModeDescription" class="text-[9px] sm:text-[11px] font-bold text-gray-500 dark:text-gray-400 leading-snug">
+                    New officers below will be added to your current homepage lineup without removing existing ones.
+                </p>
+                <button type="button" id="btnResetReplaceAll" onclick="resetForFreshReplacement()" class="hidden shrink-0 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 hover:underline cursor-pointer">
+                    Replace All (Fresh)
+                </button>
+            </div>
+        </div>
+
         <!-- Scrollable Officers Form List -->
         <div id="officersFormScrollArea" class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 sm:space-y-4 bg-[#f4f4f4] dark:bg-[#0d0d0d] hide-scrollbar transition-colors">
             <!-- Add Officer Button (Top of Slot List) -->
