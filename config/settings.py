@@ -76,6 +76,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
+    'cloudinary',
     'storages',
     'campus_app',
 ]
@@ -200,34 +202,50 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'nbat affu cqed wton
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'pupuqcams2526@gmail.com')
 
 # ==========================================
-# MEDIA / FILE STORAGE (SUPABASE S3)
+# MEDIA / FILE STORAGE (CLOUDINARY)
 # ==========================================
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'bce5970d83013956bc28f6785071e519')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'ec43bd42c0660b782e977443279fa2f77e4e26777dd7d491922786ca22ca7802')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'pup-unisan-cams-media')
-AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://dkudjrjfylpyxruxfsaf.storage.supabase.co/storage/v1/s3')
-AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'ap-southeast-1')
+cloudinary_cloud = os.environ.get('CLOUDINARY_CLOUD_NAME', 'ah8nbjfr')
+cloudinary_key = os.environ.get('CLOUDINARY_API_KEY', '197794895653581')
+cloudinary_secret = os.environ.get('CLOUDINARY_API_SECRET', 'Z4iGw14uPszUHVbSmejdVYLt_L0')
+cloudinary_url = os.environ.get('CLOUDINARY_URL')
 
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = 'public-read'
-AWS_QUERYSTRING_AUTH = False
+if cloudinary_url:
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(cloudinary_url)
+        cloudinary_key = parsed.username or cloudinary_key
+        cloudinary_secret = parsed.password or cloudinary_secret
+        cloudinary_cloud = parsed.hostname or cloudinary_cloud
+    except Exception:
+        pass
 
-supabase_ref = 'dkudjrjfylpyxruxfsaf'
-AWS_S3_CUSTOM_DOMAIN = os.environ.get(
-    'AWS_S3_CUSTOM_DOMAIN',
-    f'{supabase_ref}.supabase.co/storage/v1/object/public/{AWS_STORAGE_BUCKET_NAME}'
-)
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': cloudinary_cloud,
+    'API_KEY': cloudinary_key,
+    'API_SECRET': cloudinary_secret,
+}
 
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+try:
+    import cloudinary
+    cloudinary.config(
+        cloud_name=cloudinary_cloud,
+        api_key=cloudinary_key,
+        api_secret=cloudinary_secret,
+        secure=True
+    )
+except Exception:
+    pass
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 STORAGES = {
     'default': {
-        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
     },
     'staticfiles': {
         'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
     },
 }
-MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # ==========================================
