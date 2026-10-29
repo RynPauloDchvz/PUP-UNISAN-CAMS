@@ -376,6 +376,25 @@ const { createApp, ref, computed, onMounted, nextTick } = Vue;
                 });
             };
 
+            const downloadSingleDoc = async (url, title) => {
+                if (!url) return;
+                try {
+                    const resp = await fetch(url);
+                    const blob = await resp.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = blobUrl;
+                    const cleanTitle = (title || 'Document').replace(/\s+/g, '_');
+                    a.download = `${cleanTitle}.jpg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(blobUrl);
+                } catch (e) {
+                    window.open(url, '_blank');
+                }
+            };
+
             const getCookie = (name) => {
                 let cookieValue = null;
                 if (document.cookie && document.cookie !== '') {
@@ -507,7 +526,7 @@ const { createApp, ref, computed, onMounted, nextTick } = Vue;
                 isModalOpen, isHistoryMode, selectedEvent, actionLoading, 
                 isRejecting, rejectReason, initiateReject, cancelReject, confirmReject,
                 isRescheduling, rescheduleDate, rescheduleTime, rescheduleEndTime, initiateReschedule, cancelReschedule, confirmReschedule,
-                isDocViewerOpen, viewedDocTitle, viewedDocUrl, viewActualDoc, closeDocViewer,
+                isDocViewerOpen, viewedDocTitle, viewedDocUrl, viewActualDoc, closeDocViewer, downloadSingleDoc,
                 openModal, closeModal, approveEvent,
                 
                 currentDocCount, activeDocs,

@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         vaultList.innerHTML = vaultRecords.map(r => `
-            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-6 rounded-2xl shadow-sm hover:border-[#D4AF37] transition" data-vault-name="${(r.eventName || r.title || '').toLowerCase()}">
+            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-6 rounded-2xl shadow-sm hover:border-[#D4AF37] transition" data-vault-name="${(r.eventName || r.title || '').toLowerCase()}" data-event-id="${r.id}">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-2 overflow-hidden mb-4">
                     <div class="w-full sm:w-auto overflow-hidden">
                         <h3 class="truncate font-black text-lg text-gray-900 dark:text-gray-100 uppercase min-w-0 pr-2">${r.eventName || r.title}</h3>
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <i class="ph-bold ph-eye text-sm"></i> Preview Letter
                         </button>
                         <button class="download-records-btn shrink-0 flex items-center justify-center w-9 h-9 rounded-xl bg-[#800000] text-white hover:bg-red-900 dark:bg-[#D4AF37] dark:text-black dark:hover:bg-yellow-600 transition-colors shadow-md border-0" 
-                            onclick="handleVaultDownload(this)" title="Download Records">
+                            onclick="handleVaultDownload(this, ${r.id})" title="Download Records">
                             <i class="ph-bold ph-download-simple text-base"></i>
                         </button>
                     </div>
@@ -419,22 +419,84 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 7. REAL HISTORY DOWNLOAD LOGIC
-    window.handleVaultDownload = (btn) => {
+    window.handleVaultDownload = async (btn, eventId) => {
         const card = btn.closest('[data-vault-name]');
+        const resolvedId = eventId || (card ? card.getAttribute('data-event-id') : null);
+        if (resolvedId) {
+            try {
+                const getCookie = (name) => {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                };
+                const response = await fetch('/adviser/api/download-documents/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') || ''
+                    },
+                    body: JSON.stringify({ event_ids: [resolvedId] })
+                });
+                if (response.ok) {
+                    let filename = `Event_${resolvedId}_documents.zip`;
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    if (contentDisposition && contentDisposition.includes('filename=')) {
+                        filename = contentDisposition.split('filename=')[1].replace(/["']/g, '');
+                    }
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    return;
+                }
+            } catch (err) {
+                console.warn('ZIP download fallback to individual files:', err);
+            }
+        }
+
+        if (!card) return;
         const cells = card.querySelectorAll('.cell-container');
         cells.forEach((cell, index) => {
             const src = cell.getAttribute('data-img-src');
-            const title = cell.querySelector('span').textContent;
-            if(src) {
-                const a = document.createElement('a');
-                a.href = src;
-                a.download = `Document_${index + 1}_${title.replace(/\s+/g, '_')}`;
-                document.body.appendChild(a);
-                // Use timeout to prevent browser from blocking multiple triggers
-                setTimeout(() => {
-                    a.click();
-                    document.body.removeChild(a);
-                }, index * 200);
+            const titleEl = cell.querySelector('span');
+            const title = titleEl ? titleEl.textContent : `File_${index + 1}`;
+            if (src) {
+                setTimeout(async () => {
+                    try {
+                        const resp = await fetch(src);
+                        const blob = await resp.blob();
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        a.download = `Document_${index + 1}_${title.replace(/\s+/g, '_')}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(blobUrl);
+                    } catch (e) {
+                        const a = document.createElement('a');
+                        a.href = src;
+                        a.target = '_blank';
+                        a.download = `Document_${index + 1}_${title.replace(/\s+/g, '_')}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                }, index * 250);
             }
         });
     };

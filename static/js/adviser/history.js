@@ -204,10 +204,29 @@ window.DJANGO_HISTORY_DATA = (function() {
                     isDocViewerOpen.value = false;
                 };
 
+                const downloadSingleDoc = async (url, title) => {
+                    if (!url) return;
+                    try {
+                        const resp = await fetch(url);
+                        const blob = await resp.blob();
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        const cleanTitle = (title || 'Document').replace(/\s+/g, '_');
+                        a.download = `${cleanTitle}.jpg`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(blobUrl);
+                    } catch (e) {
+                        window.open(url, '_blank');
+                    }
+                };
+
                 return {
                     isLoading, searchQuery, statusFilter, isFilterExpanded, selectFilter, filteredEvents,
                     isModalOpen, isModalClosing, selectedEvent, openModal, closeModal,
-                    isDocViewerOpen, viewedDocTitle, viewedDocUrl, viewActualDoc, closeDocViewer,
+                    isDocViewerOpen, viewedDocTitle, viewedDocUrl, viewActualDoc, closeDocViewer, downloadSingleDoc,
                     currentDocCount, activeDocs, activeFileTab, mobileDropdownOpen, hasUploadedDocs,
                     isSelectionMode, selectedEventIds, confirmDownloadModal, isDownloading, isMobileSearchActive, isMobileScreen,
                     cancelSelection, processDownload

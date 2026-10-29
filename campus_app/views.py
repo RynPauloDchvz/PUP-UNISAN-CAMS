@@ -4844,8 +4844,11 @@ def adviser_history(request):
         })
     return render(request, 'organization adviser/history.html', {'events_json': json.dumps(events_data)})
 
-@user_passes_test(is_adviser_strictly, login_url='/admin/login/')
+@login_required(login_url='/')
 def adviser_download_documents(request):
+    if not (is_adviser_strictly(request.user) or is_admin_strictly(request.user) or is_organizer_strictly(request.user)):
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized access.'}, status=403)
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -4854,28 +4857,60 @@ def adviser_download_documents(request):
                 return JsonResponse({'status': 'error', 'message': 'No events selected.'}, status=400)
             
             events = Event.objects.filter(id__in=event_ids)
+            if is_organizer_strictly(request.user):
+                org_profile = OrgProfile.objects.filter(user=request.user).first()
+                if org_profile:
+                    events = events.filter(org_id__iexact=org_profile.organization.strip())
+                else:
+                    events = Event.objects.none()
             
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                 for event in events:
-                    docs = [
-                        (getattr(event, 'letter_of_approval', None), 'letter_of_approval'),
-                        (getattr(event, 'letter_image', None), 'letter_image'),
-                        (getattr(event, 'permit_to_conduct', None), 'permit_to_conduct'),
-                        (getattr(event, 'permit_image', None), 'permit_image'),
-                        (getattr(event, 'excuse_letter_equipment', None), 'excuse_letter'),
-                        (getattr(event, 'equipment_image', None), 'equipment_image'),
-                        (getattr(event, 'letter_of_reschedule', None), 'reschedule_letter'),
-                    ]
+                    mode = event.requirement_mode if getattr(event, 'requirement_mode', None) else (2 if event.description and "[RESCHEDULE]" in event.description else 4)
+                    if mode == 2:
+                        docs = [
+                            (getattr(event, 'letter_of_reschedule', None) or getattr(event, 'letter_image', None) or getattr(event, 'letter_of_approval', None), '1_Letter_of_Reschedule'),
+                            (getattr(event, 'reschedule_cover_photo', None) or getattr(event, 'event_cover_photo', None) or getattr(event, 'other_attachments', None) or getattr(event, 'cover_photo', None), '2_Reschedule_Cover_Photo'),
+                        ]
+                    else:
+                        docs = [
+                            (getattr(event, 'letter_of_approval', None) or getattr(event, 'letter_image', None), '1_Request_Letter'),
+                            (getattr(event, 'permit_to_conduct', None) or getattr(event, 'permit_image', None), '2_Signed_Permit'),
+                            (getattr(event, 'excuse_letter_equipment', None) or getattr(event, 'equipment_image', None), '3_Excuse_and_Equipment_Form'),
+                            (getattr(event, 'event_cover_photo', None) or getattr(event, 'other_attachments', None) or getattr(event, 'cover_photo', None), '4_Event_Cover_Photo'),
+                        ]
                     
                     folder_name = f"Event_{event.id}_{event.event_title or 'Untitled'}"
                     folder_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in folder_name).strip()
                     
                     for doc_field, label in docs:
-                        if doc_field and hasattr(doc_field, 'path') and os.path.exists(doc_field.path):
-                            ext = os.path.splitext(doc_field.path)[1]
+                        if doc_field and getattr(doc_field, 'name', None):
+                            ext = os.path.splitext(doc_field.name)[1] or '.jpg'
                             file_name = f"{folder_name}/{label}{ext}"
-                            zip_file.write(doc_field.path, arcname=file_name)
+                            file_bytes = None
+                            try:
+                                if hasattr(doc_field, 'path') and os.path.exists(doc_field.path):
+                                    with open(doc_field.path, 'rb') as local_f:
+                                        file_bytes = local_f.read()
+                            except Exception:
+                                file_bytes = None
+
+                            if not file_bytes:
+                                try:
+                                    with doc_field.open('rb') as cloud_f:
+                                        file_bytes = cloud_f.read()
+                                except Exception:
+                                    try:
+                                        if hasattr(doc_field, 'url') and str(doc_field.url).startswith('http'):
+                                            import urllib.request
+                                            with urllib.request.urlopen(doc_field.url, timeout=15) as resp:
+                                                file_bytes = resp.read()
+                                    except Exception:
+                                        file_bytes = None
+
+                            if file_bytes:
+                                zip_file.writestr(file_name, file_bytes)
                             
             if len(events) == 1:
                 event = events.first()

@@ -330,7 +330,7 @@
     <!-- 🔍 TRUE FULLSCREEN LIGHTBOX VIEWER 🔍 -->
     <div id="doc-viewer-backdrop" v-if="isDocViewerOpen" class="lightbox-overlay fade-in" style="z-index: 6000; opacity: 0; transition: opacity 0.3s ease-out;" @click="closeDocViewer">
         <div class="lightbox-header" style="z-index: 6010;">
-            <a v-if="viewedDocUrl" :href="viewedDocUrl" download class="lightbox-btn" title="Download Image">
+            <a v-if="viewedDocUrl" :href="viewedDocUrl" @click.prevent="downloadSingleDoc(viewedDocUrl, viewedDocTitle)" download class="lightbox-btn" title="Download Image">
                 <i class="ph-bold ph-download-simple" style="font-size: 1.5rem;"></i>
             </a>
             <button class="lightbox-btn close-btn" @click.stop="closeDocViewer" title="Close Viewer">
