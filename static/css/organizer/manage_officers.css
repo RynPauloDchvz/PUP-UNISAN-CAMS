@@ -45,3 +45,4 @@ html.dark .officer-year-card.drawer-open {
 .officer-entry-card {
     animation: officerCardSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+
