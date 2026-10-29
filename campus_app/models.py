@@ -252,3 +252,38 @@ class AuditLog(models.Model):
     def __str__(self):
         actor_name = self.actor.username if self.actor else "Anonymous"
         return f"[{self.timestamp.strftime('%Y-%m-%d %H:%M')}] {actor_name} -> {self.action} ({self.status})"
+
+
+# 7. ORGANIZATION OFFICERS (DYNAMIC MEET THE OFFICERS)
+class OrgOfficer(models.Model):
+    YEAR_CHOICES = [
+        ('1st Year', '1st Year'),
+        ('2nd Year', '2nd Year'),
+        ('3rd Year', '3rd Year'),
+        ('4th Year', '4th Year'),
+    ]
+
+    organization = models.CharField(max_length=50, db_index=True)
+    name = models.CharField(max_length=255)
+    year_level = models.CharField(max_length=20, choices=YEAR_CHOICES, default='1st Year')
+    position = models.CharField(max_length=150)
+    image = models.ImageField(upload_to='org_officers/', null=True, blank=True)
+    static_image_url = models.CharField(max_length=255, null=True, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def get_image_url(self):
+        if self.image:
+            try:
+                return self.image.url
+            except Exception:
+                pass
+        if self.static_image_url:
+            return self.static_image_url
+        return '/static/images/student.jpg'
+
+    def __str__(self):
+        return f"[{self.organization}] {self.name} - {self.position}"

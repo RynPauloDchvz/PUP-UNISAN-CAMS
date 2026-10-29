@@ -1,0 +1,74 @@
+<!-- ================================================================= -->
+<!-- 🟢 MANAGE ORGANIZATION OFFICERS MODAL (DESKTOP & MOBILE FULLSCREEN) -->
+<!-- ================================================================= -->
+<div id="manageOfficersModal" v-pre class="hidden fixed inset-0 z-[2050] flex items-center justify-center p-0 sm:p-4 font-sans">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity" onclick="closeManageOfficersModal()"></div>
+
+    <!-- Modal Box: Fullscreen on Mobile, Compact Rounded Card on Desktop -->
+    <div id="manageOfficersModalBox" class="relative bg-white dark:bg-[#151515] text-gray-900 dark:text-white w-full h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[88vh] sm:max-w-xl rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-gray-200 dark:border-gray-800 z-10 flex flex-col overflow-hidden transition-colors duration-300">
+        
+        <!-- Modal Header -->
+        <div class="px-4 py-3.5 sm:px-6 sm:py-5 border-b border-gray-200 dark:border-gray-800 bg-gray-50/90 dark:bg-[#111111] flex items-center justify-between gap-3 shrink-0 transition-colors">
+            <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#800000]/10 dark:bg-[#D4AF37]/15 border border-[#800000]/20 dark:border-[#D4AF37]/30 flex items-center justify-center text-[#800000] dark:text-[#D4AF37] shrink-0">
+                    <i class="ph-fill ph-users-three text-lg sm:text-xl"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm sm:text-lg font-black uppercase tracking-wide text-gray-900 dark:text-white truncate">
+                            Meet the Officers
+                        </h3>
+                        <span id="officersTotalBadge" class="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black shrink-0">
+                            0
+                        </span>
+                    </div>
+                    <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+                        Update {{ org_acronym }} officers displayed on the Organizer &amp; Student Homepages
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <!-- Quick Light/Dark Mode Sync Toggle -->
+                <button type="button" onclick="toggleSystemThemeFromOfficersModal()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200/80 dark:bg-gray-800 text-gray-600 dark:text-[#D4AF37] hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center justify-center transition-colors cursor-pointer" title="Toggle Light / Dark Mode">
+                    <i id="officersModalThemeIcon" class="ph-fill ph-moon text-base sm:text-lg"></i>
+                </button>
+                <!-- Close Button -->
+                <button type="button" onclick="closeManageOfficersModal()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200/80 dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer" title="Close">
+                    <i class="ph-bold ph-x text-base sm:text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Scrollable Officers Form List -->
+        <div id="officersFormScrollArea" class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 sm:space-y-4 bg-[#f4f4f4] dark:bg-[#0d0d0d] hide-scrollbar transition-colors">
+            <div id="officersFormContainer" class="space-y-3 sm:space-y-3.5">
+                <!-- Dynamically rendered officer cards -->
+            </div>
+
+            <!-- Add Officer Button -->
+            <button type="button" onclick="addOfficerFormCard()" class="w-full py-3 sm:py-3.5 px-4 rounded-2xl border-2 border-dashed border-[#800000]/40 dark:border-[#D4AF37]/40 bg-white/70 dark:bg-[#151515]/80 hover:bg-[#800000]/5 dark:hover:bg-[#D4AF37]/10 text-[#800000] dark:text-[#D4AF37] font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shadow-sm">
+                <i class="ph-bold ph-plus-circle text-base sm:text-lg"></i>
+                <span>Add Officer</span>
+            </button>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#151515] flex items-center justify-between gap-2.5 sm:gap-3 shrink-0 transition-colors">
+            <button type="button" onclick="closeManageOfficersModal()" class="px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-[#1f1f1f] text-gray-700 dark:text-gray-300 font-bold text-xs sm:text-sm hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+                Cancel
+            </button>
+
+            <button type="button" id="btnSaveOfficers" onclick="saveOrgOfficers()" class="flex-1 py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black font-black text-xs sm:text-sm uppercase tracking-wider hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="ph-bold ph-floppy-disk text-base sm:text-lg"></i>
+                <span>Save Officers</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Initial Officers Data from Server -->
+<script id="initial-org-officers-data" type="application/json">
+{{ org_officers_json|default:"[]"|safe }}
+</script>

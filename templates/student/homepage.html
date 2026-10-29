@@ -6,19 +6,33 @@
 <link rel="stylesheet" href="{% static 'css/student/homepage.css' %}">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 
+<script id="student-latest-news-data" type="application/json">{{ latest_news_json|default:"[]"|safe }}</script>
+<script id="student-calendar-events-data" type="application/json">{{ calendar_events_json|default:"[]"|safe }}</script>
+<script id="student-action-required-data" type="application/json">{{ action_required_json|default:"null"|safe }}</script>
+<script id="student-org-officers-data" type="application/json">{{ org_officers_json|default:"[]"|safe }}</script>
 <script>
-    window.VUE_APP_DATA = Object.assign(window.VUE_APP_DATA || {}, {
-        latestNews: {{ latest_news_json|default:"[]"|safe }},
-        calendarEvents: {{ calendar_events_json|default:"[]"|safe }},
-        actionRequired: {{ action_required_json|safe }},
-        filteredCalendarEvents: [],
-        calendarFilterDate: null,
-        calendarCurrentMonth: new Date(),
-        viewedEventIds: [],
-        activeDrawer: null,
-        orgOfficers: {{ org_officers_json|default:"[]"|safe }},
-        activeOfficerDrawer: null
-    });
+    (function() {
+        function parseJsonScript(id, fallback) {
+            try {
+                const el = document.getElementById(id);
+                return el && el.textContent ? JSON.parse(el.textContent) : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+        window.VUE_APP_DATA = Object.assign(window.VUE_APP_DATA || {}, {
+            latestNews: parseJsonScript('student-latest-news-data', []),
+            calendarEvents: parseJsonScript('student-calendar-events-data', []),
+            actionRequired: parseJsonScript('student-action-required-data', null),
+            filteredCalendarEvents: [],
+            calendarFilterDate: null,
+            calendarCurrentMonth: new Date(),
+            viewedEventIds: [],
+            activeDrawer: null,
+            orgOfficers: parseJsonScript('student-org-officers-data', []),
+            activeOfficerDrawer: null
+        });
+    })();
 </script>
 {% endblock extra_head %}
 
@@ -311,15 +325,14 @@
                 <!-- Spacer Left (Allows first item to reach center) -->
                 <div class="flex-shrink-0 w-[calc(50%-30%)] sm:w-[calc(50%-20%)] md:w-[calc(50%-15%)] lg:w-[calc(50%-11%)]"></div>
 
-                <div v-for="officer in orgOfficers" :key="officer.id" class="officer-card-item cursor-pointer flex-shrink-0 w-[60%] sm:w-[40%] md:w-[30%] lg:w-[22%] snap-center bg-white dark:bg-pup-darkcard p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center text-center transition-all duration-300">
+                <div v-for="(officer, idx) in orgOfficers" :key="officer.id || idx" class="officer-card-item cursor-pointer flex-shrink-0 w-[60%] sm:w-[40%] md:w-[30%] lg:w-[22%] snap-center bg-white dark:bg-pup-darkcard p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center text-center transition-all duration-300">
                     <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden mb-3 ring-2 ring-pup-maroon/20 dark:ring-pup-gold/20 hover:ring-pup-maroon dark:hover:ring-pup-gold transition-all duration-300">
-                        <img :src="officer.image" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500">
+                        <img :src="officer.image || '/static/images/student.jpg'" onerror="this.onerror=null; this.src='/static/images/student.jpg';" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500">
                     </div>
                     <h3 class="font-black text-[10px] sm:text-xs text-gray-900 dark:text-white uppercase tracking-widest line-clamp-1 w-full" :title="officer.name">[[ officer.name ]]</h3>
                     <span class="text-[8px] sm:text-[9px] font-black text-pup-maroon dark:text-pup-gold uppercase tracking-[0.1em] mt-1 line-clamp-2 min-h-[20px] sm:min-h-[24px] flex items-center justify-center leading-tight">[[ officer.position ]]</span>
                     <div class="w-full h-px bg-gray-100 dark:bg-gray-800 my-2.5"></div>
-                    <span class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase w-full line-clamp-1">[[ officer.program ]]</span>
-                    <span class="text-[9px] text-gray-400 dark:text-gray-500 italic mt-0.5">[[ officer.year_level ]]</span>
+                    <span class="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">[[ officer.year_level ]]</span>
                 </div>
 
                 <!-- Spacer Right (Allows last item to reach center) -->

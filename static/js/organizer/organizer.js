@@ -353,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleTheme() {
                 this.isDark = !this.isDark;
                 document.documentElement.classList.toggle('dark', this.isDark);
+                document.documentElement.classList.toggle('light', !this.isDark);
                 localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
             },
             toggleMobileMenu() {

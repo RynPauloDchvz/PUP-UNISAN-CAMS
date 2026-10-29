@@ -13,6 +13,7 @@
 </script>
 <script src="{% static 'js/face-liveness.js' %}"></script>
 <link rel="stylesheet" href="{% static 'css/organizer/profile.css' %}">
+<link rel="stylesheet" href="{% static 'css/organizer/manage_officers.css' %}">
 {% endblock extra_head %}
 
 {% block skeleton %}
@@ -354,18 +355,10 @@
             <i class="ph-bold ph-x text-lg"></i>
         </button>
         <h3 class="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-6 uppercase tracking-wide flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-4">
-            <i class="ph-fill ph-gear text-pup-maroon dark:text-pup-gold"></i> Preferences
+            <i class="ph-fill ph-gear text-pup-maroon dark:text-pup-gold"></i> Settings
         </h3>
         
         <div class="text-left mb-6">
-            <button type="button" onclick="openFaceUpdateModal()" class="w-full mb-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#111] text-gray-700 dark:text-gray-300 font-bold hover:border-[#800000] dark:hover:border-[#D4AF37] transition-colors text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer">
-                <i class="ph-bold ph-user-focus"></i> Update Biometrics
-            </button>
-            
-            <button type="button" onclick="openPasswordModal()" class="w-full mb-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#111] text-gray-700 dark:text-gray-300 font-bold hover:border-[#800000] dark:hover:border-[#D4AF37] transition-colors text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer">
-                <i class="ph-bold ph-lock-key"></i> Change Password
-            </button>
-            
             <div class="flex items-center justify-between gap-4 bg-gray-50 dark:bg-[#111] p-4 rounded-xl border border-gray-200 dark:border-gray-800 mb-4">
                 <div>
                     <h4 class="text-base font-bold text-gray-900 dark:text-white mb-0.5">Account & Event Alerts</h4>
@@ -377,12 +370,26 @@
                 </label>
             </div>
 
+            <button type="button" onclick="openManageOfficersModal()" class="w-full mb-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#111] text-gray-700 dark:text-gray-300 font-bold hover:border-[#800000] dark:hover:border-[#D4AF37] transition-colors text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                <i class="ph-bold ph-users-three"></i> Manage Officers
+            </button>
+
+            <button type="button" onclick="openFaceUpdateModal()" class="w-full mb-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#111] text-gray-700 dark:text-gray-300 font-bold hover:border-[#800000] dark:hover:border-[#D4AF37] transition-colors text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                <i class="ph-bold ph-user-focus"></i> Update Biometrics
+            </button>
+            
+            <button type="button" onclick="openPasswordModal()" class="w-full mb-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#111] text-gray-700 dark:text-gray-300 font-bold hover:border-[#800000] dark:hover:border-[#D4AF37] transition-colors text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                <i class="ph-bold ph-lock-key"></i> Change Password
+            </button>
+
             <button type="button" onclick="openLogoutModal()" class="w-full py-3 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-500 font-bold hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer">
                 <i class="ph-bold ph-sign-out"></i> Log Out
             </button>
         </div>
     </div>
 </div>
+
+{% include 'organizer/manage_officers.html' %}
 
 <!-- Password Modal -->
 <div id="passwordModal" class="hidden fixed inset-0 z-[2010] flex items-center justify-center p-4 font-sans">
@@ -620,4 +627,5 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'js/organizer/profile.js' %}"></script>
+<script src="{% static 'js/organizer/manage_officers.js' %}"></script>
 {% endblock extra_js %}

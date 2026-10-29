@@ -131,6 +131,8 @@ urlpatterns = [
     
     path('organizer/profile', views.organizer_profile, name='organizer_profile'),
     path('organizer/api/update-profile/', views.update_organizer_profile, name='update_organizer_profile'),
+    path('organizer/api/get-officers/', views.get_org_officers_api, name='get_org_officers_api'),
+    path('organizer/api/save-officers/', views.save_org_officers_api, name='save_org_officers_api'),
     path('organizer/api/update-notif-preference/', views.update_org_notification_preference, name='update_org_notification_preference'),
     path('organizer/api/mark-notifs-read/', views.mark_org_notifications_read, name='mark_org_notifications_read'),
     path('organizer/message-history', views.organizer_message_history, name='organizer_message_history'),

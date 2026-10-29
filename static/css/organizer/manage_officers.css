@@ -1,0 +1,47 @@
+/* Smooth App-Drawer Accordion Animation for Single-Card Year Level Dropdown */
+.officer-year-drawer {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.24s ease;
+}
+
+.officer-year-card.drawer-open .officer-year-drawer {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.officer-year-card.drawer-open {
+    border-color: #800000 !important;
+    box-shadow: 0 6px 18px -6px rgba(128, 0, 0, 0.18);
+}
+
+html.dark .officer-year-card.drawer-open {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 6px 18px -6px rgba(212, 175, 55, 0.2);
+}
+
+.officer-year-caret {
+    transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.officer-year-card.drawer-open .officer-year-caret {
+    transform: rotate(180deg);
+}
+
+/* Smooth Card Entry Animation when clicking Add Officer */
+@keyframes officerCardSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.officer-entry-card {
+    animation: officerCardSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

@@ -24,7 +24,7 @@ import io
 import base64
 import zipfile
 from docxtpl import DocxTemplate 
-from .models import OrgProfile, Student, Attendance, Event, LoginLockout, AuditLog, AdviserProfile
+from .models import OrgProfile, Student, Attendance, Event, LoginLockout, AuditLog, AdviserProfile, OrgOfficer
 from .utils import log_audit_event, get_client_ip
 from .middleware import get_current_request
 from .ai_utils import verify_face, get_sentiment, get_rating_sentiment, check_duplicate_face, parse_face_descriptor
@@ -84,6 +84,95 @@ ORG_FULL_NAMES = {
     "NEWSETTE": "NEWSETTE",
     "PUSO": "PUSO - PUP UNISAN SPORTS ORGANIZATION",
 }
+
+def get_org_officers_data(org_acronym):
+    """Fetch dynamic OrgOfficer records for an organization, or fall back to initial defaults."""
+    org_clean = (org_acronym or '').strip()
+    try:
+        saved_officers = list(OrgOfficer.objects.filter(organization__iexact=org_clean).order_by('order', 'id'))
+        if saved_officers:
+            return [
+                {
+                    'id': off.id,
+                    'name': off.name,
+                    'position': off.position,
+                    'year_level': off.year_level,
+                    'image': off.get_image_url(),
+                }
+                for off in saved_officers
+            ]
+    except Exception:
+        pass
+
+    # Initial fallback if the organization hasn't customized their officers yet
+    expected_roles = [
+        'President',
+        'Internal Vice President',
+        'External Vice President',
+        'Secretary',
+        'Treasurer',
+        'Auditor',
+        'Public Information Officer',
+        'Public Information Officer'
+    ]
+    ito_images = {
+        'President': 'president.jpg',
+        'Internal Vice President': 'ivp.jpg',
+        'External Vice President': 'evp.jpg',
+        'Secretary': 'secretary.jpg',
+        'Treasurer': 'treasurer.jpg',
+        'Auditor': 'auditor.jpg',
+    }
+    ito_officers_data = [
+        {"name": "Justin B. Largado", "year_level": "3rd Year"},
+        {"name": "Eddieson Jaeve U. San Bueno", "year_level": "2nd Year"},
+        {"name": "Aicelle L. Arrogancia", "year_level": "3rd Year"},
+        {"name": "Kate Norsha A. Abid", "year_level": "3rd Year"},
+        {"name": "Cherish Ann M. Parco", "year_level": "4th Year"},
+        {"name": "Jeycel R. Pareja", "year_level": "3rd Year"},
+        {"name": "Aizell Rose B. Arandia", "year_level": "2nd Year"},
+        {"name": "Marco Antonio B. Marquez", "year_level": "2nd Year"}
+    ]
+    pio_count = 1
+    officers = list(Student.objects.filter(organization__iexact=org_clean, role__in=expected_roles))
+    officers_data = []
+
+    for i, role in enumerate(expected_roles):
+        match = next((o for o in officers if o.role == role), None)
+        if match:
+            officers.remove(match)
+            officers_data.append({
+                'id': f"default_{i}",
+                'name': match.full_name,
+                'position': role,
+                'year_level': match.year_level or '1st Year',
+                'image': match.profile_picture.url if match.profile_picture else '/static/images/student.jpg'
+            })
+        else:
+            image_path = '/static/images/student.jpg'
+            mock_name = f"TBA ({role})"
+            mock_year = "1st Year"
+
+            if org_clean.upper() == 'ITO':
+                if role == 'Public Information Officer':
+                    image_path = f'/static/images/orgImage/ITO/pio{pio_count}.jpg'
+                    pio_count += 1
+                elif role in ito_images:
+                    image_path = f'/static/images/orgImage/ITO/{ito_images[role]}'
+
+                if i < len(ito_officers_data):
+                    mock_name = ito_officers_data[i]["name"]
+                    mock_year = ito_officers_data[i]["year_level"]
+
+            officers_data.append({
+                'id': f"mock_{i}",
+                'name': mock_name,
+                'position': role,
+                'year_level': mock_year,
+                'image': image_path
+            })
+
+    return officers_data
 
 def check_lockout(request, type='portal'):
     session_key = f'lockout_until_{type}'
@@ -1038,80 +1127,8 @@ def student_homepage(request):
             'image': get_img(e)
         })
 
-    # 🟢 Fetch Officers (Exact 8 for Pyramid Layout)
-    expected_roles = [
-        'President', 
-        'Internal Vice President', 
-        'External Vice President', 
-        'Secretary', 
-        'Treasurer', 
-        'Auditor', 
-        'Public Information Officer', 
-        'Public Information Officer'
-    ]
-
-    ito_images = {
-        'President': 'president.jpg',
-        'Internal Vice President': 'ivp.jpg',
-        'External Vice President': 'evp.jpg',
-        'Secretary': 'secretary.jpg',
-        'Treasurer': 'treasurer.jpg',
-        'Auditor': 'auditor.jpg',
-    }
-    # Pre-defined mock data for ITO
-    ito_officers_data = [
-        {"name": "Justin B. Largado", "year_level": "3rd Year"},
-        {"name": "Eddieson Jaeve U. San Bueno", "year_level": "2nd Year"},
-        {"name": "Aicelle L. Arrogancia", "year_level": "3rd Year"},
-        {"name": "Kate Norsha A. Abid", "year_level": "3rd Year"},
-        {"name": "Cherish Ann M. Parco", "year_level": "4th Year"},
-        {"name": "Jeycel R. Pareja", "year_level": "3rd Year"},
-        {"name": "Aizell Rose B. Arandia", "year_level": "2nd Year"},
-        {"name": "Marco Antonio B. Marquez", "year_level": "2nd Year"}
-    ]
-    pio_count = 1
-
-    officers = list(Student.objects.filter(organization=org_acronym, role__in=expected_roles))
-    
-    officers_data = []
-    # Fill exactly 8 slots based on expected roles
-    for i, role in enumerate(expected_roles):
-        # Try to find a matching officer
-        match = next((o for o in officers if o.role == role), None)
-        if match:
-            officers.remove(match) # Don't reuse
-            officers_data.append({
-                'id': match.id,
-                'name': match.full_name,
-                'position': role,
-                'program': match.program,
-                'year_level': match.year_level,
-                'image': match.profile_picture.url if match.profile_picture else '/static/images/student.jpg'
-            })
-        else:
-            image_path = '/static/images/student.jpg'
-            mock_name = f"TBA ({role})"
-            mock_year = "N/A"
-            
-            if org_acronym == 'ITO':
-                if role == 'Public Information Officer':
-                    image_path = f'/static/images/orgImage/ITO/pio{pio_count}.jpg'
-                    pio_count += 1
-                elif role in ito_images:
-                    image_path = f'/static/images/orgImage/ITO/{ito_images[role]}'
-                
-                if i < len(ito_officers_data):
-                    mock_name = ito_officers_data[i]["name"]
-                    mock_year = ito_officers_data[i]["year_level"]
-
-            officers_data.append({
-                'id': f"mock_{i}",
-                'name': mock_name,
-                'position': role,
-                'program': "BSIT",
-                'year_level': mock_year,
-                'image': image_path
-            })
+    # 🟢 Fetch Officers Dynamically (Synced with Organizer Settings)
+    officers_data = get_org_officers_data(org_acronym)
 
     context = {
         'student': student,
@@ -1717,78 +1734,8 @@ def organizer_homepage(request):
             'image': get_img(e) or '/static/images/PUPLogo.png'
         })
 
-    # 🟢 Fetch Officers (Exact 8 for Pyramid Layout)
-    expected_roles = [
-        'President', 
-        'Internal Vice President', 
-        'External Vice President', 
-        'Secretary', 
-        'Treasurer', 
-        'Auditor', 
-        'Public Information Officer', 
-        'Public Information Officer'
-    ]
-
-    ito_images = {
-        'President': 'president.jpg',
-        'Internal Vice President': 'ivp.jpg',
-        'External Vice President': 'evp.jpg',
-        'Secretary': 'secretary.jpg',
-        'Treasurer': 'treasurer.jpg',
-        'Auditor': 'auditor.jpg',
-    }
-    ito_officers_data = [
-        {"name": "Justin B. Largado", "year_level": "3rd Year"},
-        {"name": "Eddieson Jaeve U. San Bueno", "year_level": "2nd Year"},
-        {"name": "Aicelle L. Arrogancia", "year_level": "3rd Year"},
-        {"name": "Kate Norsha A. Abid", "year_level": "3rd Year"},
-        {"name": "Cherish Ann M. Parco", "year_level": "4th Year"},
-        {"name": "Jeycel R. Pareja", "year_level": "3rd Year"},
-        {"name": "Aizell Rose B. Arandia", "year_level": "2nd Year"},
-        {"name": "Marco Antonio B. Marquez", "year_level": "2nd Year"}
-    ]
-    pio_count = 1
-
-    officers = list(Student.objects.filter(organization=org_acronym, role__in=expected_roles))
-    
-    officers_data = []
-    # Fill exactly 8 slots based on expected roles
-    for i, role in enumerate(expected_roles):
-        match = next((o for o in officers if o.role == role), None)
-        if match:
-            officers.remove(match)
-            officers_data.append({
-                'id': match.id,
-                'name': match.full_name,
-                'position': role,
-                'program': match.program,
-                'year_level': match.year_level,
-                'image': match.profile_picture.url if match.profile_picture else '/static/images/student.jpg'
-            })
-        else:
-            image_path = '/static/images/student.jpg'
-            mock_name = f"TBA ({role})"
-            mock_year = "N/A"
-            
-            if org_acronym == 'ITO':
-                if role == 'Public Information Officer':
-                    image_path = f'/static/images/orgImage/ITO/pio{pio_count}.jpg'
-                    pio_count += 1
-                elif role in ito_images:
-                    image_path = f'/static/images/orgImage/ITO/{ito_images[role]}'
-                
-                if i < len(ito_officers_data):
-                    mock_name = ito_officers_data[i]["name"]
-                    mock_year = ito_officers_data[i]["year_level"]
-
-            officers_data.append({
-                'id': f"mock_{i}",
-                'name': mock_name,
-                'position': role,
-                'program': "BSIT",
-                'year_level': mock_year,
-                'image': image_path
-            })
+    # 🟢 Fetch Officers Dynamically (Synced with Organizer Settings)
+    officers_data = get_org_officers_data(org_acronym)
 
     context = {
         'org_acronym': org_acronym, 
@@ -2741,6 +2688,7 @@ def organizer_profile(request):
     email_notifications = org_profile.email_notifications if org_profile else True
     read_notifications_str = org_profile.read_notifications if org_profile else ""
     read_notifications = [r for r in read_notifications_str.split(',') if r]
+    officers_data = get_org_officers_data(org_acronym)
 
     context = {
         'org_profile': org_profile,
@@ -2752,7 +2700,8 @@ def organizer_profile(request):
         'completed_events': completed_events,
         'pending_students': pending_students,
         'email_notifications': email_notifications,
-        'read_notifications_json': json.dumps(read_notifications)
+        'read_notifications_json': json.dumps(read_notifications),
+        'org_officers_json': json.dumps(officers_data),
     }
     return render(request, 'organizer/profile.html', context)
 
@@ -2957,6 +2906,109 @@ def update_organizer_profile(request):
             return JsonResponse({"status": "error", "message": str(e)})
             
     return JsonResponse({"status": "error", "message": "Invalid request."})
+
+
+@user_passes_test(is_organizer_strictly, login_url='/')
+def get_org_officers_api(request):
+    try:
+        org_profile = OrgProfile.objects.get(user=request.user)
+        org_acronym = org_profile.organization.strip()
+        return JsonResponse({
+            "status": "success",
+            "officers": get_org_officers_data(org_acronym)
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+
+
+@user_passes_test(is_organizer_strictly, login_url='/')
+def save_org_officers_api(request):
+    if request.method != 'POST':
+        return JsonResponse({"status": "error", "message": "Invalid request method."})
+
+    try:
+        org_profile = OrgProfile.objects.get(user=request.user)
+        org_acronym = org_profile.organization.strip()
+
+        officers_meta_raw = request.POST.get('officers_meta', '[]')
+        officers_meta = json.loads(officers_meta_raw)
+        if not isinstance(officers_meta, list) or len(officers_meta) == 0:
+            return JsonResponse({"status": "error", "message": "Please keep at least one officer entry."})
+
+        valid_years = {'1st Year', '2nd Year', '3rd Year', '4th Year'}
+        kept_ids = []
+
+        existing_map = {
+            off.id: off
+            for off in OrgOfficer.objects.filter(organization__iexact=org_acronym)
+        }
+
+        for idx, item in enumerate(officers_meta):
+            name = (item.get('name') or '').strip()
+            position = (item.get('position') or '').strip()
+            year_level = (item.get('year_level') or '1st Year').strip()
+            if year_level not in valid_years:
+                year_level = '1st Year'
+
+            if not name or not position:
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Officer #{idx + 1}: Please provide both Officer Name and Position."
+                })
+
+            raw_id = item.get('id')
+            existing_img = (item.get('existing_image_url') or '').strip()
+            file_key = item.get('file_key')
+            uploaded_file = request.FILES.get(file_key) if file_key else None
+
+            officer_obj = None
+            if isinstance(raw_id, int) and raw_id in existing_map:
+                officer_obj = existing_map[raw_id]
+            elif isinstance(raw_id, str) and raw_id.isdigit() and int(raw_id) in existing_map:
+                officer_obj = existing_map[int(raw_id)]
+
+            if officer_obj:
+                officer_obj.name = name
+                officer_obj.year_level = year_level
+                officer_obj.position = position
+                officer_obj.order = idx
+                if uploaded_file:
+                    officer_obj.image = uploaded_file
+                officer_obj.save()
+                kept_ids.append(officer_obj.id)
+            else:
+                new_off = OrgOfficer(
+                    organization=org_acronym,
+                    name=name,
+                    year_level=year_level,
+                    position=position,
+                    order=idx,
+                    static_image_url=existing_img if (existing_img and not existing_img.startswith('blob:') and not existing_img.startswith('data:')) else '/static/images/student.jpg'
+                )
+                if uploaded_file:
+                    new_off.image = uploaded_file
+                new_off.save()
+                kept_ids.append(new_off.id)
+
+        # Remove any deleted officers for this org
+        OrgOfficer.objects.filter(organization__iexact=org_acronym).exclude(id__in=kept_ids).delete()
+
+        log_audit_event(
+            request,
+            'UPDATE',
+            target_model='OrgOfficer',
+            target_id=org_acronym,
+            status='Success',
+            changes={'organization': org_acronym, 'officers_count': len(kept_ids)}
+        )
+
+        return JsonResponse({
+            "status": "success",
+            "message": "Meet the Officers lineup updated successfully!",
+            "officers": get_org_officers_data(org_acronym)
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
 
 @user_passes_test(is_organizer_strictly, login_url='/')
 def organizer_attendance_history(request): 
