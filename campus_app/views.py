@@ -86,93 +86,22 @@ ORG_FULL_NAMES = {
 }
 
 def get_org_officers_data(org_acronym):
-    """Fetch dynamic OrgOfficer records for an organization, or fall back to initial defaults."""
+    """Fetch dynamic OrgOfficer records for an organization."""
     org_clean = (org_acronym or '').strip()
     try:
         saved_officers = list(OrgOfficer.objects.filter(organization__iexact=org_clean).order_by('order', 'id'))
-        if saved_officers:
-            return [
-                {
-                    'id': off.id,
-                    'name': off.name,
-                    'position': off.position,
-                    'year_level': off.year_level,
-                    'image': off.get_image_url(),
-                }
-                for off in saved_officers
-            ]
+        return [
+            {
+                'id': off.id,
+                'name': off.name,
+                'position': off.position,
+                'year_level': off.year_level,
+                'image': off.get_image_url(),
+            }
+            for off in saved_officers
+        ]
     except Exception:
-        pass
-
-    # Initial fallback if the organization hasn't customized their officers yet
-    expected_roles = [
-        'President',
-        'Internal Vice President',
-        'External Vice President',
-        'Secretary',
-        'Treasurer',
-        'Auditor',
-        'Public Information Officer',
-        'Public Information Officer'
-    ]
-    ito_images = {
-        'President': 'president.jpg',
-        'Internal Vice President': 'ivp.jpg',
-        'External Vice President': 'evp.jpg',
-        'Secretary': 'secretary.jpg',
-        'Treasurer': 'treasurer.jpg',
-        'Auditor': 'auditor.jpg',
-    }
-    ito_officers_data = [
-        {"name": "Justin B. Largado", "year_level": "3rd Year"},
-        {"name": "Eddieson Jaeve U. San Bueno", "year_level": "2nd Year"},
-        {"name": "Aicelle L. Arrogancia", "year_level": "3rd Year"},
-        {"name": "Kate Norsha A. Abid", "year_level": "3rd Year"},
-        {"name": "Cherish Ann M. Parco", "year_level": "4th Year"},
-        {"name": "Jeycel R. Pareja", "year_level": "3rd Year"},
-        {"name": "Aizell Rose B. Arandia", "year_level": "2nd Year"},
-        {"name": "Marco Antonio B. Marquez", "year_level": "2nd Year"}
-    ]
-    pio_count = 1
-    officers = list(Student.objects.filter(organization__iexact=org_clean, role__in=expected_roles))
-    officers_data = []
-
-    for i, role in enumerate(expected_roles):
-        match = next((o for o in officers if o.role == role), None)
-        if match:
-            officers.remove(match)
-            officers_data.append({
-                'id': f"default_{i}",
-                'name': match.full_name,
-                'position': role,
-                'year_level': match.year_level or '1st Year',
-                'image': match.profile_picture.url if match.profile_picture else '/static/images/student.jpg'
-            })
-        else:
-            image_path = '/static/images/student.jpg'
-            mock_name = f"TBA ({role})"
-            mock_year = "1st Year"
-
-            if org_clean.upper() == 'ITO':
-                if role == 'Public Information Officer':
-                    image_path = f'/static/images/orgImage/ITO/pio{pio_count}.jpg'
-                    pio_count += 1
-                elif role in ito_images:
-                    image_path = f'/static/images/orgImage/ITO/{ito_images[role]}'
-
-                if i < len(ito_officers_data):
-                    mock_name = ito_officers_data[i]["name"]
-                    mock_year = ito_officers_data[i]["year_level"]
-
-            officers_data.append({
-                'id': f"mock_{i}",
-                'name': mock_name,
-                'position': role,
-                'year_level': mock_year,
-                'image': image_path
-            })
-
-    return officers_data
+        return []
 
 def check_lockout(request, type='portal'):
     session_key = f'lockout_until_{type}'
@@ -2932,8 +2861,8 @@ def save_org_officers_api(request):
 
         officers_meta_raw = request.POST.get('officers_meta', '[]')
         officers_meta = json.loads(officers_meta_raw)
-        if not isinstance(officers_meta, list) or len(officers_meta) == 0:
-            return JsonResponse({"status": "error", "message": "Please keep at least one officer entry."})
+        if not isinstance(officers_meta, list):
+            return JsonResponse({"status": "error", "message": "Invalid officers data format."})
 
         valid_years = {'1st Year', '2nd Year', '3rd Year', '4th Year'}
         kept_ids = []

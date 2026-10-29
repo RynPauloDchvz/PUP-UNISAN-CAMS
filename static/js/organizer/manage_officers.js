@@ -32,7 +32,7 @@
             id: null,
             name: '',
             year_level: '1st Year',
-            position: 'President',
+            position: '',
             imagePreview: DEFAULT_OFFICER_IMAGE,
             existingImageUrl: DEFAULT_OFFICER_IMAGE,
             file: null,
@@ -48,28 +48,6 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
     }
-
-    function syncThemeIconInOfficersModal() {
-        const icon = document.getElementById('officersModalThemeIcon');
-        if (!icon) return;
-        const isDark = document.documentElement.classList.contains('dark');
-        icon.className = isDark
-            ? 'ph-fill ph-sun text-base sm:text-lg text-[#D4AF37]'
-            : 'ph-fill ph-moon text-base sm:text-lg text-gray-700';
-    }
-
-    window.toggleSystemThemeFromOfficersModal = function() {
-        const appEl = document.getElementById('app');
-        if (appEl && appEl.__vue_app__ && appEl.__vue_app__._instance && appEl.__vue_app__._instance.proxy && typeof appEl.__vue_app__._instance.proxy.toggleTheme === 'function') {
-            appEl.__vue_app__._instance.proxy.toggleTheme();
-        } else {
-            const isDark = !document.documentElement.classList.contains('dark');
-            document.documentElement.classList.toggle('dark', isDark);
-            document.documentElement.classList.toggle('light', !isDark);
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        }
-        syncThemeIconInOfficersModal();
-    };
 
     function updateBadgeCount() {
         const badge = document.getElementById('officersTotalBadge');
@@ -113,18 +91,16 @@
                                 Officer Slot #${idx + 1}
                             </span>
                         </div>
-                        ${officersState.length > 1 ? `
                         <button type="button" onclick="removeOfficerFormCard('${off.uid}')" class="text-[10px] font-bold text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer" title="Remove Officer">
                             <i class="ph-bold ph-trash text-xs"></i>
-                            <span>Remove</span>
+                            <span>${officersState.length > 1 ? 'Remove' : 'Clear'}</span>
                         </button>
-                        ` : ''}
                     </div>
 
                     <!-- Same Left-Right Layout on Both Desktop & Mobile -->
-                    <div class="flex flex-row items-start gap-3 sm:gap-4">
-                        <!-- LEFT SIDE: Picture Upload -->
-                        <div class="w-24 sm:w-28 shrink-0 flex flex-col items-center">
+                    <div class="flex flex-row items-center gap-3 sm:gap-4">
+                        <!-- LEFT SIDE: Picture Upload (Vertically Centered) -->
+                        <div class="w-24 sm:w-28 shrink-0 flex flex-col items-center justify-center self-center">
                             <div onclick="triggerOfficerFileInput('${off.uid}')"
                                  class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-[#800000] dark:hover:border-[#D4AF37] bg-gray-100 dark:bg-[#111111] relative group cursor-pointer shadow-inner transition-all">
                                 <img id="officer-img-preview-${off.uid}"
@@ -194,7 +170,7 @@
                                 <input type="text"
                                        value="${escapeHtml(off.position)}"
                                        oninput="updateOfficerField('${off.uid}', 'position', this.value)"
-                                       placeholder="e.g. President, Secretary, PIO..."
+                                       placeholder="Enter position (e.g. President, Secretary)..."
                                        class="w-full bg-[#f8f8f8] dark:bg-[#111111] border border-gray-200 dark:border-gray-700 focus:border-[#800000] dark:focus:border-[#D4AF37] rounded-xl px-3 py-2 text-xs sm:text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors">
                             </div>
                         </div>
@@ -316,7 +292,21 @@
     };
 
     window.removeOfficerFormCard = function(uid) {
-        if (officersState.length <= 1) return;
+        if (officersState.length <= 1) {
+            officersState = [{
+                uid: 'off_reset_' + (nextTempId++),
+                id: null,
+                name: '',
+                year_level: '1st Year',
+                position: '',
+                imagePreview: DEFAULT_OFFICER_IMAGE,
+                existingImageUrl: DEFAULT_OFFICER_IMAGE,
+                file: null,
+                drawerOpen: false
+            }];
+            renderOfficersFormList();
+            return;
+        }
         officersState = officersState.filter(o => o.uid !== uid);
         renderOfficersFormList();
     };
@@ -328,7 +318,6 @@
         if (officersState.length === 0) {
             loadInitialOfficers();
         }
-        syncThemeIconInOfficersModal();
         renderOfficersFormList();
 
         const modal = document.getElementById('manageOfficersModal');
@@ -350,18 +339,26 @@
         const btn = document.getElementById('btnSaveOfficers');
         if (!btn) return;
 
-        // Validate all officer entries
-        for (let i = 0; i < officersState.length; i++) {
-            const o = officersState[i];
-            if (!o.name.trim() || !o.position.trim()) {
-                if (typeof showPwToast === 'function') {
-                    showPwToast(`Officer Slot #${i + 1}: Please fill in both Officer Name and Position.`, 'error');
-                } else {
-                    alert(`Officer Slot #${i + 1}: Please fill in both Officer Name and Position.`);
+        // Allow clearing all officers if there is only 1 blank slot
+        const isSingleBlankSlot = officersState.length === 1 &&
+            !officersState[0].name.trim() &&
+            !officersState[0].position.trim() &&
+            !officersState[0].file;
+
+        if (!isSingleBlankSlot) {
+            // Validate all officer entries
+            for (let i = 0; i < officersState.length; i++) {
+                const o = officersState[i];
+                if (!o.name.trim() || !o.position.trim()) {
+                    if (typeof showPwToast === 'function') {
+                        showPwToast(`Officer Slot #${i + 1}: Please fill in both Officer Name and Position.`, 'error');
+                    } else {
+                        alert(`Officer Slot #${i + 1}: Please fill in both Officer Name and Position.`);
+                    }
+                    const cardEl = document.getElementById('officer-card-' + o.uid);
+                    if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
                 }
-                const cardEl = document.getElementById('officer-card-' + o.uid);
-                if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return;
             }
         }
 
@@ -370,7 +367,7 @@
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-base sm:text-lg"></i> <span>Saving...</span>';
 
         const formData = new FormData();
-        const metaList = officersState.map((o, idx) => {
+        const metaList = isSingleBlankSlot ? [] : officersState.map((o, idx) => {
             const fileKey = o.file ? `officer_image_${idx}` : null;
             if (o.file && fileKey) {
                 formData.append(fileKey, o.file);
@@ -400,7 +397,7 @@
             const data = await resp.json();
 
             if (data.status === 'success') {
-                if (Array.isArray(data.officers)) {
+                if (Array.isArray(data.officers) && data.officers.length > 0) {
                     officersState = data.officers.map((item, idx) => ({
                         uid: 'off_' + idx + '_' + (nextTempId++),
                         id: item.id,
@@ -412,6 +409,18 @@
                         file: null,
                         drawerOpen: false
                     }));
+                } else {
+                    officersState = [{
+                        uid: 'off_init_' + (nextTempId++),
+                        id: null,
+                        name: '',
+                        year_level: '1st Year',
+                        position: '',
+                        imagePreview: DEFAULT_OFFICER_IMAGE,
+                        existingImageUrl: DEFAULT_OFFICER_IMAGE,
+                        file: null,
+                        drawerOpen: false
+                    }];
                 }
 
                 if (typeof showPwToast === 'function') {
@@ -439,7 +448,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         loadInitialOfficers();
-        syncThemeIconInOfficersModal();
     });
 })();
 

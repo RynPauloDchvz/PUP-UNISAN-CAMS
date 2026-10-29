@@ -220,7 +220,9 @@ function closeFullCalendarModal() {
 // Officer Carousel Focus Script
 document.addEventListener("DOMContentLoaded", () => {
     // Wait for Vue to render the elements
+    let attempts = 0;
     const checkExist = setInterval(() => {
+        attempts++;
         const container = document.getElementById('officers-scroll');
         const cards = document.querySelectorAll('.officer-card-item');
         
@@ -271,6 +273,8 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             setTimeout(updateFocus, 100);
+        } else if (attempts > 25) {
+            clearInterval(checkExist);
         }
     }, 200);
 });

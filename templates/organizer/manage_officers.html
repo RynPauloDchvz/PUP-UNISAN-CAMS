@@ -17,7 +17,7 @@
                 <div class="min-w-0">
                     <div class="flex items-center gap-2">
                         <h3 class="text-sm sm:text-lg font-black uppercase tracking-wide text-gray-900 dark:text-white truncate">
-                            Meet the Officers
+                            Manage Officers
                         </h3>
                         <span id="officersTotalBadge" class="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black shrink-0">
                             0
@@ -30,10 +30,6 @@
             </div>
 
             <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                <!-- Quick Light/Dark Mode Sync Toggle -->
-                <button type="button" onclick="toggleSystemThemeFromOfficersModal()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200/80 dark:bg-gray-800 text-gray-600 dark:text-[#D4AF37] hover:bg-gray-300 dark:hover:bg-gray-700 flex items-center justify-center transition-colors cursor-pointer" title="Toggle Light / Dark Mode">
-                    <i id="officersModalThemeIcon" class="ph-fill ph-moon text-base sm:text-lg"></i>
-                </button>
                 <!-- Close Button -->
                 <button type="button" onclick="closeManageOfficersModal()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200/80 dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer" title="Close">
                     <i class="ph-bold ph-x text-base sm:text-lg"></i>
@@ -43,15 +39,15 @@
 
         <!-- Scrollable Officers Form List -->
         <div id="officersFormScrollArea" class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 sm:space-y-4 bg-[#f4f4f4] dark:bg-[#0d0d0d] hide-scrollbar transition-colors">
-            <div id="officersFormContainer" class="space-y-3 sm:space-y-3.5">
-                <!-- Dynamically rendered officer cards -->
-            </div>
-
-            <!-- Add Officer Button -->
+            <!-- Add Officer Button (Top of Slot List) -->
             <button type="button" onclick="addOfficerFormCard()" class="w-full py-3 sm:py-3.5 px-4 rounded-2xl border-2 border-dashed border-[#800000]/40 dark:border-[#D4AF37]/40 bg-white/70 dark:bg-[#151515]/80 hover:bg-[#800000]/5 dark:hover:bg-[#D4AF37]/10 text-[#800000] dark:text-[#D4AF37] font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shadow-sm">
                 <i class="ph-bold ph-plus-circle text-base sm:text-lg"></i>
                 <span>Add Officer</span>
             </button>
+
+            <div id="officersFormContainer" class="space-y-3 sm:space-y-3.5">
+                <!-- Dynamically rendered officer cards -->
+            </div>
         </div>
 
         <!-- Modal Footer -->
