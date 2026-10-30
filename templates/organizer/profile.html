@@ -631,6 +631,12 @@
   "notifSettingEnabled": {{ email_notifications|yesno:'true,false' }}
 }
 </script>
+<script id="initial-org-officers-data" type="application/json">
+{{ org_officers_json|default:"[]"|safe }}
+</script>
+<script id="initial-org-slideshow-data" type="application/json">
+{{ org_slideshow_json|default:"[]"|safe }}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'js/organizer/profile.js' %}"></script>
 <script src="{% static 'js/organizer/manage_officers.js' %}"></script>
