@@ -24,7 +24,7 @@ import io
 import base64
 import zipfile
 from docxtpl import DocxTemplate 
-from .models import OrgProfile, Student, Attendance, Event, LoginLockout, AuditLog, AdviserProfile, OrgOfficer
+from .models import OrgProfile, Student, Attendance, Event, LoginLockout, AuditLog, AdviserProfile, OrgOfficer, OrgSlideshow
 from .utils import log_audit_event, get_client_ip
 from .middleware import get_current_request
 from .ai_utils import verify_face, get_sentiment, get_rating_sentiment, check_duplicate_face, parse_face_descriptor
@@ -102,6 +102,79 @@ def get_org_officers_data(org_acronym):
         ]
     except Exception:
         return []
+
+
+def get_org_logo_url(org_acronym):
+    """Return the official logo path for an organization."""
+    org_clean = (org_acronym or '').strip()
+    if org_clean.upper() in ('PRIDE', 'PRIDEVERSE', 'BAHAGHARIU'):
+        org_img_dir = os.path.join(settings.BASE_DIR, 'static', 'images', 'orgImage', org_clean)
+        if os.path.exists(org_img_dir):
+            files = os.listdir(org_img_dir)
+            logo_file = next((f for f in files if f.lower().startswith(org_clean.lower()) and f.lower().endswith(('.png', '.jpg', '.jpeg'))), None)
+            if logo_file:
+                return f'/static/images/orgImage/{org_clean}/{logo_file}'
+        return '/static/images/footer/bahaghari.png'
+
+    org_img_dir = os.path.join(settings.BASE_DIR, 'static', 'images', 'orgImage', org_clean)
+    if os.path.exists(org_img_dir):
+        files = os.listdir(org_img_dir)
+        logo_file = next((f for f in files if f.lower().startswith(org_clean.lower()) and f.lower().endswith(('.png', '.jpg', '.jpeg'))), None)
+        if logo_file:
+            return f'/static/images/orgImage/{org_clean}/{logo_file}'
+    return '/static/images/PUPLogo.png'
+
+
+def get_org_slideshow_data(org_acronym):
+    """Fetch dynamic OrgSlideshow records for an organization."""
+    org_clean = (org_acronym or '').strip()
+    try:
+        saved_slides = list(OrgSlideshow.objects.filter(organization__iexact=org_clean).order_by('order', 'id'))
+        result = []
+        for slide in saved_slides:
+            img_url = slide.get_image_url()
+            if img_url:
+                result.append({
+                    'id': slide.id,
+                    'image': img_url,
+                    'order': slide.order,
+                })
+        return result
+    except Exception:
+        return []
+
+
+def build_org_slideshow_items(org_acronym):
+    """Build the train slideshow items (Logo card first, followed by dynamic slides or moving placeholders)."""
+    items = [{
+        'url': get_org_logo_url(org_acronym),
+        'is_logo': True,
+        'is_placeholder': False,
+    }]
+    saved_slides = get_org_slideshow_data(org_acronym)
+    if saved_slides:
+        photo_cards = [
+            {
+                'url': s['image'],
+                'is_logo': False,
+                'is_placeholder': False,
+            }
+            for s in saved_slides
+        ]
+        # Ensure at least 4 photo cards in each train set so the infinite loop spans wide screens without gaps
+        base_cards = list(photo_cards)
+        while len(photo_cards) < 5:
+            photo_cards.extend(base_cards)
+        items.extend(photo_cards)
+    else:
+        for idx in range(5):
+            items.append({
+                'url': '',
+                'is_logo': False,
+                'is_placeholder': True,
+                'slot_num': idx + 1,
+            })
+    return items
 
 def check_lockout(request, type='portal'):
     session_key = f'lockout_until_{type}'
@@ -931,33 +1004,8 @@ def student_homepage(request):
     
     latest_news = Event.objects.filter(org_filter).filter(event_status='Approved').order_by('-created_at')[:4]
 
-    # --- 🟢 STRICT ORGANIZATION-SPECIFIC SLIDESHOW LOGIC 🟢 ---
-    slideshow_images = []
-    import os
-    from django.conf import settings
-    
-    org_img_dir = os.path.join(settings.BASE_DIR, 'static', 'images', 'orgImage', org_acronym)
-    if os.path.exists(org_img_dir):
-        files = os.listdir(org_img_dir)
-        # 1. Identify Logo (Must be first)
-        logo_file = next((f for f in files if f.lower().startswith(org_acronym.lower()) and f.lower().endswith(('.png', '.jpg', '.jpeg'))), None)
-        if logo_file:
-            slideshow_images.append({
-                'url': f'/static/images/orgImage/{org_acronym}/{logo_file}',
-                'is_logo': True
-            })
-        
-        # 2. Add other images from folder (must contain 'slide' in filename to avoid picking up officer photos)
-        other_files = [f for f in files if f != logo_file and f.lower().endswith(('.png', '.jpg', '.jpeg')) and 'slide' in f.lower()]
-        for f in other_files:
-            slideshow_images.append({
-                'url': f'/static/images/orgImage/{org_acronym}/{f}',
-                'is_logo': False
-            })
-
-    # Final Fallback if folder empty
-    if not slideshow_images:
-        slideshow_images = [{'url': '/static/images/PUPLogo.png', 'is_logo': True}]
+    # --- 🟢 DYNAMIC ORGANIZATION SLIDESHOW LOGIC (SYNCED WITH ORGANIZER SETTINGS) 🟢 ---
+    slideshow_images = build_org_slideshow_items(org_acronym)
 
     def clean_desc(desc):
         if not desc: return 'No description provided.'
@@ -1587,30 +1635,8 @@ def organizer_homepage(request):
         org_acronym = "UNKNOWN"
         org_profile = None
 
-    # --- 🟢 ORGANIZATION-SPECIFIC SLIDESHOW LOGIC 🟢 ---
-    # Strictly only from the static folder as requested
-    slideshow_images = []
-    import os
-    from django.conf import settings
-    
-    org_img_dir = os.path.join(settings.BASE_DIR, 'static', 'images', 'orgImage', org_acronym)
-    if os.path.exists(org_img_dir):
-        files = os.listdir(org_img_dir)
-        # Prioritize Logo (File starting with acronym)
-        logo_file = next((f for f in files if f.lower().startswith(org_acronym.lower()) and f.lower().endswith(('.png', '.jpg', '.jpeg'))), None)
-        if logo_file:
-            slideshow_images.append({'url': f'/static/images/orgImage/{org_acronym}/{logo_file}', 'is_logo': True})
-        
-        # Add other background images from the same folder
-        other_files = [f for f in files if f != logo_file and f.lower().endswith(('.png', '.jpg', '.jpeg')) and 'slide' in f.lower()]
-        for f in other_files:
-            slideshow_images.append({'url': f'/static/images/orgImage/{org_acronym}/{f}', 'is_logo': False})
-
-    # Final Fallback if folder is empty or doesn't exist
-    if not slideshow_images:
-        slideshow_images = [
-            {'url': '/static/images/PUPLogo.png', 'is_logo': True}
-        ]
+    # --- 🟢 DYNAMIC ORGANIZATION SLIDESHOW LOGIC (SYNCED WITH ORGANIZER SETTINGS) 🟢 ---
+    slideshow_images = build_org_slideshow_items(org_acronym)
 
     # 🟢 Latest News: Own Org + Global Events
     latest_news = Event.objects.filter(
@@ -2618,6 +2644,7 @@ def organizer_profile(request):
     read_notifications_str = org_profile.read_notifications if org_profile else ""
     read_notifications = [r for r in read_notifications_str.split(',') if r]
     officers_data = get_org_officers_data(org_acronym)
+    slideshow_data = get_org_slideshow_data(org_acronym)
 
     context = {
         'org_profile': org_profile,
@@ -2631,6 +2658,7 @@ def organizer_profile(request):
         'email_notifications': email_notifications,
         'read_notifications_json': json.dumps(read_notifications),
         'org_officers_json': json.dumps(officers_data),
+        'org_slideshow_json': json.dumps(slideshow_data),
     }
     return render(request, 'organizer/profile.html', context)
 
@@ -2995,6 +3023,144 @@ def save_org_officers_api(request):
             "status": "success",
             "message": "Officers lineup replaced and updated successfully!",
             "officers": updated_officers
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+
+
+@user_passes_test(is_organizer_strictly, login_url='/')
+def get_org_slideshow_api(request):
+    try:
+        org_profile = OrgProfile.objects.get(user=request.user)
+        org_acronym = org_profile.organization.strip()
+        return JsonResponse({
+            "status": "success",
+            "slides": get_org_slideshow_data(org_acronym)
+        })
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+
+
+@user_passes_test(is_organizer_strictly, login_url='/')
+def save_org_slideshow_api(request):
+    if request.method != 'POST':
+        return JsonResponse({"status": "error", "message": "Invalid request method."})
+
+    try:
+        org_profile = OrgProfile.objects.get(user=request.user)
+        org_acronym = org_profile.organization.strip()
+
+        action_mode = (request.POST.get('action_mode') or 'append').strip().lower()
+        slides_meta_raw = request.POST.get('slides_meta', '[]')
+        slides_meta = json.loads(slides_meta_raw)
+        if not isinstance(slides_meta, list):
+            return JsonResponse({"status": "error", "message": "Invalid slideshow data format."})
+
+        if action_mode == 'append':
+            if len(slides_meta) == 0:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Please select at least one photo to add to the slideshow."
+                })
+
+            existing_slides = list(OrgSlideshow.objects.filter(organization__iexact=org_acronym).order_by('order', 'id'))
+            start_order = len(existing_slides)
+            added_count = 0
+
+            for idx, item in enumerate(slides_meta):
+                file_key = item.get('file_key')
+                uploaded_file = request.FILES.get(file_key) if file_key else None
+                existing_img = (item.get('existing_image_url') or '').strip()
+
+                if not uploaded_file and (not existing_img or existing_img.startswith('blob:') or existing_img.startswith('data:')):
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"Slide #{idx + 1}: Please upload a photo for this slot."
+                    })
+
+                new_slide = OrgSlideshow(
+                    organization=org_acronym,
+                    order=start_order + idx,
+                    static_image_url=existing_img if (existing_img and not existing_img.startswith('blob:') and not existing_img.startswith('data:')) else ''
+                )
+                if uploaded_file:
+                    new_slide.image = uploaded_file
+                new_slide.save()
+                added_count += 1
+
+            updated_slides = get_org_slideshow_data(org_acronym)
+            log_audit_event(
+                request,
+                'CREATE',
+                target_model='OrgSlideshow',
+                target_id=org_acronym,
+                status='Success',
+                changes={'organization': org_acronym, 'added_count': added_count, 'total_slides': len(updated_slides)}
+            )
+            return JsonResponse({
+                "status": "success",
+                "message": f"Added {added_count} new photo(s) to the homepage slideshow!",
+                "slides": updated_slides
+            })
+
+        # action_mode == 'replace' (Replace or update existing slideshow images)
+        kept_ids = []
+        existing_map = {
+            s.id: s
+            for s in OrgSlideshow.objects.filter(organization__iexact=org_acronym)
+        }
+
+        for idx, item in enumerate(slides_meta):
+            raw_id = item.get('id')
+            existing_img = (item.get('existing_image_url') or '').strip()
+            file_key = item.get('file_key')
+            uploaded_file = request.FILES.get(file_key) if file_key else None
+
+            slide_obj = None
+            if isinstance(raw_id, int) and raw_id in existing_map:
+                slide_obj = existing_map[raw_id]
+            elif isinstance(raw_id, str) and raw_id.isdigit() and int(raw_id) in existing_map:
+                slide_obj = existing_map[int(raw_id)]
+
+            if slide_obj:
+                slide_obj.order = idx
+                if uploaded_file:
+                    slide_obj.image = uploaded_file
+                slide_obj.save()
+                kept_ids.append(slide_obj.id)
+            else:
+                if not uploaded_file and (not existing_img or existing_img.startswith('blob:') or existing_img.startswith('data:')):
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"Slide #{idx + 1}: Please upload a photo for this slot."
+                    })
+                new_slide = OrgSlideshow(
+                    organization=org_acronym,
+                    order=idx,
+                    static_image_url=existing_img if (existing_img and not existing_img.startswith('blob:') and not existing_img.startswith('data:')) else ''
+                )
+                if uploaded_file:
+                    new_slide.image = uploaded_file
+                new_slide.save()
+                kept_ids.append(new_slide.id)
+
+        # Remove any deleted/replaced slideshow images for this org
+        OrgSlideshow.objects.filter(organization__iexact=org_acronym).exclude(id__in=kept_ids).delete()
+
+        updated_slides = get_org_slideshow_data(org_acronym)
+        log_audit_event(
+            request,
+            'UPDATE',
+            target_model='OrgSlideshow',
+            target_id=org_acronym,
+            status='Success',
+            changes={'organization': org_acronym, 'slides_count': len(kept_ids)}
+        )
+
+        return JsonResponse({
+            "status": "success",
+            "message": "Slideshow images replaced and updated successfully!",
+            "slides": updated_slides
         })
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})

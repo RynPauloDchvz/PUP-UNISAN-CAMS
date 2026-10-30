@@ -34,10 +34,10 @@
     <div class="slide-track items-stretch">
       
       <!-- ORIGINAL SET -->
-      <!-- Card 1: Org Information -->
-      <div class="train-card flex-shrink-0 w-[80vw] sm:w-[450px] bg-white dark:bg-pup-darkcard rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-5 sm:p-8 flex flex-col sm:flex-row items-center sm:items-center gap-4 text-center sm:text-left mr-4 sm:mr-6">
+      <!-- Card 1: Org Logo -->
+      <div class="train-card flex-shrink-0 w-[60vw] sm:w-[300px] bg-white dark:bg-pup-darkcard rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-5 sm:p-6 flex flex-col items-center justify-center gap-3 text-center mr-4 sm:mr-6">
         <!-- Org Logo -->
-        <div class="w-16 h-16 sm:w-24 sm:h-24 shrink-0 bg-gray-50 dark:bg-white rounded-2xl p-2 sm:p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-sm unskew-content">
+        <div class="w-24 h-24 sm:w-32 sm:h-32 shrink-0 bg-gray-50 dark:bg-white rounded-2xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-sm unskew-content">
           {% for img in slideshow_images %}
             {% if img.is_logo %}
               <img src="{{ img.url }}" class="w-full h-full object-contain">
@@ -45,33 +45,40 @@
           {% endfor %}
         </div>
         <!-- Org Info -->
-        <div class="flex flex-col justify-center h-full unskew-content">
-          <div class="mb-2 sm:mb-3">
-            <h2 class="text-xl sm:text-3xl font-black text-gray-900 dark:text-white uppercase leading-none mb-1">
-              {{ org_acronym }}
-            </h2>
-            <p class="text-pup-maroon dark:text-pup-gold text-[10px] font-bold uppercase">{{ full_org_name }}</p>
-          </div>
-          <p class="text-gray-600 dark:text-gray-400 text-[10px] sm:text-xs leading-relaxed font-medium italic border-l-0 sm:border-l-4 border-pup-maroon dark:border-pup-gold pl-0 sm:pl-3 line-clamp-3">
-            "{{ about_us_text }}"
-          </p>
+        <div class="unskew-content">
+          <h2 class="text-lg sm:text-2xl font-black text-gray-900 dark:text-white uppercase leading-none">
+            {{ org_acronym }}
+          </h2>
+          <p class="text-pup-maroon dark:text-pup-gold text-[9px] sm:text-[10px] font-bold uppercase mt-1 line-clamp-1">{{ full_org_name }}</p>
         </div>
       </div>
       
-      <!-- Following Cards: Org Images -->
+      <!-- Following Cards: Org Images or Moving Placeholders -->
       {% for img in slideshow_images %}
         {% if not img.is_logo %}
-        <div class="train-card flex-shrink-0 w-[60vw] sm:w-[300px] bg-gray-100 dark:bg-black rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden mr-4 sm:mr-6 flex items-center justify-center">
-          <img src="{{ img.url }}" class="w-full h-full object-cover" alt="Org Photo">
-        </div>
+          {% if img.is_placeholder %}
+          <div class="train-card flex-shrink-0 w-[60vw] sm:w-[300px] bg-white/95 dark:bg-[#151515] rounded-3xl shadow-xl border-2 border-dashed border-gray-200 dark:border-gray-800 overflow-hidden mr-4 sm:mr-6 flex flex-col items-center justify-center p-4 text-center">
+            <div class="unskew-content flex flex-col items-center justify-center">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-pup-maroon/10 dark:bg-pup-gold/10 border border-pup-maroon/20 dark:border-pup-gold/20 flex items-center justify-center text-pup-maroon dark:text-pup-gold mb-2.5">
+                <i class="ph-duotone ph-images text-2xl sm:text-3xl"></i>
+              </div>
+              <span class="text-[10px] sm:text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">{{ org_acronym }} Highlight</span>
+              <span class="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-0.5">Slideshow Placeholder</span>
+            </div>
+          </div>
+          {% else %}
+          <div class="train-card flex-shrink-0 w-[60vw] sm:w-[300px] bg-gray-100 dark:bg-black rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden mr-4 sm:mr-6 flex items-center justify-center">
+            <img src="{{ img.url }}" class="w-full h-full object-cover" alt="Org Photo">
+          </div>
+          {% endif %}
         {% endif %}
       {% endfor %}
 
       <!-- DUPLICATED SET (For seamless looping) -->
-      <!-- Card 1: Org Information -->
-      <div class="train-card flex-shrink-0 w-[80vw] sm:w-[450px] bg-white dark:bg-pup-darkcard rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-5 sm:p-8 flex flex-col sm:flex-row items-center sm:items-center gap-4 text-center sm:text-left mr-4 sm:mr-6">
+      <!-- Card 1: Org Logo -->
+      <div class="train-card flex-shrink-0 w-[60vw] sm:w-[300px] bg-white dark:bg-pup-darkcard rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-5 sm:p-6 flex flex-col items-center justify-center gap-3 text-center mr-4 sm:mr-6">
         <!-- Org Logo -->
-        <div class="w-16 h-16 sm:w-24 sm:h-24 shrink-0 bg-gray-50 dark:bg-white rounded-2xl p-2 sm:p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-sm unskew-content">
+        <div class="w-24 h-24 sm:w-32 sm:h-32 shrink-0 bg-gray-50 dark:bg-white rounded-2xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden shadow-sm unskew-content">
           {% for img in slideshow_images %}
             {% if img.is_logo %}
               <img src="{{ img.url }}" class="w-full h-full object-contain">
@@ -79,25 +86,32 @@
           {% endfor %}
         </div>
         <!-- Org Info -->
-        <div class="flex flex-col justify-center h-full unskew-content">
-          <div class="mb-2 sm:mb-3">
-            <h2 class="text-xl sm:text-3xl font-black text-gray-900 dark:text-white uppercase leading-none mb-1">
-              {{ org_acronym }}
-            </h2>
-            <p class="text-pup-maroon dark:text-pup-gold text-[10px] font-bold uppercase">{{ full_org_name }}</p>
-          </div>
-          <p class="text-gray-600 dark:text-gray-400 text-[10px] sm:text-xs leading-relaxed font-medium italic border-l-0 sm:border-l-4 border-pup-maroon dark:border-pup-gold pl-0 sm:pl-3 line-clamp-3">
-            "{{ about_us_text }}"
-          </p>
+        <div class="unskew-content">
+          <h2 class="text-lg sm:text-2xl font-black text-gray-900 dark:text-white uppercase leading-none">
+            {{ org_acronym }}
+          </h2>
+          <p class="text-pup-maroon dark:text-pup-gold text-[9px] sm:text-[10px] font-bold uppercase mt-1 line-clamp-1">{{ full_org_name }}</p>
         </div>
       </div>
       
-      <!-- Following Cards: Org Images -->
+      <!-- Following Cards: Org Images or Moving Placeholders -->
       {% for img in slideshow_images %}
         {% if not img.is_logo %}
-        <div class="train-card flex-shrink-0 w-[60vw] sm:w-[300px] bg-gray-100 dark:bg-black rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden mr-4 sm:mr-6 flex items-center justify-center">
-          <img src="{{ img.url }}" class="w-full h-full object-cover" alt="Org Photo">
-        </div>
+          {% if img.is_placeholder %}
+          <div class="train-card flex-shrink-0 w-[60vw] sm:w-[300px] bg-white/95 dark:bg-[#151515] rounded-3xl shadow-xl border-2 border-dashed border-gray-200 dark:border-gray-800 overflow-hidden mr-4 sm:mr-6 flex flex-col items-center justify-center p-4 text-center">
+            <div class="unskew-content flex flex-col items-center justify-center">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-pup-maroon/10 dark:bg-pup-gold/10 border border-pup-maroon/20 dark:border-pup-gold/20 flex items-center justify-center text-pup-maroon dark:text-pup-gold mb-2.5">
+                <i class="ph-duotone ph-images text-2xl sm:text-3xl"></i>
+              </div>
+              <span class="text-[10px] sm:text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">{{ org_acronym }} Highlight</span>
+              <span class="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-0.5">Slideshow Placeholder</span>
+            </div>
+          </div>
+          {% else %}
+          <div class="train-card flex-shrink-0 w-[60vw] sm:w-[300px] bg-gray-100 dark:bg-black rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden mr-4 sm:mr-6 flex items-center justify-center">
+            <img src="{{ img.url }}" class="w-full h-full object-cover" alt="Org Photo">
+          </div>
+          {% endif %}
         {% endif %}
       {% endfor %}
 

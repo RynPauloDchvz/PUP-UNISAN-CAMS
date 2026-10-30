@@ -14,6 +14,7 @@
 <script src="{% static 'js/face-liveness.js' %}"></script>
 <link rel="stylesheet" href="{% static 'css/organizer/profile.css' %}">
 <link rel="stylesheet" href="{% static 'css/organizer/manage_officers.css' %}">
+<link rel="stylesheet" href="{% static 'css/organizer/manage_slideshow.css' %}">
 {% endblock extra_head %}
 
 {% block skeleton %}
@@ -374,6 +375,10 @@
                 <i class="ph-bold ph-users-three"></i> Manage Officers
             </button>
 
+            <button type="button" onclick="openManageSlideshowModal()" class="w-full mb-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#111] text-gray-700 dark:text-gray-300 font-bold hover:border-[#800000] dark:hover:border-[#D4AF37] transition-colors text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                <i class="ph-bold ph-images"></i> Manage Slideshow
+            </button>
+
             <button type="button" onclick="openFaceUpdateModal()" class="w-full mb-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#111] text-gray-700 dark:text-gray-300 font-bold hover:border-[#800000] dark:hover:border-[#D4AF37] transition-colors text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer">
                 <i class="ph-bold ph-user-focus"></i> Update Biometrics
             </button>
@@ -390,6 +395,7 @@
 </div>
 
 {% include 'organizer/manage_officers.html' %}
+{% include 'organizer/manage_slideshow.html' %}
 
 <!-- Password Modal -->
 <div id="passwordModal" class="hidden fixed inset-0 z-[2010] flex items-center justify-center p-4 font-sans">
@@ -628,4 +634,5 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'js/organizer/profile.js' %}"></script>
 <script src="{% static 'js/organizer/manage_officers.js' %}"></script>
+<script src="{% static 'js/organizer/manage_slideshow.js' %}"></script>
 {% endblock extra_js %}

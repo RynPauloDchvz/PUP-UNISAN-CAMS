@@ -287,3 +287,28 @@ class OrgOfficer(models.Model):
 
     def __str__(self):
         return f"[{self.organization}] {self.name} - {self.position}"
+
+
+# 8. ORGANIZATION SLIDESHOW (DYNAMIC TRAIN SLIDESHOW IMAGES)
+class OrgSlideshow(models.Model):
+    organization = models.CharField(max_length=50, db_index=True)
+    image = models.ImageField(upload_to='org_slideshows/', null=True, blank=True)
+    static_image_url = models.CharField(max_length=255, null=True, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def get_image_url(self):
+        if self.image:
+            try:
+                return self.image.url
+            except Exception:
+                pass
+        if self.static_image_url:
+            return self.static_image_url
+        return ''
+
+    def __str__(self):
+        return f"[{self.organization}] Slide #{self.order + 1}"

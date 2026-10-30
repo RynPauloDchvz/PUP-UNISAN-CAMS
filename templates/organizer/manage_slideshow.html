@@ -1,0 +1,94 @@
+<!-- ================================================================= -->
+<!-- 🟢 MANAGE ORGANIZATION SLIDESHOW MODAL (DESKTOP & MOBILE FULLSCREEN) -->
+<!-- ================================================================= -->
+<div id="manageSlideshowModal" v-pre class="hidden fixed inset-0 z-[2050] flex items-center justify-center p-0 sm:p-4 font-sans">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity" onclick="closeManageSlideshowModal()"></div>
+
+    <!-- Modal Box: Fullscreen on Mobile, Compact Rounded Card on Desktop -->
+    <div id="manageSlideshowModalBox" class="relative bg-white dark:bg-[#151515] text-gray-900 dark:text-white w-full h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[88vh] sm:max-w-xl rounded-none sm:rounded-3xl shadow-2xl border-0 sm:border border-gray-200 dark:border-gray-800 z-10 flex flex-col overflow-hidden transition-colors duration-300">
+        
+        <!-- Modal Header -->
+        <div class="px-4 py-3.5 sm:px-6 sm:py-5 border-b border-gray-200 dark:border-gray-800 bg-gray-50/90 dark:bg-[#111111] flex items-center justify-between gap-3 shrink-0 transition-colors">
+            <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#800000]/10 dark:bg-[#D4AF37]/15 border border-[#800000]/20 dark:border-[#D4AF37]/30 flex items-center justify-center text-[#800000] dark:text-[#D4AF37] shrink-0">
+                    <i class="ph-fill ph-images text-lg sm:text-xl"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm sm:text-lg font-black uppercase tracking-wide text-gray-900 dark:text-white truncate">
+                            Manage Slideshow
+                        </h3>
+                        <span id="slideshowTotalBadge" class="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black shrink-0">
+                            0 Saved
+                        </span>
+                    </div>
+                    <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+                        Update {{ org_acronym }} highlight photos displayed on Organizer &amp; Student Homepages
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <!-- Close Button -->
+                <button type="button" onclick="closeManageSlideshowModal()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200/80 dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer" title="Close">
+                    <i class="ph-bold ph-x text-base sm:text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mode Selector Bar: Add Photos vs. Replace Photos -->
+        <div class="px-4 py-2.5 sm:px-6 sm:py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#151515] shrink-0 space-y-2 transition-colors">
+            <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-gray-100 dark:bg-[#0d0d0d] border border-gray-200 dark:border-gray-800">
+                <button type="button" id="slideshowModeBtnAppend" onclick="switchSlideshowModalMode('append')" class="py-2 px-3 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black shadow-sm">
+                    <i class="ph-bold ph-plus-square text-xs sm:text-sm"></i>
+                    <span>Add Photos</span>
+                </button>
+                <button type="button" id="slideshowModeBtnReplace" onclick="switchSlideshowModalMode('replace')" class="py-2 px-3 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <i class="ph-bold ph-arrows-clockwise text-xs sm:text-sm"></i>
+                    <span>Replace Photos (<span id="savedSlideshowCountText">0</span>)</span>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 px-1">
+                <p id="slideshowModeDescription" class="text-[9px] sm:text-[11px] font-bold text-gray-500 dark:text-gray-400 leading-snug">
+                    New photos below will be added to your current homepage slideshow without removing existing ones.
+                </p>
+                <button type="button" id="btnResetSlideshowReplaceAll" onclick="resetSlideshowForFreshReplacement()" class="hidden shrink-0 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 hover:underline cursor-pointer">
+                    Replace All (Fresh)
+                </button>
+            </div>
+        </div>
+
+        <!-- Scrollable Slideshow Slots List -->
+        <div id="slideshowFormScrollArea" class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3 sm:space-y-4 bg-[#f4f4f4] dark:bg-[#0d0d0d] hide-scrollbar transition-colors">
+            <!-- Add Photo Slot Button (Top of Slot List) -->
+            <button type="button" onclick="addSlideshowFormCard()" class="w-full py-3 sm:py-3.5 px-4 rounded-2xl border-2 border-dashed border-[#800000]/40 dark:border-[#D4AF37]/40 bg-white/70 dark:bg-[#151515]/80 hover:bg-[#800000]/5 dark:hover:bg-[#D4AF37]/10 text-[#800000] dark:text-[#D4AF37] font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shadow-sm">
+                <i class="ph-bold ph-plus-circle text-base sm:text-lg"></i>
+                <span>Add Photo Slot</span>
+            </button>
+
+            <div id="slideshowFormContainer" class="space-y-3 sm:space-y-3.5">
+                <!-- Dynamically rendered slideshow photo slots -->
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#151515] flex items-center justify-between gap-2.5 sm:gap-3 shrink-0 transition-colors">
+            <button type="button" onclick="closeManageSlideshowModal()" class="px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-[#1f1f1f] text-gray-700 dark:text-gray-300 font-bold text-xs sm:text-sm hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+                Cancel
+            </button>
+
+            <button type="button" id="btnSaveSlideshow" onclick="saveOrgSlideshow()" class="flex-1 py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl bg-[#800000] dark:bg-[#D4AF37] text-white dark:text-black font-black text-xs sm:text-sm uppercase tracking-wider hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="ph-bold ph-floppy-disk text-base sm:text-lg"></i>
+                <span>Save Slideshow</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Initial Slideshow Data from Server -->
+<script id="initial-org-slideshow-data" type="application/json">
+{{ org_slideshow_json|default:"[]"|safe }}
+</script>
+
