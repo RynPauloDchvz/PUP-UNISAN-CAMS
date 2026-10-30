@@ -6263,48 +6263,55 @@ def get_chat_user_context(request):
         'email': 'N/A'
     }
 
-    if user and user.is_authenticated:
-        info['is_authenticated'] = True
-        if hasattr(user, 'student') and user.student:
-            s = user.student
-            info['name'] = s.full_name or user.username
-            info['role'] = s.role or 'Student'
-            info['year_level'] = s.year_level or '1st Year'
-            info['organization'] = s.organization or 'General'
-            info['student_number'] = s.student_number or 'N/A'
-            info['email'] = s.email_address or user.email or 'N/A'
-        elif hasattr(user, 'orgprofile') and user.orgprofile:
-            org = user.orgprofile
-            info['name'] = user.get_full_name() or user.username
-            info['role'] = 'Organizer'
-            info['year_level'] = org.year_level or 'Student Leader'
-            info['organization'] = org.organization or 'General'
-            info['student_number'] = user.username
-            info['email'] = user.email or 'N/A'
-        elif user.is_superuser:
-            info['name'] = 'Administrator'
-            info['role'] = 'Admin'
-            info['year_level'] = 'Faculty / Staff'
-            info['organization'] = 'Administration'
-            info['student_number'] = 'Admin'
-            info['email'] = user.email or 'N/A'
-        elif user.is_staff:
-            info['name'] = user.get_full_name() or user.username
-            info['role'] = 'Adviser'
-            info['year_level'] = 'Faculty / Staff'
-            org_name = 'Adviser'
-            if '_' in user.username.lower():
-                org_name = user.username.split('_')[0].upper()
-            info['organization'] = org_name
-            info['student_number'] = 'Adviser'
-            info['email'] = user.email or 'N/A'
-        else:
-            info['name'] = user.username
-            info['role'] = 'User'
-            info['year_level'] = 'Student'
-            info['organization'] = 'General'
-            info['student_number'] = user.username
-            info['email'] = user.email or 'N/A'
+    try:
+        if user and user.is_authenticated:
+            info['is_authenticated'] = True
+            if hasattr(user, 'student') and user.student:
+                s = user.student
+                info['name'] = s.full_name or user.username
+                info['role'] = s.role or 'Student'
+                info['year_level'] = s.year_level or '1st Year'
+                info['organization'] = s.organization or 'General'
+                info['student_number'] = s.student_number or 'N/A'
+                info['email'] = s.email_address or user.email or 'N/A'
+            elif hasattr(user, 'orgprofile') and user.orgprofile:
+                org = user.orgprofile
+                info['name'] = user.get_full_name() or user.username
+                info['role'] = 'Organizer'
+                info['year_level'] = org.year_level or 'Student Leader'
+                info['organization'] = org.organization or 'General'
+                info['student_number'] = user.username
+                info['email'] = user.email or 'N/A'
+            elif user.is_superuser:
+                info['name'] = 'Administrator'
+                info['role'] = 'Admin'
+                info['year_level'] = 'Faculty / Staff'
+                info['organization'] = 'Administration'
+                info['student_number'] = 'Admin'
+                info['email'] = user.email or 'N/A'
+            elif user.is_staff:
+                info['name'] = user.get_full_name() or user.username
+                info['role'] = 'Adviser'
+                info['year_level'] = 'Faculty / Staff'
+                org_name = 'Adviser'
+                if '_' in user.username.lower():
+                    org_name = user.username.split('_')[0].upper()
+                info['organization'] = org_name
+                info['student_number'] = 'Adviser'
+                info['email'] = user.email or 'N/A'
+            else:
+                info['name'] = user.username
+                info['role'] = 'User'
+                info['year_level'] = 'Student'
+                info['organization'] = 'General'
+                info['student_number'] = user.username
+                info['email'] = user.email or 'N/A'
+    except Exception:
+        try:
+            from django.db import connection
+            connection.close()
+        except Exception:
+            pass
 
     return info
 

@@ -133,6 +133,38 @@ if DATABASE_URL:
             ssl_require=True
         )
     }
+    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS'].update({
+        'connect_timeout': 10,
+        'keepalives': 1,
+        'keepalives_idle': 30,
+        'keepalives_interval': 10,
+        'keepalives_count': 5,
+    })
+
+    # Automatically retry transient SSL EOF / pooler handshake drops on PostgreSQL connect
+    try:
+        import time
+        from django.db.backends.postgresql.base import DatabaseWrapper as PgDatabaseWrapper
+        if not getattr(PgDatabaseWrapper, '_cams_retry_patched', False):
+            _orig_get_new_connection = PgDatabaseWrapper.get_new_connection
+
+            def _retry_get_new_connection(self, conn_params):
+                last_err = None
+                for attempt in range(3):
+                    try:
+                        return _orig_get_new_connection(self, conn_params)
+                    except Exception as err:
+                        last_err = err
+                        if attempt < 2:
+                            time.sleep(0.2 * (attempt + 1))
+                raise last_err
+
+            PgDatabaseWrapper.get_new_connection = _retry_get_new_connection
+            PgDatabaseWrapper._cams_retry_patched = True
+    except Exception:
+        pass
 else:
     DATABASES = {
         'default': {

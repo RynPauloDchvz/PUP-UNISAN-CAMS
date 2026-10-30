@@ -56,8 +56,8 @@ def student_org_context_processor(request):
     """
     Supplies active_org, user_orgs, and switcher info across student templates.
     """
-    if hasattr(request, 'user') and request.user.is_authenticated:
-        try:
+    try:
+        if hasattr(request, 'user') and request.user.is_authenticated:
             from .models import Student
             student = Student.objects.filter(user=request.user).first()
             if student:
@@ -88,6 +88,10 @@ def student_org_context_processor(request):
                     'active_org_full_name': ORG_FULL_NAMES.get(active_org, active_org),
                     'is_multi_org': len(user_orgs) > 1
                 }
+    except Exception:
+        try:
+            from django.db import connection
+            connection.close()
         except Exception:
             pass
     return {
